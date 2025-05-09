@@ -19,6 +19,7 @@ internal static class Constants
     public const uint BetIncrement = 10;
     public const uint BetWinMultiplier = 2;
     public const uint NewGameCountdown = 5;
+    public const int InitialDiscardTokens = 3; // Starting number of discard tokens
 }
 
 internal enum WinCode 
@@ -37,10 +38,12 @@ public class Deck : MonoBehaviour
     public Button hitButton;
     public Button stickButton;
     public Button playAgainButton;
+    public Button discardButton; // New discard button
     public Text finalMessage;
     public Text probMessage;
     public Text playerScoreText;
     public Text dealerScoreText;
+    public Text discardTokensText; // Display for discard tokens
 
     // Bet
     public Button raiseBetButton;
@@ -49,6 +52,9 @@ public class Deck : MonoBehaviour
     public Text bet;
     private uint _balance = Constants.InitialBalance;
     private uint _bet;
+
+    // Discard tokens
+    private int _discardTokens = Constants.InitialDiscardTokens;
 
     public int[] values = new int[Constants.DeckCards];
     int cardIndex = 0;  
@@ -59,6 +65,7 @@ public class Deck : MonoBehaviour
     private void Start()
     {
         ShuffleCards();
+        UpdateDiscardTokensUI();
         StartGame();   
     }
 
@@ -150,6 +157,7 @@ public class Deck : MonoBehaviour
             PushDealer();
         }
         UpdateScoreDisplays(); // Initial score display
+        UpdateDiscardButtonState(); // Update discard button state
 
         if (Blackjack(player, true))
         {
@@ -321,6 +329,7 @@ public class Deck : MonoBehaviour
         // FlipDealerCard(); // Dealer card is not flipped on player hit generally
         
         UpdateScoreDisplays(); // Update scores after player hits
+        UpdateDiscardButtonState(); // Update discard button state
 
         // Check for Blackjack and the win
         if (Blackjack(player, true)) { EndHand(WinCode.PlayerWins); }
@@ -368,7 +377,10 @@ public class Deck : MonoBehaviour
                 break;
             case WinCode.PlayerWins:
                 finalMessage.text = "You win!";
-                _balance += Constants.BetWinMultiplier * _bet; 
+                _balance += Constants.BetWinMultiplier * _bet;
+                // Award a discard token for winning
+                _discardTokens++;
+                UpdateDiscardTokensUI();
                 break;
             case WinCode.Draw:
                 finalMessage.text = "Draw!";
@@ -381,6 +393,7 @@ public class Deck : MonoBehaviour
         // Disable buttons
         hitButton.interactable = false;
         stickButton.interactable = false;
+        discardButton.interactable = false;
         raiseBetButton.interactable = false;
         lowerBetButton.interactable = false;
 
@@ -404,9 +417,8 @@ public class Deck : MonoBehaviour
         stickButton.interactable = true;
         raiseBetButton.interactable = true;
         lowerBetButton.interactable = true;
+        UpdateDiscardButtonState(); // Initialize discard button state
         finalMessage.text = "";
-        // playerScoreText.text = "Score: 0"; // Will be handled by UpdateScoreDisplays
-        // dealerScoreText.text = "Score: 0";
 
         // Clear hand
         player.GetComponent<CardHand>().Clear();
@@ -481,9 +493,110 @@ public class Deck : MonoBehaviour
         return visibleScore;
     }
 
-    private void UpdateScoreDisplays()
+    // Listen for card selection changes 
+    void Update()
+    {
+        // Check for card selection changes to update the discard button state
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand != null)
+        {
+            bool hasSelectedCard = playerHand.HasSelectedCard();
+            
+            // Only update the button if its current state is different from what it should be
+            if (discardButton != null && discardButton.interactable != (_discardTokens > 0 && hasSelectedCard))
+            {
+                UpdateDiscardButtonState();
+                
+                // Debug message to help diagnose selection issues
+                if (hasSelectedCard)
+                {
+                    Debug.Log("Card selected - Discard button should be enabled: " + (_discardTokens > 0));
+                }
+            }
+        }
+    }
+    
+    // Make UpdateScoreDisplays public so it can be called from CardHand
+    public void UpdateScoreDisplays()
     {
         playerScoreText.text = "Score: " + GetVisibleScore(player, true);
         dealerScoreText.text = "Score: " + GetVisibleScore(dealer, false);
+    }
+    
+    // Make UpdateDiscardButtonState public so it can be called from CardModel
+    public void UpdateDiscardButtonState()
+    {
+        if (discardButton != null)
+        {
+            bool hasSelectedCard = player.GetComponent<CardHand>().HasSelectedCard();
+            discardButton.interactable = (_discardTokens > 0 && hasSelectedCard);
+            
+            // Visual feedback on button
+            var buttonImage = discardButton.GetComponent<Image>();
+            if (buttonImage != null)
+            {
+                if (discardButton.interactable)
+                {
+                    buttonImage.color = Color.white;
+                }
+                else
+                {
+                    buttonImage.color = new Color(0.7f, 0.7f, 0.7f);
+                }
+            }
+            
+            if (hasSelectedCard)
+            {
+                Debug.Log("Card is selected - Discard button enabled: " + discardButton.interactable);
+            }
+        }
+    }
+    
+    // This method should be explicitly assigned to the Discard button's onClick event in the Inspector
+    public void DiscardSelectedCard()
+    {
+        Debug.Log("DiscardSelectedCard method called");
+        
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (_discardTokens <= 0)
+        {
+            Debug.LogWarning("Cannot discard: No tokens left");
+            return;
+        }
+        
+        if (!playerHand.HasSelectedCard())
+        {
+            Debug.LogWarning("Cannot discard: No card selected");
+            return;
+        }
+        
+        // All checks passed, proceed with discard
+        Debug.Log("Discarding card... Tokens before: " + _discardTokens);
+        _discardTokens--;
+        
+        // Call the discard method on the hand
+        playerHand.DiscardSelectedCard();
+        
+        // Update UI elements
+        UpdateDiscardTokensUI();
+        UpdateDiscardButtonState();
+        
+        // Check if player busted but now is back under 21 after discarding
+        int playerPoints = GetPlayerPoints();
+        Debug.Log("Player points after discard: " + playerPoints);
+        
+        if (playerPoints <= Constants.Blackjack)
+        {
+            hitButton.interactable = true;
+            stickButton.interactable = true;
+        }
+    }
+    
+    private void UpdateDiscardTokensUI()
+    {
+        if (discardTokensText != null)
+        {
+            discardTokensText.text = "Discard Tokens: " + _discardTokens;
+        }
     }
 }
