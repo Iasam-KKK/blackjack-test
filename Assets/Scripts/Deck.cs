@@ -39,6 +39,8 @@ public class Deck : MonoBehaviour
     public Button playAgainButton;
     public Text finalMessage;
     public Text probMessage;
+    public Text playerScoreText;
+    public Text dealerScoreText;
 
     // Bet
     public Button raiseBetButton;
@@ -147,6 +149,7 @@ public class Deck : MonoBehaviour
             PushPlayer();
             PushDealer();
         }
+        UpdateScoreDisplays(); // Initial score display
 
         if (Blackjack(player, true))
         {
@@ -299,12 +302,15 @@ public class Deck : MonoBehaviour
     {
         dealer.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex]);
         cardIndex++;
+        // Potentially update dealer score here if their first card was visible,
+        // but typical Blackjack rules hide it. So, update when it's flipped.
     }
 
     private void PushPlayer()
     {
         player.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex]);
         cardIndex++;
+        UpdateScoreDisplays(); // Update after player gets a card
 
         CalculateProbabilities();
     }
@@ -312,8 +318,10 @@ public class Deck : MonoBehaviour
     public void Hit()
     {
         PushPlayer();
-        FlipDealerCard();
+        // FlipDealerCard(); // Dealer card is not flipped on player hit generally
         
+        UpdateScoreDisplays(); // Update scores after player hits
+
         // Check for Blackjack and the win
         if (Blackjack(player, true)) { EndHand(WinCode.PlayerWins); }
         else if (GetPlayerPoints() > Constants.Blackjack) { EndHand(WinCode.DealerWins); }
@@ -322,13 +330,18 @@ public class Deck : MonoBehaviour
     public void Stand()
     {
         int playerPoints = player.GetComponent<CardHand>().points;
-        int dealerPoints = dealer.GetComponent<CardHand>().points;
+        int dealerPoints = dealer.GetComponent<CardHand>().points; // This is full points, not visible yet
+
+        FlipDealerCard(); // Dealer reveals card now
 
         while (dealerPoints < Constants.DealerStand)
         {
             PushDealer();
             dealerPoints = dealer.GetComponent<CardHand>().points;
+            UpdateScoreDisplays(); // Update as dealer draws
         }
+        
+        UpdateScoreDisplays(); // Final update after dealer's turn
 
         if (dealerPoints > Constants.Blackjack || dealerPoints < playerPoints) 
         { 
@@ -338,8 +351,11 @@ public class Deck : MonoBehaviour
         else { EndHand(WinCode.Draw); }
     }
 
-    public void FlipDealerCard() => 
+    public void FlipDealerCard()
+    {
         dealer.GetComponent<CardHand>().FlipFirstCard();
+        UpdateScoreDisplays(); // Update scores when dealer card is flipped
+    }
 
     private void EndHand(WinCode code)
     {   
@@ -372,6 +388,7 @@ public class Deck : MonoBehaviour
         _bet = 0;
         bet.text = "Bet: 0 $";
         balance.text = "Balance: " + _balance + " $";
+        UpdateScoreDisplays(); // Ensure final scores are displayed
 
         if (_balance == 0)
         {
@@ -388,6 +405,8 @@ public class Deck : MonoBehaviour
         raiseBetButton.interactable = true;
         lowerBetButton.interactable = true;
         finalMessage.text = "";
+        // playerScoreText.text = "Score: 0"; // Will be handled by UpdateScoreDisplays
+        // dealerScoreText.text = "Score: 0";
 
         // Clear hand
         player.GetComponent<CardHand>().Clear();
@@ -396,6 +415,7 @@ public class Deck : MonoBehaviour
         
         ShuffleCards();
         StartGame();
+        UpdateScoreDisplays(); // Reset scores for new game (will be updated again in StartGame)
     }
 
     public void RaiseBet()
@@ -421,5 +441,49 @@ public class Deck : MonoBehaviour
     {   
         yield return new WaitForSeconds(Constants.NewGameCountdown);
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    private int GetVisibleScore(GameObject handOwner, bool isPlayer)
+    {
+        CardHand hand = handOwner.GetComponent<CardHand>();
+        int visibleScore = 0;
+        int aces = 0;
+
+        foreach (GameObject cardGO in hand.cards)
+        {
+            CardModel cardModel = cardGO.GetComponent<CardModel>();
+            // We need to access the SpriteRenderer of the CardModel to check the current sprite
+            SpriteRenderer cardSpriteRenderer = cardGO.GetComponent<SpriteRenderer>();
+
+            if (cardSpriteRenderer.sprite == cardModel.cardFront)
+            {
+                if (cardModel.value == 1) // Ace
+                {
+                    aces++;
+                    visibleScore += Constants.SoftAce; // Add as 11 for now
+                }
+                else
+                {
+                    visibleScore += cardModel.value;
+                }
+            }
+            // If it's the dealer and the card is the first one and not yet flipped (showing cardBack),
+            // and we are calculating for display purposes (not final hand), it's 0.
+            // However, the logic above (sprite == cardFront) correctly handles this.
+        }
+
+        // Adjust for Aces: if score > 21 and there are Aces, convert Aces from 11 to 1
+        while (visibleScore > Constants.Blackjack && aces > 0)
+        {
+            visibleScore -= (Constants.SoftAce - 1); // Subtract 10 (11 - 1)
+            aces--;
+        }
+        return visibleScore;
+    }
+
+    private void UpdateScoreDisplays()
+    {
+        playerScoreText.text = "Score: " + GetVisibleScore(player, true);
+        dealerScoreText.text = "Score: " + GetVisibleScore(dealer, false);
     }
 }
