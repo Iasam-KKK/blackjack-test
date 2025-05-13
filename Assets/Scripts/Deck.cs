@@ -20,6 +20,7 @@ internal static class Constants
     public const uint BetWinMultiplier = 2;
     public const uint NewGameCountdown = 5;
     public const int InitialDiscardTokens = 3; // Starting number of discard tokens
+    public const int MaxCardsInHand = 5; // Maximum number of cards in a hand
 }
 
 internal enum WinCode 
@@ -38,22 +39,19 @@ public class Deck : MonoBehaviour
     public Button hitButton;
     public Button stickButton;
     public Button playAgainButton;
-    public Button discardButton; // New discard button
+    public Button discardButton; 
     public Text finalMessage;
     public Text probMessage;
     public Text playerScoreText;
     public Text dealerScoreText;
-    public Text discardTokensText; // Display for discard tokens
-
-    // Bet
-    public Button raiseBetButton;
+    public Text discardTokensText; 
+     public Button raiseBetButton;
     public Button lowerBetButton;
     public Text balance;
     public Text bet;
     private uint _balance = Constants.InitialBalance;
     private uint _bet;
-
-    // Discard tokens
+ 
     private int _discardTokens = Constants.InitialDiscardTokens;
 
     public int[] values = new int[Constants.DeckCards];
@@ -68,14 +66,12 @@ public class Deck : MonoBehaviour
         UpdateDiscardTokensUI();
         StartGame();   
     }
-
-    // O(n) -> Linear time complexity
+ 
     private void InitCardValues()
     {
         int count = 0;
         for (int i = 0; i < values.Length; ++i) 
-        {
-            // This only affects the J, Q, K cards
+        { 
             if (count > 9)
             {
                 values[i] = 10; 
@@ -90,8 +86,7 @@ public class Deck : MonoBehaviour
             }
         }
     }
-
-    // Swap algorithms by un/definining `ARRAY_SHUFFLE` at the top
+ 
     private void ShuffleCards()
     {
         #if (ARRAY_SHUFFLE)
@@ -100,46 +95,38 @@ public class Deck : MonoBehaviour
             FisherYatesShuffle();
         #endif
     }
-
-    // O(n) -> Linear time complexity
+ 
     private void FisherYatesShuffle()
     {
         for (int i = 0; i < values.Length; ++i)
         {
             int rndIndex = Random.Range(i, values.Length);
-
-            // Swap sprites
+ 
             Sprite currCard = faces[i];
             faces[i] = faces[rndIndex];
             faces[rndIndex] = currCard;
-
-            // Swap card values
+ 
             int currValue = values[i];
             values[i] = values[rndIndex];
             values[rndIndex] = currValue;
         }
     }
-
-    // O(n * log n) -> Linearithmic time complexity
+ 
     private void ArrayShuffle()
-    {
-        // Randomized indices array -> [0, values.Length - 1]
+    { 
         System.Random rnd = new System.Random();
         int[] index = Enumerable.Range(0, values.Length).ToArray();
         index.OrderBy(_ => rnd.Next()).ToArray();
-        
-        // Temporary arrays for shuffling
+         
         int[] tmpValues = new int[Constants.DeckCards];
         Sprite[] tmpFaces = new Sprite[Constants.DeckCards];
-
-        // Copy the elements by means of the randomized indices
+ 
         for (int i = 0; i < Constants.DeckCards; ++i)
         {
             tmpValues[index[i]] = values[i];
             tmpFaces[index[i]] = faces[i];
         }
-
-        // Update the resulting arrays
+ 
         for (int i = 0; i < Constants.DeckCards; ++i)
         {
             values[i] = tmpValues[i];
@@ -156,15 +143,15 @@ public class Deck : MonoBehaviour
             PushPlayer();
             PushDealer();
         }
-        UpdateScoreDisplays(); // Initial score display
-        UpdateDiscardButtonState(); // Update discard button state
+        UpdateScoreDisplays(); 
+        UpdateDiscardButtonState();  
 
         if (Blackjack(player, true))
         {
-            if (Blackjack(dealer, false)) { EndHand(WinCode.Draw); }        // Draw
-            else { EndHand(WinCode.PlayerWins); }                           // Player wins
+            if (Blackjack(dealer, false)) { EndHand(WinCode.Draw); }        
+            else { EndHand(WinCode.PlayerWins); }                          
         }
-        else if (Blackjack(dealer, false)) { EndHand(WinCode.DealerWins); } // Dealer wins
+        else if (Blackjack(dealer, false)) { EndHand(WinCode.DealerWins); }  
     }
 
     private bool Blackjack(GameObject whoever, bool isPlayer)
@@ -175,8 +162,7 @@ public class Deck : MonoBehaviour
         {
             CardHand hand = whoever.GetComponent<CardHand>();
             foreach (GameObject card in hand.cards)
-            {
-                // Contemplate soft aces that make make a blackjack
+            { 
                 if (card.GetComponent<CardModel>().value == 1)
                 {
                     if ((handPoints - 1 + Constants.SoftAce) == Constants.Blackjack) 
@@ -199,8 +185,7 @@ public class Deck : MonoBehaviour
     private void CalculateProbabilities()
     {
         float possibleCases = values.Length - cardIndex + 1.0f;
-
-        // Every remaining ace has two possible values (different sums)
+ 
         for (int i = cardIndex; i < values.Length; ++i)
         {
             if (values[i] == 1) { possibleCases++; }
@@ -210,8 +195,7 @@ public class Deck : MonoBehaviour
             ProbabilityPlayerInBetween(possibleCases) + " % | " + 
             ProbabibilityPlayerOver() + " %";
     }
-
-    // Having the card hidden, probability that the dealer has a higher point count than the player
+ 
     private double ProbabilityDealerHigher(float possibleCases)
     {
         CardHand dealerHand = dealer.GetComponent<CardHand>();
@@ -227,15 +211,13 @@ public class Deck : MonoBehaviour
             int sum = 0;
 
             for (int i = cardIndex; i < values.Length; ++i)
-            {
-                // Default case
+            { 
                 sum = dealerPointsVisible + values[i];
                 if (sum < Constants.Blackjack && sum > playerPoints)
                 {
                     favorableCases++;
                 }
-
-                // Hidden ace as 11 points
+ 
                 if (values[i] == 1)
                 {
                     sum = dealerPointsVisible + Constants.SoftAce;
@@ -244,8 +226,7 @@ public class Deck : MonoBehaviour
                         favorableCases++;
                     }
                 }
-
-                // Visible ace as 11 points
+ 
                 if (dealerPointsVisible == 1)
                 {
                     sum = Constants.SoftAce + values[i];
@@ -259,8 +240,7 @@ public class Deck : MonoBehaviour
 
         return System.Math.Round((favorableCases / possibleCases) * 100, Constants.ProbPrecision);
     }
-
-    // Probability that the player gets 17 - 21 points if he/she asks for a card
+ 
     private double ProbabilityPlayerInBetween(float possibleCases)
     {
         int playerPoints = GetDealerPoints();
@@ -274,8 +254,7 @@ public class Deck : MonoBehaviour
             {
                 favorableCases++;
             }
-
-            // Contemplate an ace as 11 points
+ 
             if (values[i] == 1)
             {
                 sum = playerPoints + Constants.SoftAce;
@@ -288,8 +267,7 @@ public class Deck : MonoBehaviour
     
         return System.Math.Round((favorableCases / possibleCases) * 100, Constants.ProbPrecision);
     }
-
-    // Probability that the player goes over 21 points if he/she asks for a card
+ 
     private double ProbabibilityPlayerOver()
     {
         float possibleCases = values.Length - cardIndex + 1.0f;
@@ -318,20 +296,26 @@ public class Deck : MonoBehaviour
     {
         player.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex]);
         cardIndex++;
-        UpdateScoreDisplays(); // Update after player gets a card
+        UpdateScoreDisplays();  
 
         CalculateProbabilities();
     }
 
     public void Hit()
-    {
+    { 
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (!playerHand.CanAddMoreCards())
+        {
+            finalMessage.text = "Maximum cards reached!";
+            return;
+        }
+
         PushPlayer();
         // FlipDealerCard(); // Dealer card is not flipped on player hit generally
         
-        UpdateScoreDisplays(); // Update scores after player hits
-        UpdateDiscardButtonState(); // Update discard button state
-
-        // Check for Blackjack and the win
+        UpdateScoreDisplays();  
+        UpdateDiscardButtonState();  
+ 
         if (Blackjack(player, true)) { EndHand(WinCode.PlayerWins); }
         else if (GetPlayerPoints() > Constants.Blackjack) { EndHand(WinCode.DealerWins); }
     }
@@ -339,18 +323,17 @@ public class Deck : MonoBehaviour
     public void Stand()
     {
         int playerPoints = player.GetComponent<CardHand>().points;
-        int dealerPoints = dealer.GetComponent<CardHand>().points; // This is full points, not visible yet
+        int dealerPoints = dealer.GetComponent<CardHand>().points;  
 
-        FlipDealerCard(); // Dealer reveals card now
-
+        FlipDealerCard();  
         while (dealerPoints < Constants.DealerStand)
         {
             PushDealer();
             dealerPoints = dealer.GetComponent<CardHand>().points;
-            UpdateScoreDisplays(); // Update as dealer draws
+            UpdateScoreDisplays();  
         }
         
-        UpdateScoreDisplays(); // Final update after dealer's turn
+        UpdateScoreDisplays();  
 
         if (dealerPoints > Constants.Blackjack || dealerPoints < playerPoints) 
         { 
@@ -363,7 +346,7 @@ public class Deck : MonoBehaviour
     public void FlipDealerCard()
     {
         dealer.GetComponent<CardHand>().FlipFirstCard();
-        UpdateScoreDisplays(); // Update scores when dealer card is flipped
+        UpdateScoreDisplays(); 
     }
 
     private void EndHand(WinCode code)
@@ -377,8 +360,7 @@ public class Deck : MonoBehaviour
                 break;
             case WinCode.PlayerWins:
                 finalMessage.text = "You win!";
-                _balance += Constants.BetWinMultiplier * _bet;
-                // Award a discard token for winning
+                _balance += Constants.BetWinMultiplier * _bet; 
                 _discardTokens++;
                 UpdateDiscardTokensUI();
                 break;
@@ -386,22 +368,20 @@ public class Deck : MonoBehaviour
                 finalMessage.text = "Draw!";
                 break;
             default:
-                Debug.Assert(false);    // Report invalid input
+                Debug.Assert(false);    
                 break;
         }
-
-        // Disable buttons
+ 
         hitButton.interactable = false;
         stickButton.interactable = false;
         discardButton.interactable = false;
         raiseBetButton.interactable = false;
         lowerBetButton.interactable = false;
-
-        // Update bet and balance
+ 
         _bet = 0;
         bet.text = "Bet: 0 $";
         balance.text = "Balance: " + _balance + " $";
-        UpdateScoreDisplays(); // Ensure final scores are displayed
+        UpdateScoreDisplays();  
 
         if (_balance == 0)
         {
@@ -417,7 +397,7 @@ public class Deck : MonoBehaviour
         stickButton.interactable = true;
         raiseBetButton.interactable = true;
         lowerBetButton.interactable = true;
-        UpdateDiscardButtonState(); // Initialize discard button state
+        UpdateDiscardButtonState();  
         finalMessage.text = "";
 
         // Clear hand
@@ -427,7 +407,7 @@ public class Deck : MonoBehaviour
         
         ShuffleCards();
         StartGame();
-        UpdateScoreDisplays(); // Reset scores for new game (will be updated again in StartGame)
+        UpdateScoreDisplays();  
     }
 
     public void RaiseBet()
@@ -463,8 +443,7 @@ public class Deck : MonoBehaviour
 
         foreach (GameObject cardGO in hand.cards)
         {
-            CardModel cardModel = cardGO.GetComponent<CardModel>();
-            // We need to access the SpriteRenderer of the CardModel to check the current sprite
+            CardModel cardModel = cardGO.GetComponent<CardModel>(); 
             SpriteRenderer cardSpriteRenderer = cardGO.GetComponent<SpriteRenderer>();
 
             if (cardSpriteRenderer.sprite == cardModel.cardFront)
@@ -492,22 +471,18 @@ public class Deck : MonoBehaviour
         }
         return visibleScore;
     }
-
-    // Listen for card selection changes 
+ 
     void Update()
-    {
-        // Check for card selection changes to update the discard button state
+    { 
         CardHand playerHand = player.GetComponent<CardHand>();
         if (playerHand != null)
         {
             bool hasSelectedCard = playerHand.HasSelectedCard();
-            
-            // Only update the button if its current state is different from what it should be
+             
             if (discardButton != null && discardButton.interactable != (_discardTokens > 0 && hasSelectedCard))
             {
                 UpdateDiscardButtonState();
-                
-                // Debug message to help diagnose selection issues
+                 
                 if (hasSelectedCard)
                 {
                     Debug.Log("Card selected - Discard button should be enabled: " + (_discardTokens > 0));
@@ -569,19 +544,15 @@ public class Deck : MonoBehaviour
             Debug.LogWarning("Cannot discard: No card selected");
             return;
         }
-        
-        // All checks passed, proceed with discard
+         
         Debug.Log("Discarding card... Tokens before: " + _discardTokens);
         _discardTokens--;
-        
-        // Call the discard method on the hand
+         
         playerHand.DiscardSelectedCard();
-        
-        // Update UI elements
+         
         UpdateDiscardTokensUI();
         UpdateDiscardButtonState();
-        
-        // Check if player busted but now is back under 21 after discarding
+         
         int playerPoints = GetPlayerPoints();
         Debug.Log("Player points after discard: " + playerPoints);
         
