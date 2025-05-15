@@ -19,8 +19,10 @@ internal static class Constants
     public const uint BetIncrement = 10;
     public const uint BetWinMultiplier = 2;
     public const uint NewGameCountdown = 5;
-    public const int InitialDiscardTokens = 3; // Starting number of discard tokens
+    public const int InitialTokens = 3; // Starting number of tokens for all tarot card effects
     public const int MaxCardsInHand = 5; // Maximum number of cards in a hand
+    public const float PeekDuration = 2.0f; // Duration in seconds to peek at dealer's card
+    public const int MaxSelectedCards = 2; // Maximum number of cards that can be selected at once for transformation
 }
 
 internal enum WinCode 
@@ -44,15 +46,20 @@ public class Deck : MonoBehaviour
     public Text probMessage;
     public Text playerScoreText;
     public Text dealerScoreText;
-    public Text discardTokensText; 
-     public Button raiseBetButton;
+    public Text tokensText; // Single token UI for all tarot card effects
+    public Button peekButton; // Eye button for peeking
+    public Button transformButton; // Transformation button for card transformation
+    public Button raiseBetButton;
     public Button lowerBetButton;
     public Text balance;
     public Text bet;
     private uint _balance = Constants.InitialBalance;
     private uint _bet;
  
-    private int _discardTokens = Constants.InitialDiscardTokens;
+    private int _tokens = Constants.InitialTokens;
+    private bool _isPeeking = false;
+    private bool _hasUsedPeekThisRound = false; // Track if peek has been used in current round
+    private bool _hasUsedTransformThisRound = false; // Track if transform has been used in current round
 
     public int[] values = new int[Constants.DeckCards];
     int cardIndex = 0;  
@@ -63,8 +70,32 @@ public class Deck : MonoBehaviour
     private void Start()
     {
         ShuffleCards();
-        UpdateDiscardTokensUI();
-        StartGame();   
+        UpdateTokensUI();
+        
+        // Ensure buttons are properly configured
+        if (peekButton != null)
+        {
+            peekButton.onClick.RemoveAllListeners();
+            peekButton.onClick.AddListener(PeekAtDealerCard);
+            Debug.Log("Peek button listener configured");
+        }
+        else
+        {
+            Debug.LogError("Peek button reference is missing!");
+        }
+        
+        if (transformButton != null)
+        {
+            transformButton.onClick.RemoveAllListeners();
+            transformButton.onClick.AddListener(TransformSelectedCards);
+            Debug.Log("Transform button listener configured");
+        }
+        else
+        {
+            Debug.LogError("Transform button reference is missing!");
+        }
+        
+        StartGame();
     }
  
     private void InitCardValues()
@@ -137,6 +168,10 @@ public class Deck : MonoBehaviour
     private void StartGame()
     {
         StopCoroutine(NewGame());
+        
+        // Reset tarot ability usage for new round
+        _hasUsedPeekThisRound = false;
+        _hasUsedTransformThisRound = false;
 
         for (int i = 0; i < Constants.InitialCardsDealt; ++i)
         {
@@ -145,6 +180,8 @@ public class Deck : MonoBehaviour
         }
         UpdateScoreDisplays(); 
         UpdateDiscardButtonState();  
+        UpdatePeekButtonState();
+        UpdateTransformButtonState();
 
         if (Blackjack(player, true))
         {
@@ -361,8 +398,8 @@ public class Deck : MonoBehaviour
             case WinCode.PlayerWins:
                 finalMessage.text = "You win!";
                 _balance += Constants.BetWinMultiplier * _bet; 
-                _discardTokens++;
-                UpdateDiscardTokensUI();
+                _tokens++; // Add one token on win
+                UpdateTokensUI();
                 break;
             case WinCode.Draw:
                 finalMessage.text = "Draw!";
@@ -375,6 +412,8 @@ public class Deck : MonoBehaviour
         hitButton.interactable = false;
         stickButton.interactable = false;
         discardButton.interactable = false;
+        peekButton.interactable = false;
+        transformButton.interactable = false;
         raiseBetButton.interactable = false;
         lowerBetButton.interactable = false;
  
@@ -397,7 +436,11 @@ public class Deck : MonoBehaviour
         stickButton.interactable = true;
         raiseBetButton.interactable = true;
         lowerBetButton.interactable = true;
+        _hasUsedPeekThisRound = false; // Reset peek usage for new round
+        _hasUsedTransformThisRound = false; // Reset transform usage for new round
         UpdateDiscardButtonState();  
+        UpdatePeekButtonState();
+        UpdateTransformButtonState();
         finalMessage.text = "";
 
         // Clear hand
@@ -479,15 +522,25 @@ public class Deck : MonoBehaviour
         {
             bool hasSelectedCard = playerHand.HasSelectedCard();
              
-            if (discardButton != null && discardButton.interactable != (_discardTokens > 0 && hasSelectedCard))
+            if (discardButton != null && discardButton.interactable != (_tokens > 0 && hasSelectedCard))
             {
                 UpdateDiscardButtonState();
                  
                 if (hasSelectedCard)
                 {
-                    Debug.Log("Card selected - Discard button should be enabled: " + (_discardTokens > 0));
+                    Debug.Log("Card selected - Discard button should be enabled: " + (_tokens > 0));
                 }
             }
+        }
+        
+        if (peekButton != null && !_isPeeking)
+        {
+            UpdatePeekButtonState();
+        }
+        
+        if (transformButton != null)
+        {
+            UpdateTransformButtonState();
         }
     }
     
@@ -504,7 +557,7 @@ public class Deck : MonoBehaviour
         if (discardButton != null)
         {
             bool hasSelectedCard = player.GetComponent<CardHand>().HasSelectedCard();
-            discardButton.interactable = (_discardTokens > 0 && hasSelectedCard);
+            discardButton.interactable = (_tokens > 0 && hasSelectedCard);
             
             // Visual feedback on button
             var buttonImage = discardButton.GetComponent<Image>();
@@ -533,7 +586,7 @@ public class Deck : MonoBehaviour
         Debug.Log("DiscardSelectedCard method called");
         
         CardHand playerHand = player.GetComponent<CardHand>();
-        if (_discardTokens <= 0)
+        if (_tokens <= 0)
         {
             Debug.LogWarning("Cannot discard: No tokens left");
             return;
@@ -545,12 +598,12 @@ public class Deck : MonoBehaviour
             return;
         }
          
-        Debug.Log("Discarding card... Tokens before: " + _discardTokens);
-        _discardTokens--;
+        Debug.Log("Discarding card... Tokens before: " + _tokens);
+        _tokens--;
          
         playerHand.DiscardSelectedCard();
          
-        UpdateDiscardTokensUI();
+        UpdateTokensUI();
         UpdateDiscardButtonState();
          
         int playerPoints = GetPlayerPoints();
@@ -563,11 +616,219 @@ public class Deck : MonoBehaviour
         }
     }
     
-    private void UpdateDiscardTokensUI()
+    private void UpdateTokensUI()
     {
-        if (discardTokensText != null)
+        if (tokensText != null)
         {
-            discardTokensText.text = "Discard Tokens: " + _discardTokens;
+            tokensText.text = "Tokens: " + _tokens;
+        }
+    }
+    
+    // Update peek button state
+    private void UpdatePeekButtonState()
+    {
+        if (peekButton != null)
+        {
+            // Only enable if: has tokens, game is active, not currently peeking, and hasn't used peek this round
+            peekButton.interactable = (_tokens > 0 && hitButton.interactable && !_isPeeking && !_hasUsedPeekThisRound);
+            
+            // Visual feedback on button
+            var buttonImage = peekButton.GetComponent<Image>();
+            if (buttonImage != null)
+            {
+                if (peekButton.interactable)
+                {
+                    buttonImage.color = Color.white;
+                }
+                else
+                {
+                    buttonImage.color = new Color(0.7f, 0.7f, 0.7f);
+                }
+            }
+        }
+    }
+    
+    // Peek at dealer's card functionality
+    public void PeekAtDealerCard()
+    {
+        Debug.Log("PeekAtDealerCard method called, current tokens: " + _tokens);
+        
+        if (_tokens <= 0 || _isPeeking || _hasUsedPeekThisRound)
+        {
+            Debug.LogWarning("Cannot peek: No tokens left, already peeking, or already used peek this round");
+            return;
+        }
+        
+        _tokens--; // Use a token to peek
+        _hasUsedPeekThisRound = true; // Mark peek as used for this round
+        Debug.Log("Peeking at dealer card... Tokens after deduction: " + _tokens);
+        UpdateTokensUI();
+        UpdatePeekButtonState();
+        UpdateDiscardButtonState();
+        
+        // Temporarily flip the dealer's card
+        StartCoroutine(PeekCoroutine());
+    }
+    
+    private IEnumerator PeekCoroutine()
+    {
+        _isPeeking = true;
+        peekButton.interactable = false;
+        
+        Debug.Log("Starting peek coroutine");
+        
+        // Get dealer's hand
+        CardHand dealerHand = dealer.GetComponent<CardHand>();
+        
+        // Save current state
+        List<GameObject> cards = dealerHand.cards;
+        if (cards.Count > 0)
+        {
+            GameObject firstCard = cards[0];
+            CardModel cardModel = firstCard.GetComponent<CardModel>();
+            SpriteRenderer spriteRenderer = firstCard.GetComponent<SpriteRenderer>();
+            
+            // Store original sprite
+            Sprite originalSprite = spriteRenderer.sprite;
+            bool wasShowingBack = (originalSprite == cardModel.cardBack);
+            
+            Debug.Log("Card was showing " + (wasShowingBack ? "back" : "front"));
+            
+            // If card is showing back, flip it to show front
+            if (wasShowingBack)
+            {
+                spriteRenderer.sprite = cardModel.cardFront;
+                Debug.Log("Flipped card to show front");
+                UpdateScoreDisplays();
+            }
+            
+            // Wait for the peek duration
+            yield return new WaitForSeconds(Constants.PeekDuration);
+            
+            Debug.Log("Peek duration finished, checking if game is still in progress");
+            
+            // If game is still in progress and card was originally showing back, flip it back
+            if (hitButton.interactable && wasShowingBack)
+            {
+                spriteRenderer.sprite = cardModel.cardBack;
+                Debug.Log("Flipped card back to show back");
+                UpdateScoreDisplays();
+            }
+            else
+            {
+                Debug.Log("Not flipping card back: " + 
+                    (!hitButton.interactable ? "game has ended" : "card was already showing front"));
+            }
+        }
+        else
+        {
+            Debug.LogWarning("No dealer cards to peek at");
+            yield return new WaitForSeconds(Constants.PeekDuration);
+        }
+        
+        _isPeeking = false;
+        UpdatePeekButtonState();
+        Debug.Log("Peek coroutine completed");
+    }
+
+    // Make UpdateTransformButtonState public
+    public void UpdateTransformButtonState()
+    {
+        if (transformButton != null)
+        {
+            CardHand playerHand = player.GetComponent<CardHand>();
+            int selectedCount = playerHand ? playerHand.GetSelectedCardCount() : 0;
+            
+            bool hasTokens = _tokens > 0;
+            bool gameActive = hitButton.interactable;
+            bool has2CardsSelected = selectedCount == Constants.MaxSelectedCards;
+            bool notUsedThisRound = !_hasUsedTransformThisRound;
+            
+            // Enable only if: has tokens, game is active, exactly 2 cards selected, and hasn't used transform this round
+            transformButton.interactable = (hasTokens && gameActive && 
+                                         has2CardsSelected && 
+                                         notUsedThisRound);
+            
+            // Debug log to track transformation button state
+            if (has2CardsSelected)
+            {
+                string reason = "";
+                if (!hasTokens) reason += "No tokens left. ";
+                if (!gameActive) reason += "Game not active. ";
+                if (!notUsedThisRound) reason += "Already used transformation this round. ";
+                
+                if (reason == "")
+                    Debug.Log("Transform button enabled: Tokens=" + _tokens + ", Selected=" + selectedCount);
+                else
+                    Debug.Log("Transform button disabled: " + reason + "Tokens=" + _tokens + ", Selected=" + selectedCount);
+            }
+            
+            // Visual feedback on button
+            var buttonImage = transformButton.GetComponent<Image>();
+            if (buttonImage != null)
+            {
+                if (transformButton.interactable)
+                {
+                    buttonImage.color = Color.white;
+                }
+                else
+                {
+                    buttonImage.color = new Color(0.7f, 0.7f, 0.7f);
+                }
+            }
+        }
+    }
+    
+    // Transform selected cards functionality
+    public void TransformSelectedCards()
+    {
+        Debug.Log("TransformSelectedCards method called, current tokens: " + _tokens + ", Used this round: " + _hasUsedTransformThisRound);
+        
+        CardHand playerHand = player.GetComponent<CardHand>();
+        int selectedCount = playerHand ? playerHand.GetSelectedCardCount() : 0;
+        
+        // Detailed check with better error messages
+        if (_tokens <= 0)
+        {
+            Debug.LogWarning("Cannot transform: No tokens left");
+            return;
+        }
+        
+        if (selectedCount != Constants.MaxSelectedCards)
+        {
+            Debug.LogWarning("Cannot transform: Need exactly " + Constants.MaxSelectedCards + " cards selected (currently " + selectedCount + ")");
+            return;
+        }
+        
+        if (_hasUsedTransformThisRound)
+        {
+            Debug.LogWarning("Cannot transform: Already used transformation this round");
+            return;
+        }
+        
+        // Use a token for transformation
+        _tokens--;
+        _hasUsedTransformThisRound = true;
+        Debug.Log("Transforming cards... Tokens after deduction: " + _tokens + ", Used this round: " + _hasUsedTransformThisRound);
+        
+        // Perform the transformation
+        playerHand.TransformSelectedCards();
+         
+        UpdateTokensUI();
+        UpdateTransformButtonState();
+        UpdateDiscardButtonState();
+        UpdateScoreDisplays();
+         
+        int playerPoints = GetPlayerPoints();
+        Debug.Log("Player points after transformation: " + playerPoints);
+        
+        if (playerPoints > Constants.Blackjack)
+        {
+            EndHand(WinCode.DealerWins);
+        }
+        else if (playerPoints == Constants.Blackjack)
+        {
+            EndHand(WinCode.PlayerWins);
         }
     }
 }

@@ -40,6 +40,15 @@ public class CardModel : MonoBehaviour
     {
         spriteRenderer.sprite = showFace ? cardFront : cardBack;
     }
+    
+    public void UpdateSprite()
+    {
+        // Update sprite to match current cardFront value
+        if (spriteRenderer.sprite == cardFront || spriteRenderer.sprite == null)
+        {
+            spriteRenderer.sprite = cardFront;
+        }
+    }
      
     private void OnMouseEnter()
     { 
@@ -68,15 +77,29 @@ public class CardModel : MonoBehaviour
          
         if (Input.GetMouseButton(0))
         {
-            if (isSelected)
+            CardHand hand = transform.parent.GetComponent<CardHand>();
+            
+            // Allow selecting if not already selected OR if we haven't reached max selections yet
+            if (!isSelected || hand.GetSelectedCardCount() < Constants.MaxSelectedCards)
             {
-                DeselectCard();
-                Debug.Log("LEFT-CLICK: Card deselected: " + gameObject.name);
-            }
-            else
-            {
-                SelectCard();
-                Debug.Log("LEFT-CLICK: Card selected: " + gameObject.name);
+                if (isSelected)
+                {
+                    DeselectCard();
+                    Debug.Log("LEFT-CLICK: Card deselected: " + gameObject.name);
+                }
+                else
+                {
+                    // Only select if we're below the maximum number of selected cards
+                    if (hand.GetSelectedCardCount() < Constants.MaxSelectedCards)
+                    {
+                        SelectCard();
+                        Debug.Log("LEFT-CLICK: Card selected: " + gameObject.name + " (Selected count: " + hand.GetSelectedCardCount() + ")");
+                    }
+                    else
+                    {
+                        Debug.Log("Cannot select more than " + Constants.MaxSelectedCards + " cards at once");
+                    }
+                }
             }
         } 
         else if (Input.GetMouseButton(1))
@@ -109,6 +132,9 @@ public class CardModel : MonoBehaviour
             if (deck != null)
             {
                 deck.UpdateDiscardButtonState();
+                
+                // Also update transform button state
+                deck.UpdateTransformButtonState();
             }
         }
     }
@@ -130,6 +156,9 @@ public class CardModel : MonoBehaviour
             if (deck != null)
             {
                 deck.UpdateDiscardButtonState();
+                
+                // Also update transform button state
+                deck.UpdateTransformButtonState();
             }
         }
     }

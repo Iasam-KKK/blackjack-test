@@ -199,4 +199,108 @@ public class CardHand : MonoBehaviour
     {
         return cards.Count < Constants.MaxCardsInHand;
     }
+
+    public int GetSelectedCardCount()
+    {
+        int count = 0;
+        foreach (GameObject cardObj in cards)
+        {
+            if (cardObj.GetComponent<CardModel>().isSelected)
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+    
+    public List<GameObject> GetSelectedCards()
+    {
+        List<GameObject> selectedCards = new List<GameObject>();
+        foreach (GameObject cardObj in cards)
+        {
+            if (cardObj.GetComponent<CardModel>().isSelected)
+            {
+                selectedCards.Add(cardObj);
+            }
+        }
+        return selectedCards;
+    }
+    
+    public void TransformSelectedCards()
+    {
+        List<GameObject> selectedCards = GetSelectedCards();
+        
+        if (selectedCards.Count != Constants.MaxSelectedCards)
+        {
+            Debug.LogError("TransformSelectedCards requires exactly " + Constants.MaxSelectedCards + " selected cards!");
+            return;
+        }
+        
+        // Get the two selected cards
+        GameObject firstCardObj = selectedCards[0];  // The card to be replaced
+        GameObject secondCardObj = selectedCards[1]; // The card to be duplicated
+        
+        CardModel firstCard = firstCardObj.GetComponent<CardModel>();
+        CardModel secondCard = secondCardObj.GetComponent<CardModel>();
+        
+        // Store the original scale of cards in the hand
+        Vector3 originalScale = secondCardObj.transform.localScale;
+        
+        Debug.Log("Transforming card with value " + firstCard.value + " into duplicate of card with value " + secondCard.value);
+        Debug.Log("Original card scale: " + originalScale);
+        
+        // Store the position of the first card
+        Vector3 firstCardPosition = firstCardObj.transform.position;
+        
+        // Visual effect for transformation
+        firstCardObj.transform.DOScale(1.2f, 0.3f).SetEase(Ease.OutQuad).OnComplete(() => {
+            // Deselect the second card
+            secondCard.DeselectCard();
+            
+            // Create a visual copy of the second card
+            GameObject newCardObj = Instantiate(card, transform);
+            CardModel newCard = newCardObj.GetComponent<CardModel>();
+            
+            // Set properties to match the second card
+            newCard.value = secondCard.value;
+            newCard.cardFront = secondCard.cardFront;
+            
+            // Position at the first card's location
+            newCardObj.transform.position = firstCardPosition;
+            newCardObj.transform.localScale = Vector3.zero; // Start small for grow effect
+            
+            // Remove the first card from the list before destroying it
+            cards.Remove(firstCardObj);
+            
+            // Add the new card to our hand
+            cards.Add(newCardObj);
+            newCardObj.name = "Card_Transformed";
+            
+            // Destroy the original first card
+            Destroy(firstCardObj);
+            
+            // Grow the new card with animation to the exact same scale as other cards
+            newCardObj.transform.DOScale(originalScale, 0.3f).SetEase(Ease.OutBack).OnComplete(() => {
+                // Ensure the card has the exact same scale as other cards
+                newCardObj.transform.localScale = originalScale;
+                Debug.Log("New card scale after animation: " + newCardObj.transform.localScale);
+            });
+            
+            // Show the front face
+            newCard.ToggleFace(true);
+            
+            // Rearrange cards in hand
+            ArrangeCardsInWindow();
+            
+            // Update hand points
+            UpdatePoints();
+            
+            // Update UI displays
+            Deck deck = FindObjectOfType<Deck>();
+            if (deck != null)
+            {
+                deck.UpdateScoreDisplays();
+            }
+        });
+    }
 }
