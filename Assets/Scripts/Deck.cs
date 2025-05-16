@@ -71,28 +71,58 @@ public class Deck : MonoBehaviour
     {
         ShuffleCards();
         UpdateTokensUI();
+
+        bet.text = " " + _bet.ToString() + " $";
+        balance.text = " " + _balance.ToString() + " $";
         
-        // Ensure buttons are properly configured
+        // Set up dealer and player hands
+        if (dealer != null)
+        {
+            CardHand dealerHand = dealer.GetComponent<CardHand>();
+            if (dealerHand != null)
+            {
+                dealerHand.isDealer = true; // Explicitly set dealer flag
+                Debug.Log("Set up dealer hand, isDealer=" + dealerHand.isDealer);
+            }
+            else
+            {
+                Debug.LogError("Dealer GameObject does not have a CardHand component!");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Dealer reference missing!");
+        }
+        
+        if (player != null)
+        {
+            CardHand playerHand = player.GetComponent<CardHand>();
+            if (playerHand != null)
+            {
+                playerHand.isDealer = false; // Explicitly set player flag
+                Debug.Log("Set up player hand, isDealer=" + playerHand.isDealer);
+            }
+            else
+            {
+                Debug.LogError("Player GameObject does not have a CardHand component!");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Player reference missing!");
+        }
+        
+        // Configure button listeners
         if (peekButton != null)
         {
             peekButton.onClick.RemoveAllListeners();
             peekButton.onClick.AddListener(PeekAtDealerCard);
-            Debug.Log("Peek button listener configured");
-        }
-        else
-        {
-            Debug.LogError("Peek button reference is missing!");
         }
         
         if (transformButton != null)
         {
             transformButton.onClick.RemoveAllListeners();
             transformButton.onClick.AddListener(TransformSelectedCards);
-            Debug.Log("Transform button listener configured");
-        }
-        else
-        {
-            Debug.LogError("Transform button reference is missing!");
         }
         
         StartGame();
@@ -323,14 +353,28 @@ public class Deck : MonoBehaviour
 
     private void PushDealer()
     {
+        // Check if we're reaching the end of the deck and need to reshuffle
+        if (cardIndex >= values.Length - 1)
+        {
+            Debug.Log("Dealer drawing - Deck is almost empty, reshuffling...");
+            ShuffleCards();
+            cardIndex = 0;
+        }
+
         dealer.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex]);
         cardIndex++;
-        // Potentially update dealer score here if their first card was visible,
-        // but typical Blackjack rules hide it. So, update when it's flipped.
     }
 
     private void PushPlayer()
     {
+        // Check if we're reaching the end of the deck and need to reshuffle
+        if (cardIndex >= values.Length - 1)
+        {
+            Debug.Log("Player drawing - Deck is almost empty, reshuffling...");
+            ShuffleCards();
+            cardIndex = 0;
+        }
+
         player.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex]);
         cardIndex++;
         UpdateScoreDisplays();  
@@ -418,8 +462,8 @@ public class Deck : MonoBehaviour
         lowerBetButton.interactable = false;
  
         _bet = 0;
-        bet.text = "Bet: 0 $";
-        balance.text = "Balance: " + _balance + " $";
+        bet.text = " " + _bet.ToString() + " $";
+        balance.text = " " + _balance + " $";
         UpdateScoreDisplays();  
 
         if (_balance == 0)
