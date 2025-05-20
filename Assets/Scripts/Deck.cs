@@ -19,7 +19,6 @@ internal static class Constants
     public const uint BetIncrement = 10;
     public const uint BetWinMultiplier = 2;
     public const uint NewGameCountdown = 5;
-    public const int InitialTokens = 3; // Starting number of tokens for all tarot card effects
     public const int MaxCardsInHand = 5; // Maximum number of cards in a hand
     public const float PeekDuration = 2.0f; // Duration in seconds to peek at dealer's card
     public const int MaxSelectedCards = 2; // Maximum number of cards that can be selected at once for transformation
@@ -46,7 +45,6 @@ public class Deck : MonoBehaviour
     public Text probMessage;
     public Text playerScoreText;
     public Text dealerScoreText;
-    public Text tokensText; // Single token UI for all tarot card effects
     public Button peekButton; // Eye button for peeking
     public Button transformButton; // Transformation button for card transformation
     public Button raiseBetButton;
@@ -55,11 +53,20 @@ public class Deck : MonoBehaviour
     public Text bet;
     private uint _balance = Constants.InitialBalance;
     private uint _bet;
- 
-    private int _tokens = Constants.InitialTokens;
     private bool _isPeeking = false;
-    private bool _hasUsedPeekThisRound = false; // Track if peek has been used in current round
-    private bool _hasUsedTransformThisRound = false; // Track if transform has been used in current round
+    public bool _hasUsedPeekThisRound = false; // Track if peek has been used in current round
+    public bool _hasUsedTransformThisRound = false; // Track if transform has been used in current round
+
+    // Public property to access balance
+    public uint Balance
+    {
+        get { return _balance; }
+        set 
+        { 
+            _balance = value;
+            UpdateBalanceDisplay();
+        }
+    }
 
     public int[] values = new int[Constants.DeckCards];
     int cardIndex = 0;  
@@ -70,10 +77,9 @@ public class Deck : MonoBehaviour
     private void Start()
     {
         ShuffleCards();
-        UpdateTokensUI();
-
+        
         bet.text = " " + _bet.ToString() + " $";
-        balance.text = " " + _balance.ToString() + " $";
+        UpdateBalanceDisplay();
         
         // Set up dealer and player hands
         if (dealer != null)
@@ -437,13 +443,11 @@ public class Deck : MonoBehaviour
         {
             case WinCode.DealerWins:
                 finalMessage.text = "You lose!";
-                _balance -= _bet;
+                Balance -= _bet;
                 break;
             case WinCode.PlayerWins:
                 finalMessage.text = "You win!";
-                _balance += Constants.BetWinMultiplier * _bet; 
-                _tokens++; // Add one token on win
-                UpdateTokensUI();
+                Balance += Constants.BetWinMultiplier * _bet; 
                 break;
             case WinCode.Draw:
                 finalMessage.text = "Draw!";
@@ -463,10 +467,10 @@ public class Deck : MonoBehaviour
  
         _bet = 0;
         bet.text = " " + _bet.ToString() + " $";
-        balance.text = " " + _balance + " $";
+        UpdateBalanceDisplay();
         UpdateScoreDisplays();  
 
-        if (_balance == 0)
+        if (Balance == 0)
         {
             finalMessage.text += "\n - GAME OVER -";
             StartCoroutine(NewGame());
@@ -492,6 +496,13 @@ public class Deck : MonoBehaviour
         dealer.GetComponent<CardHand>().Clear();          
         cardIndex = 0;
         
+        // Reset tarot cards
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager != null)
+        {
+            shopManager.ResetTarotCardsForNewRound();
+        }
+        
         ShuffleCards();
         StartGame();
         UpdateScoreDisplays();  
@@ -499,10 +510,10 @@ public class Deck : MonoBehaviour
 
     public void RaiseBet()
     {
-        if (_bet < _balance)
+        if (_bet < Balance)
         {
             _bet += Constants.BetIncrement;
-            bet.text = "Bet: " + _bet.ToString() + " $";
+            bet.text = _bet.ToString() + " $";
             playAgainButton.interactable = true;
         }
     }
@@ -512,7 +523,7 @@ public class Deck : MonoBehaviour
         if (_bet > 0)
         {
             _bet -= Constants.BetIncrement;
-            bet.text = "Bet: " + _bet.ToString() + " $";
+            bet.text = _bet.ToString() + " $";
         }
     }
 
@@ -566,13 +577,13 @@ public class Deck : MonoBehaviour
         {
             bool hasSelectedCard = playerHand.HasSelectedCard();
              
-            if (discardButton != null && discardButton.interactable != (_tokens > 0 && hasSelectedCard))
+            if (discardButton != null && discardButton.interactable != hasSelectedCard)
             {
                 UpdateDiscardButtonState();
                  
                 if (hasSelectedCard)
                 {
-                    Debug.Log("Card selected - Discard button should be enabled: " + (_tokens > 0));
+                    Debug.Log("Card selected - Discard button should be enabled: " + hasSelectedCard);
                 }
             }
         }
@@ -601,7 +612,7 @@ public class Deck : MonoBehaviour
         if (discardButton != null)
         {
             bool hasSelectedCard = player.GetComponent<CardHand>().HasSelectedCard();
-            discardButton.interactable = (_tokens > 0 && hasSelectedCard);
+            discardButton.interactable = hasSelectedCard;
             
             // Visual feedback on button
             var buttonImage = discardButton.GetComponent<Image>();
@@ -630,11 +641,6 @@ public class Deck : MonoBehaviour
         Debug.Log("DiscardSelectedCard method called");
         
         CardHand playerHand = player.GetComponent<CardHand>();
-        if (_tokens <= 0)
-        {
-            Debug.LogWarning("Cannot discard: No tokens left");
-            return;
-        }
         
         if (!playerHand.HasSelectedCard())
         {
@@ -642,12 +648,10 @@ public class Deck : MonoBehaviour
             return;
         }
          
-        Debug.Log("Discarding card... Tokens before: " + _tokens);
-        _tokens--;
+        Debug.Log("Discarding card...");
          
         playerHand.DiscardSelectedCard();
          
-        UpdateTokensUI();
         UpdateDiscardButtonState();
          
         int playerPoints = GetPlayerPoints();
@@ -660,21 +664,13 @@ public class Deck : MonoBehaviour
         }
     }
     
-    private void UpdateTokensUI()
-    {
-        if (tokensText != null)
-        {
-            tokensText.text = "Tokens: " + _tokens;
-        }
-    }
-    
     // Update peek button state
     private void UpdatePeekButtonState()
     {
         if (peekButton != null)
         {
-            // Only enable if: has tokens, game is active, not currently peeking, and hasn't used peek this round
-            peekButton.interactable = (_tokens > 0 && hitButton.interactable && !_isPeeking && !_hasUsedPeekThisRound);
+            // Only enable if: game is active, not currently peeking, and hasn't used peek this round
+            peekButton.interactable = (hitButton.interactable && !_isPeeking && !_hasUsedPeekThisRound);
             
             // Visual feedback on button
             var buttonImage = peekButton.GetComponent<Image>();
@@ -695,18 +691,16 @@ public class Deck : MonoBehaviour
     // Peek at dealer's card functionality
     public void PeekAtDealerCard()
     {
-        Debug.Log("PeekAtDealerCard method called, current tokens: " + _tokens);
+        Debug.Log("PeekAtDealerCard method called");
         
-        if (_tokens <= 0 || _isPeeking || _hasUsedPeekThisRound)
+        if (_isPeeking || _hasUsedPeekThisRound)
         {
-            Debug.LogWarning("Cannot peek: No tokens left, already peeking, or already used peek this round");
+            Debug.LogWarning("Cannot peek: Already peeking or already used peek this round");
             return;
         }
         
-        _tokens--; // Use a token to peek
         _hasUsedPeekThisRound = true; // Mark peek as used for this round
-        Debug.Log("Peeking at dealer card... Tokens after deduction: " + _tokens);
-        UpdateTokensUI();
+        Debug.Log("Peeking at dealer card...");
         UpdatePeekButtonState();
         UpdateDiscardButtonState();
         
@@ -783,28 +777,24 @@ public class Deck : MonoBehaviour
             CardHand playerHand = player.GetComponent<CardHand>();
             int selectedCount = playerHand ? playerHand.GetSelectedCardCount() : 0;
             
-            bool hasTokens = _tokens > 0;
             bool gameActive = hitButton.interactable;
             bool has2CardsSelected = selectedCount == Constants.MaxSelectedCards;
             bool notUsedThisRound = !_hasUsedTransformThisRound;
             
-            // Enable only if: has tokens, game is active, exactly 2 cards selected, and hasn't used transform this round
-            transformButton.interactable = (hasTokens && gameActive && 
-                                         has2CardsSelected && 
-                                         notUsedThisRound);
+            // Enable only if: game is active, exactly 2 cards selected, and hasn't used transform this round
+            transformButton.interactable = (gameActive && has2CardsSelected && notUsedThisRound);
             
             // Debug log to track transformation button state
             if (has2CardsSelected)
             {
                 string reason = "";
-                if (!hasTokens) reason += "No tokens left. ";
                 if (!gameActive) reason += "Game not active. ";
                 if (!notUsedThisRound) reason += "Already used transformation this round. ";
                 
                 if (reason == "")
-                    Debug.Log("Transform button enabled: Tokens=" + _tokens + ", Selected=" + selectedCount);
+                    Debug.Log("Transform button enabled: Selected=" + selectedCount);
                 else
-                    Debug.Log("Transform button disabled: " + reason + "Tokens=" + _tokens + ", Selected=" + selectedCount);
+                    Debug.Log("Transform button disabled: " + reason + "Selected=" + selectedCount);
             }
             
             // Visual feedback on button
@@ -826,18 +816,12 @@ public class Deck : MonoBehaviour
     // Transform selected cards functionality
     public void TransformSelectedCards()
     {
-        Debug.Log("TransformSelectedCards method called, current tokens: " + _tokens + ", Used this round: " + _hasUsedTransformThisRound);
+        Debug.Log("TransformSelectedCards method called, Used this round: " + _hasUsedTransformThisRound);
         
         CardHand playerHand = player.GetComponent<CardHand>();
         int selectedCount = playerHand ? playerHand.GetSelectedCardCount() : 0;
         
         // Detailed check with better error messages
-        if (_tokens <= 0)
-        {
-            Debug.LogWarning("Cannot transform: No tokens left");
-            return;
-        }
-        
         if (selectedCount != Constants.MaxSelectedCards)
         {
             Debug.LogWarning("Cannot transform: Need exactly " + Constants.MaxSelectedCards + " cards selected (currently " + selectedCount + ")");
@@ -851,14 +835,12 @@ public class Deck : MonoBehaviour
         }
         
         // Use a token for transformation
-        _tokens--;
         _hasUsedTransformThisRound = true;
-        Debug.Log("Transforming cards... Tokens after deduction: " + _tokens + ", Used this round: " + _hasUsedTransformThisRound);
+        Debug.Log("Transforming cards... Used this round: " + _hasUsedTransformThisRound);
         
         // Perform the transformation
         playerHand.TransformSelectedCards();
          
-        UpdateTokensUI();
         UpdateTransformButtonState();
         UpdateDiscardButtonState();
         UpdateScoreDisplays();
@@ -873,6 +855,15 @@ public class Deck : MonoBehaviour
         else if (playerPoints == Constants.Blackjack)
         {
             EndHand(WinCode.PlayerWins);
+        }
+    }
+
+    // Update balance display
+    private void UpdateBalanceDisplay()
+    {
+        if (balance != null)
+        {
+            balance.text = " " + _balance.ToString() + " $";
         }
     }
 }

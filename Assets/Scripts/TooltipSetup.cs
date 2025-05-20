@@ -29,27 +29,46 @@ public class TooltipSetup : MonoBehaviour
         Image panelImage = tooltipPanel.AddComponent<Image>();
         panelImage.color = new Color(0, 0, 0, 0.8f);
         
-        // Create tooltip text
-        GameObject textObj = new GameObject("TooltipText");
-        textObj.transform.SetParent(tooltipPanel.transform, false);
+        // Create tooltip title
+        GameObject titleObj = new GameObject("TitleText");
+        titleObj.transform.SetParent(tooltipPanel.transform, false);
         
-        RectTransform textRectTransform = textObj.AddComponent<RectTransform>();
-        textRectTransform.anchorMin = new Vector2(0, 0);
-        textRectTransform.anchorMax = new Vector2(1, 1);
-        textRectTransform.offsetMin = new Vector2(10, 10);
-        textRectTransform.offsetMax = new Vector2(-10, -10);
+        RectTransform titleRectTransform = titleObj.AddComponent<RectTransform>();
+        titleRectTransform.anchorMin = new Vector2(0, 0.75f);
+        titleRectTransform.anchorMax = new Vector2(1, 1);
+        titleRectTransform.offsetMin = new Vector2(10, 5);
+        titleRectTransform.offsetMax = new Vector2(-10, -5);
         
-        Text tooltipText = textObj.AddComponent<Text>();
-        tooltipText.alignment = TextAnchor.MiddleCenter;
-        tooltipText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-        tooltipText.fontSize = 16;
-        tooltipText.color = Color.white;
-        tooltipText.supportRichText = true;
+        Text titleText = titleObj.AddComponent<Text>();
+        titleText.alignment = TextAnchor.UpperCenter;
+        titleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        titleText.fontSize = 18;
+        titleText.fontStyle = FontStyle.Bold;
+        titleText.color = Color.white;
+        titleText.supportRichText = true;
+        
+        // Create tooltip description
+        GameObject descObj = new GameObject("DescriptionText");
+        descObj.transform.SetParent(tooltipPanel.transform, false);
+        
+        RectTransform descRectTransform = descObj.AddComponent<RectTransform>();
+        descRectTransform.anchorMin = new Vector2(0, 0);
+        descRectTransform.anchorMax = new Vector2(1, 0.75f);
+        descRectTransform.offsetMin = new Vector2(10, 10);
+        descRectTransform.offsetMax = new Vector2(-10, -5);
+        
+        Text descriptionText = descObj.AddComponent<Text>();
+        descriptionText.alignment = TextAnchor.UpperLeft;
+        descriptionText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        descriptionText.fontSize = 16;
+        descriptionText.color = Color.white;
+        descriptionText.supportRichText = true;
         
         // Add TooltipManager to canvas
         TooltipManager tooltipManager = canvas.gameObject.AddComponent<TooltipManager>();
         tooltipManager.tooltipPanel = tooltipPanel;
-        tooltipManager.tooltipText = tooltipText;
+        tooltipManager.titleText = titleText;
+        tooltipManager.descriptionText = descriptionText;
         
         // Hide initially
         tooltipPanel.SetActive(false);

@@ -3,14 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using DG.Tweening;
 
 public class TooltipManager : MonoBehaviour
 {
     public static TooltipManager Instance { get; private set; }
     
-    [Header("Tooltip UI")]
+    [Header("Tooltip Components")]
     public GameObject tooltipPanel;
-    public Text tooltipText;
+    public Text titleText;
+    public Text descriptionText;
+    
+    [Header("Settings")]
+    public float offset = 20f;
+    public float fadeTime = 0.1f;
+    
+    // For smooth fade in/out
+    private CanvasGroup canvasGroup;
     
     [Header("Tooltip Descriptions")]
     [TextArea(3, 5)]
@@ -29,17 +38,21 @@ public class TooltipManager : MonoBehaviour
         {
             Instance = this;
         }
-        else
+        else if (Instance != this)
         {
             Destroy(gameObject);
             return;
         }
         
-        // Hide tooltip panel initially
-        if (tooltipPanel != null)
+        // Get or add canvas group for fading
+        canvasGroup = tooltipPanel.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
         {
-            tooltipPanel.SetActive(false);
+            canvasGroup = tooltipPanel.AddComponent<CanvasGroup>();
         }
+        
+        // Hide tooltip initially
+        HideTooltip();
         
         // Initialize descriptions
         tooltipDescriptions.Add("TheEye", peekDescription);
@@ -47,50 +60,90 @@ public class TooltipManager : MonoBehaviour
         tooltipDescriptions.Add("Discard", discardDescription);
     }
     
-    public void ShowTooltip(string cardName, Vector3 position)
+    public void ShowTooltip(string title, string description, Vector3 position)
     {
-        if (tooltipPanel == null || tooltipText == null)
+        // Check for null references
+        if (tooltipPanel == null || titleText == null || descriptionText == null)
         {
-            Debug.LogWarning("Tooltip UI references are missing!");
+            Debug.LogWarning("TooltipManager has missing references! Check Inspector assignments.");
             return;
         }
+
+        // Set text
+        titleText.text = title;
+        descriptionText.text = description;
         
-        if (tooltipDescriptions.TryGetValue(cardName, out string description))
-        {
-            tooltipText.text = description;
-            tooltipPanel.SetActive(true);
-            
-            // Position tooltip near the card but ensure it stays on screen
-            RectTransform rectTransform = tooltipPanel.GetComponent<RectTransform>();
-            if (rectTransform != null)
-            {
-                // Convert world position to screen position
-                Vector3 screenPos = Camera.main.WorldToScreenPoint(position);
-                
-                // Adjust position to ensure visibility
-                screenPos.y += 50; // Offset up a bit
-                
-                // Constrain to screen edges
-                float width = rectTransform.rect.width;
-                float height = rectTransform.rect.height;
-                
-                screenPos.x = Mathf.Clamp(screenPos.x, width/2, Screen.width - width/2);
-                screenPos.y = Mathf.Clamp(screenPos.y, height/2, Screen.height - height/2);
-                
-                rectTransform.position = screenPos;
-            }
-        }
-        else
-        {
-            Debug.LogWarning("No tooltip description found for " + cardName);
-        }
+        // Position tooltip
+        PositionTooltip(position);
+        
+        // Show tooltip
+        tooltipPanel.SetActive(true);
+        
+        // Fade in
+        canvasGroup.alpha = 0f;
+        DOTween.Kill(tooltipPanel);
+        canvasGroup.DOFade(1f, fadeTime);
+    }
+    
+    // Overload for backward compatibility
+    public void ShowTooltip(string title, Vector3 position)
+    {
+        ShowTooltip(title, "", position);
     }
     
     public void HideTooltip()
     {
-        if (tooltipPanel != null)
-        {
+        // Fade out and hide
+        DOTween.Kill(tooltipPanel);
+        canvasGroup.DOFade(0f, fadeTime).OnComplete(() => {
             tooltipPanel.SetActive(false);
+        });
+    }
+    
+    private void PositionTooltip(Vector3 targetPosition)
+    {
+        // Get canvas for screen space positioning
+        Canvas canvas = GetComponentInParent<Canvas>();
+        
+        if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+        {
+            // For screen space overlay
+            Vector2 screenPoint = targetPosition;
+            
+            // Get tooltip size
+            RectTransform tooltipRect = tooltipPanel.GetComponent<RectTransform>();
+            Vector2 tooltipSize = tooltipRect.sizeDelta;
+            
+            // Position tooltip to avoid going off-screen
+            float screenWidth = Screen.width;
+            float screenHeight = Screen.height;
+            
+            // Adjust X position to keep tooltip on screen
+            if (screenPoint.x + tooltipSize.x + offset > screenWidth)
+            {
+                screenPoint.x = screenPoint.x - tooltipSize.x - offset;
+            }
+            else
+            {
+                screenPoint.x += offset;
+            }
+            
+            // Adjust Y position to keep tooltip on screen
+            if (screenPoint.y + tooltipSize.y + offset > screenHeight)
+            {
+                screenPoint.y = screenPoint.y - tooltipSize.y - offset;
+            }
+            else
+            {
+                screenPoint.y += offset;
+            }
+            
+            tooltipPanel.transform.position = screenPoint;
+        }
+        else
+        {
+            // For world space or camera space canvas
+            tooltipPanel.transform.position = targetPosition + new Vector3(offset, offset, 0);
         }
     }
 } 
