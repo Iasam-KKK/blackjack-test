@@ -147,8 +147,13 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     {
         if (deck != null && deck.Balance >= (uint)cardData.price)
         {
+            uint cost = (uint)cardData.price;
+            
             // Deduct balance
-            deck.Balance -= (uint)cardData.price;
+            deck.Balance -= cost;
+            
+            // Notify the deck about the purchase
+            deck.OnCardPurchased(cost);
             
             // Notify shop manager (optional)
             if (shopManager != null)

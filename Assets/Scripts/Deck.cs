@@ -22,6 +22,26 @@ internal static class Constants
     public const int MaxCardsInHand = 5; // Maximum number of cards in a hand
     public const float PeekDuration = 2.0f; // Duration in seconds to peek at dealer's card
     public const int MaxSelectedCards = 2; // Maximum number of cards that can be selected at once for transformation
+    
+    // Blind progression constants
+    public const int SmallBlindRounds = 5;
+    public const uint SmallBlindGoal = 300;
+    public const int BigBlindRounds = 8;
+    public const uint BigBlindGoal = 600;
+    public const int MegaBlindRounds = 12;
+    public const uint MegaBlindGoal = 1200;
+    public const int SuperBlindRounds = 15;
+    public const uint SuperBlindGoal = 2000;
+}
+
+// Enum to track current blind level
+internal enum BlindLevel
+{
+    SmallBlind,
+    BigBlind,
+    MegaBlind,
+    SuperBlind,
+    Completed
 }
 
 internal enum WinCode 
@@ -51,11 +71,25 @@ public class Deck : MonoBehaviour
     public Button lowerBetButton;
     public Text balance;
     public Text bet;
+    public Text roundText; // Text to display current round
+    public Text blindText; // Text to display current blind
+    public Text goalText; // Text to display progress towards goal
+
     private uint _balance = Constants.InitialBalance;
     private uint _bet;
     private bool _isPeeking = false;
     public bool _hasUsedPeekThisRound = false; // Track if peek has been used in current round
     public bool _hasUsedTransformThisRound = false; // Track if transform has been used in current round
+    
+    // Blind progression variables
+    private BlindLevel _currentBlind = BlindLevel.SmallBlind;
+    private int _currentRound = 1;
+    private uint _startingBalanceForBlind;
+    private uint _goalForCurrentBlind = Constants.SmallBlindGoal;
+    private int _totalRoundsForBlind = Constants.SmallBlindRounds;
+
+    // Add a new field to track blackjack earnings
+    private long _earningsForCurrentBlind = 0;
 
     // Public property to access balance
     public uint Balance
@@ -63,8 +97,10 @@ public class Deck : MonoBehaviour
         get { return _balance; }
         set 
         { 
+            // We don't update earnings here anymore - only track in EndHand and OnCardPurchased
             _balance = value;
             UpdateBalanceDisplay();
+            UpdateGoalProgress();
         }
     }
 
@@ -78,8 +114,22 @@ public class Deck : MonoBehaviour
     {
         ShuffleCards();
         
-        bet.text = " " + _bet.ToString() + " $";
+        _startingBalanceForBlind = _balance;
+        _earningsForCurrentBlind = 0; // Reset earnings at game start
+        bet.text = _bet.ToString() + " $";
         UpdateBalanceDisplay();
+        UpdateRoundDisplay();
+        UpdateBlindDisplay();
+        UpdateGoalProgress();
+        
+        // Set the button text to "Next Round" at the start
+        SetButtonTextToNextRound();
+        
+        // Debug logging of initial state
+        DebugPrintBlindState("Initial setup");
+        
+        // Disable the next round button until the round is over
+        playAgainButton.interactable = false;
         
         // Set up dealer and player hands
         if (dealer != null)
@@ -439,23 +489,44 @@ public class Deck : MonoBehaviour
     private void EndHand(WinCode code)
     {   
         FlipDealerCard();
+        uint oldBalance = _balance;
+        long oldEarnings = _earningsForCurrentBlind;
+        
         switch (code)
         {
             case WinCode.DealerWins:
                 finalMessage.text = "You lose!";
-                Balance -= _bet;
+                if (_bet <= _balance) {
+                    // Track losses BEFORE changing balance
+                    _earningsForCurrentBlind -= _bet;
+                    Balance -= _bet;
+                } else {
+                    // Safety check
+                    Debug.LogWarning("Bet amount greater than balance! Setting balance to 0.");
+                    _earningsForCurrentBlind -= _balance; // Lost whatever was left
+                    Balance = 0;
+                }
                 break;
+                
             case WinCode.PlayerWins:
                 finalMessage.text = "You win!";
-                Balance += Constants.BetWinMultiplier * _bet; 
+                // Track winnings BEFORE changing balance
+                _earningsForCurrentBlind += Constants.BetWinMultiplier * _bet;
+                Balance += Constants.BetWinMultiplier * _bet;
                 break;
+                
             case WinCode.Draw:
                 finalMessage.text = "Draw!";
                 break;
+                
             default:
                 Debug.Assert(false);    
                 break;
         }
+        
+        Debug.Log("Hand ended: " + code + " - Old balance: " + oldBalance + ", New balance: " + _balance + 
+                  ", Bet: " + _bet + ", Balance change: " + (_balance - oldBalance) + 
+                  ", Old earnings: " + oldEarnings + ", New earnings: " + _earningsForCurrentBlind);
  
         hitButton.interactable = false;
         stickButton.interactable = false;
@@ -464,26 +535,86 @@ public class Deck : MonoBehaviour
         transformButton.interactable = false;
         raiseBetButton.interactable = false;
         lowerBetButton.interactable = false;
+        
+        // Enable the next round button when the round is over
+        playAgainButton.interactable = true;
  
         _bet = 0;
-        bet.text = " " + _bet.ToString() + " $";
+        bet.text = _bet.ToString() + " $";
         UpdateBalanceDisplay();
-        UpdateScoreDisplays();  
+        UpdateScoreDisplays();
+        UpdateGoalProgress(); // Update goal progress when hand ends
+        
+        // Debug print the blind state after updating the balance
+        DebugPrintBlindState("After EndHand");
 
         if (Balance == 0)
         {
             finalMessage.text += "\n - GAME OVER -";
+            // Change button text to "Play Again" when it's game over
+            Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+            if (buttonText != null)
+            {
+                buttonText.text = "Play Again";
+            }
             StartCoroutine(NewGame());
         }
     }
 
     public void PlayAgain()
     {   
+        // Increment round
+        _currentRound++;
+        
+        // Check if we've completed rounds for current blind
+        if (_currentRound > _totalRoundsForBlind)
+        {
+            Debug.Log("Completed all rounds for blind level " + _currentBlind + 
+                     " - Total earnings: " + _earningsForCurrentBlind + 
+                     ", Goal: " + _goalForCurrentBlind);
+                     
+            // Make sure earnings aren't negative
+            if (_earningsForCurrentBlind < 0)
+            {
+                Debug.LogWarning("Negative earnings detected at end of blind: " + _earningsForCurrentBlind + ". Resetting to 0.");
+                _earningsForCurrentBlind = 0;
+            }
+                     
+            // Check if goal was met using direct earnings tracking
+            if (_earningsForCurrentBlind >= _goalForCurrentBlind)
+            {
+                // Advance to next blind
+                AdvanceToNextBlind();
+            }
+            else
+            {
+                // Goal not met, game over
+                long displayEarnings = _earningsForCurrentBlind < 0 ? 0 : _earningsForCurrentBlind;
+                finalMessage.text = "Goal not met! Game Over!\nYou earned $" + displayEarnings + 
+                                    " but needed $" + _goalForCurrentBlind;
+                // Change button text to "Play Again" since it's game over
+                Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+                if (buttonText != null)
+                {
+                    buttonText.text = "Play Again";
+                }
+                StartCoroutine(NewGame());
+                return;
+            }
+        }
+        
+        // Update displays
+        UpdateRoundDisplay();
+        UpdateBlindDisplay();
+        UpdateGoalProgress();
+        
         // Reset GUI
         hitButton.interactable = true;
         stickButton.interactable = true;
         raiseBetButton.interactable = true;
         lowerBetButton.interactable = true;
+        // Disable the next round button during gameplay
+        playAgainButton.interactable = false;
         _hasUsedPeekThisRound = false; // Reset peek usage for new round
         _hasUsedTransformThisRound = false; // Reset transform usage for new round
         UpdateDiscardButtonState();  
@@ -858,12 +989,162 @@ public class Deck : MonoBehaviour
         }
     }
 
+    // Method to debug print the current state of the blind system
+    private void DebugPrintBlindState(string context)
+    {
+        Debug.Log(context + " - BLIND SYSTEM STATE: " +
+                 "Blind Level: " + _currentBlind + 
+                 ", Round: " + _currentRound + "/" + _totalRoundsForBlind +
+                 ", Current Balance: " + _balance + 
+                 ", Starting Balance: " + _startingBalanceForBlind +
+                 ", Earnings: " + _earningsForCurrentBlind +
+                 ", Goal: " + _goalForCurrentBlind);
+    }
+    
+    // Method to advance to the next blind level
+    private void AdvanceToNextBlind()
+    {
+        _currentRound = 1;
+        _startingBalanceForBlind = _balance; // Reset starting balance to current balance for the new blind
+        _earningsForCurrentBlind = 0; // Reset earnings for the new blind
+        
+        // Make sure button says "Next Round" when advancing to a new blind level
+        SetButtonTextToNextRound();
+        
+        DebugPrintBlindState("Before advancing blind");
+        
+        // Give player feedback about advancing to next blind
+        string successMessage = "Congratulations! You've completed the ";
+        
+        switch (_currentBlind)
+        {
+            case BlindLevel.SmallBlind:
+                successMessage += "Small Blind!";
+                _currentBlind = BlindLevel.BigBlind;
+                _goalForCurrentBlind = Constants.BigBlindGoal;
+                _totalRoundsForBlind = Constants.BigBlindRounds;
+                break;
+            case BlindLevel.BigBlind:
+                successMessage += "Big Blind!";
+                _currentBlind = BlindLevel.MegaBlind;
+                _goalForCurrentBlind = Constants.MegaBlindGoal;
+                _totalRoundsForBlind = Constants.MegaBlindRounds;
+                break;
+            case BlindLevel.MegaBlind:
+                successMessage += "Mega Blind!";
+                _currentBlind = BlindLevel.SuperBlind;
+                _goalForCurrentBlind = Constants.SuperBlindGoal;
+                _totalRoundsForBlind = Constants.SuperBlindRounds;
+                break;
+            case BlindLevel.SuperBlind:
+                successMessage += "Super Blind!";
+                _currentBlind = BlindLevel.Completed;
+                finalMessage.text = "Congratulations! You have completed all Blinds!";
+                break;
+            default:
+                break;
+        }
+        
+        // Display success message
+        finalMessage.text = successMessage;
+        
+        DebugPrintBlindState("After advancing blind");
+    }
+    
+    // Update round display
+    public void UpdateRoundDisplay()
+    {
+        if (roundText != null)
+        {
+            roundText.text = "Round " + _currentRound + "/" + _totalRoundsForBlind;
+            Debug.Log("Updated round display: " + roundText.text);
+        }
+        else
+        {
+            Debug.LogWarning("roundText is not assigned in the inspector!");
+        }
+    }
+    
+    // Update blind display
+    public void UpdateBlindDisplay()
+    {
+        if (blindText != null)
+        {
+            string blindName = "";
+            switch (_currentBlind)
+            {
+                case BlindLevel.SmallBlind:
+                    blindName = "Small Blind";
+                    break;
+                case BlindLevel.BigBlind:
+                    blindName = "Big Blind";
+                    break;
+                case BlindLevel.MegaBlind:
+                    blindName = "Mega Blind";
+                    break;
+                case BlindLevel.SuperBlind:
+                    blindName = "Super Blind";
+                    break;
+                case BlindLevel.Completed:
+                    blindName = "All Completed!";
+                    break;
+            }
+            blindText.text = blindName;
+            Debug.Log("Updated blind display: " + blindText.text);
+        }
+        else
+        {
+            Debug.LogWarning("blindText is not assigned in the inspector!");
+        }
+    }
+    
+    // Update goal progress
+    public void UpdateGoalProgress()
+    {
+        if (goalText != null)
+        {
+            // Ensure we never show negative earnings
+            long displayEarnings = _earningsForCurrentBlind;
+            if (displayEarnings < 0)
+            {
+                Debug.LogWarning("Earnings calculation resulted in negative value: " + _earningsForCurrentBlind);
+                displayEarnings = 0;
+            }
+            
+            goalText.text = "Goal $" + displayEarnings + "/" + _goalForCurrentBlind;
+            Debug.Log("Updated goal progress: " + goalText.text);
+        }
+        else
+        {
+            Debug.LogWarning("goalText is not assigned in the inspector!");
+        }
+    }
+
     // Update balance display
     private void UpdateBalanceDisplay()
     {
         if (balance != null)
         {
             balance.text = " " + _balance.ToString() + " $";
+        }
+    }
+
+    // Method for the ShopManager to call when a card is purchased
+    public void OnCardPurchased(uint cost)
+    {
+        // Card purchases do NOT affect earnings at all
+        // We just log the purchase
+        Debug.Log("Card purchased for $" + cost + " - NOT affecting goal progress");
+        DebugPrintBlindState("After card purchase");
+    }
+
+    // Method to set the button text to "Next Round"
+    private void SetButtonTextToNextRound()
+    {
+        Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = "Next Round";
         }
     }
 }
