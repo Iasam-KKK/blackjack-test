@@ -32,6 +32,12 @@ internal static class Constants
     public const uint MegaBlindGoal = 1200;
     public const int SuperBlindRounds = 15;
     public const uint SuperBlindGoal = 2000;
+    
+    // Streak system constants
+    public const int StreakMultiplierIncrement = 1;
+    public const float BaseWinMultiplier = 1.5f; // Base multiplier (bet 2, get 3 back = 1.5x)
+    public const float StreakMultiplierStep = 0.25f; // How much multiplier increases per streak level
+    public const int MaxStreakLevel = 5;
 }
 
 // Enum to track current blind level
@@ -74,6 +80,11 @@ public class Deck : MonoBehaviour
     public Text roundText; // Text to display current round
     public Text blindText; // Text to display current blind
     public Text goalText; // Text to display progress towards goal
+    
+    // UI elements for streak
+    public Text streakText;
+    public GameObject streakPanel;
+    public StreakFlameEffect streakFlameEffect;
 
     private uint _balance = Constants.InitialBalance;
     private uint _bet;
@@ -90,6 +101,10 @@ public class Deck : MonoBehaviour
 
     // Add a new field to track blackjack earnings
     private long _earningsForCurrentBlind = 0;
+
+    // Streak variables
+    private int _currentStreak = 0;
+    private int _streakMultiplier = 1;
 
     // Public property to access balance
     public uint Balance
@@ -506,17 +521,42 @@ public class Deck : MonoBehaviour
                     _earningsForCurrentBlind -= _balance; // Lost whatever was left
                     Balance = 0;
                 }
+                
+                // Reset streak on loss
+                _currentStreak = 0;
+                _streakMultiplier = 0;
                 break;
                 
             case WinCode.PlayerWins:
+                // Increment streak
+                _currentStreak++;
+                
+                // Calculate streak level and multiplier
+                _streakMultiplier = Mathf.Min(_currentStreak / Constants.StreakMultiplierIncrement, Constants.MaxStreakLevel);
+                float multiplier = CalculateWinMultiplier();
+                
+                // Apply multiplier to winnings
+                uint winnings = (uint)(_bet * multiplier);
+                
                 finalMessage.text = "You win!";
+                
+                // Add streak info if there's a streak
+                if (_currentStreak > 1)
+                {
+                    finalMessage.text += "\nStreak: " + _currentStreak + " (" + multiplier.ToString("0.0") + "x)";
+                }
+                
                 // Track winnings BEFORE changing balance
-                _earningsForCurrentBlind += Constants.BetWinMultiplier * _bet;
-                Balance += Constants.BetWinMultiplier * _bet;
+                _earningsForCurrentBlind += winnings;
+                Balance += winnings;
                 break;
                 
             case WinCode.Draw:
                 finalMessage.text = "Draw!";
+                
+                // Reset streak on draw
+                _currentStreak = 0;
+                _streakMultiplier = 0;
                 break;
                 
             default:
@@ -524,9 +564,18 @@ public class Deck : MonoBehaviour
                 break;
         }
         
-        Debug.Log("Hand ended: " + code + " - Old balance: " + oldBalance + ", New balance: " + _balance + 
-                  ", Bet: " + _bet + ", Balance change: " + (_balance - oldBalance) + 
-                  ", Old earnings: " + oldEarnings + ", New earnings: " + _earningsForCurrentBlind);
+        // Update streak UI
+        UpdateStreakUI();
+        
+        Debug.Log("Hand ended: " + code + 
+                  " - Old balance: " + oldBalance + 
+                  ", New balance: " + _balance + 
+                  ", Bet: " + _bet + 
+                  ", Balance change: " + (_balance - oldBalance) + 
+                  ", Old earnings: " + oldEarnings + 
+                  ", New earnings: " + _earningsForCurrentBlind + 
+                  ", Current streak: " + _currentStreak +
+                  ", Multiplier: " + CalculateWinMultiplier().ToString("F2") + "x");
  
         hitButton.interactable = false;
         stickButton.interactable = false;
@@ -620,6 +669,7 @@ public class Deck : MonoBehaviour
         UpdateDiscardButtonState();  
         UpdatePeekButtonState();
         UpdateTransformButtonState();
+        UpdateStreakUI(); // Update streak UI for new round
         finalMessage.text = "";
 
         // Clear hand
@@ -1145,6 +1195,58 @@ public class Deck : MonoBehaviour
         if (buttonText != null)
         {
             buttonText.text = "Next Round";
+        }
+    }
+
+    // Method to calculate win multiplier based on streak level
+    private float CalculateWinMultiplier()
+    {
+        return Constants.BaseWinMultiplier + (_streakMultiplier * Constants.StreakMultiplierStep);
+    }
+
+    // Method to handle streak rewards and multiplier calculation
+    private void HandleStreakRewards()
+    {
+        // Calculate streak level (capped at MaxStreakLevel)
+        _streakMultiplier = Mathf.Min(_currentStreak / Constants.StreakMultiplierIncrement, Constants.MaxStreakLevel);
+        
+        // Update UI to reflect new streak level
+        UpdateStreakUI();
+        
+        // Log streak information
+        Debug.Log("Streak updated: Level=" + _streakMultiplier + ", Streak=" + _currentStreak +
+                 ", Multiplier=" + CalculateWinMultiplier().ToString("F2") + "x");
+    }
+
+    // Update streak UI
+    private void UpdateStreakUI()
+    {
+        if (streakText != null)
+        {
+            if (_currentStreak > 0)
+            {
+                // Display streak count and multiplier
+                float multiplier = CalculateWinMultiplier();
+                streakText.text = "Streak: " + _currentStreak + " (" + multiplier.ToString("0.0") + "x)";
+                
+                if (streakPanel != null)
+                {
+                    streakPanel.SetActive(true);
+                }
+            }
+            else
+            {
+                if (streakPanel != null)
+                {
+                    streakPanel.SetActive(false);
+                }
+            }
+        }
+        
+        // Update flame effect if available
+        if (streakFlameEffect != null)
+        {
+            streakFlameEffect.SetStreakLevel(_streakMultiplier);
         }
     }
 }

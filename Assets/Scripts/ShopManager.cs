@@ -20,12 +20,134 @@ public class ShopManager : MonoBehaviour
     [Header("Tarot Panel Settings")]
     public List<Transform> tarotSlots = new List<Transform>();
     
+    [Header("Streak Reward Settings")]
+    public Text discardTokensText; // UI text to display discard tokens
+    public int discardTokens = 0;
+    public GameObject streakRewardNotification; // Notification panel for streak rewards
+    public float notificationDuration = 3f; // Duration to show notification
+
     private void Start()
     {
         if (setupOnStart)
         {
             SetupShop();
         }
+        
+        UpdateDiscardTokensDisplay();
+        
+        // Hide notification if it exists
+        if (streakRewardNotification != null)
+        {
+            streakRewardNotification.SetActive(false);
+        }
+    }
+    
+    // Method to add discard tokens as streak reward
+    public void AddDiscardTokens(int amount)
+    {
+        discardTokens += amount;
+        UpdateDiscardTokensDisplay();
+        ShowRewardNotification("+" + amount + " Discard Token" + (amount > 1 ? "s" : "") + "!");
+    }
+    
+    // Method to update the discard tokens display
+    private void UpdateDiscardTokensDisplay()
+    {
+        if (discardTokensText != null)
+        {
+            discardTokensText.text = discardTokens.ToString();
+        }
+    }
+    
+    // Method to give a random tarot card as streak reward
+    public void GiveRandomTarotCard()
+    {
+        if (availableTarotCards.Count == 0)
+        {
+            Debug.LogWarning("No tarot cards available to give as reward!");
+            return;
+        }
+        
+        // Get a random card from the available cards
+        int randomIndex = Random.Range(0, availableTarotCards.Count);
+        TarotCardData cardData = availableTarotCards[randomIndex];
+        
+        // Check if there's an empty slot in the tarot panel
+        Transform emptySlot = GetEmptyTarotSlot();
+        if (emptySlot == null)
+        {
+            Debug.LogWarning("No empty slots available for free tarot card!");
+            // Give discard tokens instead as a fallback
+            AddDiscardTokens(2);
+            return;
+        }
+        
+        // Create new card instance
+        GameObject cardObject = Instantiate(tarotCardPrefab, emptySlot);
+        TarotCard card = cardObject.GetComponent<TarotCard>();
+        if (card != null)
+        {
+            card.cardData = cardData;
+            card.isInShop = false;
+            card.deck = deck;
+            card.transform.localPosition = Vector3.zero;
+            card.transform.localScale = Vector3.one * 0.8f;
+            
+            // Set up the card's RectTransform
+            RectTransform cardRect = card.GetComponent<RectTransform>();
+            if (cardRect != null)
+            {
+                cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+                cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+                cardRect.pivot = new Vector2(0.5f, 0.5f);
+                cardRect.sizeDelta = new Vector2(100, 150); // Smaller size
+            }
+            
+            // Notify the player
+            ShowRewardNotification("Free Tarot Card: " + cardData.cardName);
+        }
+    }
+    
+    // Method to show a reward notification
+    private void ShowRewardNotification(string message)
+    {
+        if (streakRewardNotification != null)
+        {
+            // Set the notification text
+            Text notificationText = streakRewardNotification.GetComponentInChildren<Text>();
+            if (notificationText != null)
+            {
+                notificationText.text = message;
+            }
+            
+            // Show the notification
+            streakRewardNotification.SetActive(true);
+            
+            // Hide it after a delay
+            CancelInvoke("HideRewardNotification");
+            Invoke("HideRewardNotification", notificationDuration);
+        }
+    }
+    
+    // Method to hide the reward notification
+    private void HideRewardNotification()
+    {
+        if (streakRewardNotification != null)
+        {
+            streakRewardNotification.SetActive(false);
+        }
+    }
+    
+    // Method to use a discard token (called when player uses discard)
+    public bool UseDiscardToken()
+    {
+        if (discardTokens > 0)
+        {
+            discardTokens--;
+            UpdateDiscardTokensDisplay();
+            return true;
+        }
+        return false;
     }
     
     public void SetupShop()
