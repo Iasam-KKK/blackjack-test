@@ -3,76 +3,117 @@ using UnityEngine.UI;
 
 public class StreakFlameEffect : MonoBehaviour
 {
-    [Header("Flame Settings")]
-    public Material flameMaterial;
-    public Image flameImage;
-    public float minStreakLevel = 0f;
-    public float maxStreakLevel = 5f;
+    [Header("Flame Prefabs")]
+    public GameObject blueFlame;    // Level 1 (default)
+    public GameObject greenFlame;   // Level 2
+    public GameObject yellowFlame;  // Level 3
+    public GameObject pinkFlame;    // Level 4
+    public GameObject purpleFlame;  // Level 5
     
-    [Header("Animation")]
-    public float transitionSpeed = 5f;
+    [Header("UI References")]
+    public Transform flameContainer; // Where to place the flame
+    public Text streakText;         // Text showing current streak
     
-    private float _targetStreakLevel = 0f;
-    private float _currentStreakLevel = 0f;
-    
-    private static readonly int StreakLevelProperty = Shader.PropertyToID("_StreakLevel");
+    private GameObject _currentFlame;
+    private int _currentLevel = -1; // Start with -1 to force initial update
     
     void Start()
     {
-        // Make sure flame image uses the flame material
-        if (flameImage != null && flameMaterial != null)
-        {
-            // Create a new instance of the material to avoid changing the shared material
-            Material instancedMaterial = new Material(flameMaterial);
-            flameImage.material = instancedMaterial;
+        // Use this object as container if none specified
+        if (flameContainer == null)
+            flameContainer = transform;
             
-            // Initially set to no streak
-            instancedMaterial.SetFloat(StreakLevelProperty, 0f);
-            flameImage.enabled = false; // Hide flames initially
+        // Initialize with blue flame (1x streak)
+        UpdateFlame(1);
+        
+        Debug.Log("StreakFlameEffect: Started with blue flame");
+    }
+    
+    public void SetStreakLevel(int level)
+    {
+        // Convert streak multiplier to display level
+        // If level is 0, show as 1x with blue flame
+        int displayLevel = (level <= 0) ? 1 : level;
+        UpdateFlame(displayLevel);
+    }
+    
+    public void SetStreakLevelImmediate(int level)
+    {
+        // Convert streak multiplier to display level
+        int displayLevel = (level <= 0) ? 1 : level;
+        UpdateFlame(displayLevel);
+    }
+    
+    private void UpdateFlame(int level)
+    {
+        Debug.Log($"StreakFlameEffect: UpdateFlame called with level {level}");
+        
+        // Only update if the level changed
+        if (level == _currentLevel) return;
+        
+        // Store new level
+        _currentLevel = level;
+        
+        // Update streak text
+        if (streakText != null)
+        {
+            streakText.text = level + "x";
+            Debug.Log($"StreakFlameEffect: Updated text to {streakText.text}");
         }
         else
         {
-            Debug.LogWarning("Flame image or material is not set. Streak visual effect will not work.");
+            Debug.LogWarning("StreakFlameEffect: streakText is null!");
         }
-    }
-    
-    void Update()
-    {
-        // Smoothly transition between current and target streak levels
-        if (Mathf.Abs(_currentStreakLevel - _targetStreakLevel) > 0.01f)
+        
+        // Remove current flame
+        if (_currentFlame != null)
         {
-            _currentStreakLevel = Mathf.Lerp(_currentStreakLevel, _targetStreakLevel, Time.deltaTime * transitionSpeed);
+            Destroy(_currentFlame);
+            _currentFlame = null;
+        }
+        
+        // Add appropriate flame based on level
+        GameObject flamePrefab = null;
+        switch (level)
+        {
+            case 1: flamePrefab = blueFlame; break;
+            case 2: flamePrefab = greenFlame; break;
+            case 3: flamePrefab = yellowFlame; break;
+            case 4: flamePrefab = pinkFlame; break;
+            case 5: flamePrefab = purpleFlame; break;
+            default: flamePrefab = blueFlame; break; // Default to blue for any other value
+        }
+        
+        // Instantiate new flame if we have a valid prefab
+        if (flamePrefab != null && flameContainer != null)
+        {
+            _currentFlame = Instantiate(flamePrefab, flameContainer);
             
-            if (flameImage != null && flameImage.material != null)
+            // Reset transform for UI compatibility
+            _currentFlame.transform.localPosition = Vector3.zero;
+            _currentFlame.transform.localRotation = Quaternion.identity;
+            _currentFlame.transform.localScale = Vector3.one;
+            
+            // Ensure particle system renders in front of UI
+            ParticleSystem ps = _currentFlame.GetComponent<ParticleSystem>();
+            if (ps != null)
             {
-                flameImage.material.SetFloat(StreakLevelProperty, _currentStreakLevel);
+                var renderer = ps.GetComponent<ParticleSystemRenderer>();
+                if (renderer != null)
+                {
+                    renderer.sortingLayerName = "Default";
+                    renderer.sortingOrder = 10; // High value to render on top
+                }
             }
+            
+            Debug.Log($"StreakFlameEffect: Instantiated {flamePrefab.name} flame");
         }
-    }
-    
-    // Call this method when the streak level changes
-    public void SetStreakLevel(int streakCount)
-    {
-        // Map streak count to shader streak level (0-5 range)
-        _targetStreakLevel = Mathf.Clamp(streakCount, 0, (int)maxStreakLevel);
-        
-        // Enable/disable the flame image based on streak
-        if (flameImage != null)
+        else
         {
-            flameImage.enabled = (_targetStreakLevel > 0);
-        }
-    }
-    
-    // Method to instantly set streak level without transition
-    public void SetStreakLevelImmediate(int streakCount)
-    {
-        _targetStreakLevel = Mathf.Clamp(streakCount, 0, (int)maxStreakLevel);
-        _currentStreakLevel = _targetStreakLevel;
-        
-        if (flameImage != null && flameImage.material != null)
-        {
-            flameImage.material.SetFloat(StreakLevelProperty, _currentStreakLevel);
-            flameImage.enabled = (_currentStreakLevel > 0);
+            if (flamePrefab == null)
+                Debug.LogWarning($"StreakFlameEffect: No flame prefab assigned for level {level}");
+            if (flameContainer == null)
+                Debug.LogWarning("StreakFlameEffect: flameContainer is null!");
         }
     }
 } 
