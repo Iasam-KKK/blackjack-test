@@ -14,8 +14,12 @@ public class StreakFlameEffect : MonoBehaviour
     public Transform flameContainer; // Where to place the flame
     public Text streakText;         // Text showing current streak
     
+    [Header("Testing")]
+    [SerializeField] private int testStreakLevel = 1; // For testing in inspector
+    
     private GameObject _currentFlame;
     private int _currentLevel = -1; // Start with -1 to force initial update
+    private int _lastTestLevel = 1; // Track last test level for editor changes
     
     void Start()
     {
@@ -27,6 +31,21 @@ public class StreakFlameEffect : MonoBehaviour
         UpdateFlame(1);
         
         Debug.Log("StreakFlameEffect: Started with blue flame");
+    }
+    
+    // This method is called when values change in the inspector (Editor only)
+    void OnValidate()
+    {
+        // Clamp test level to valid range
+        testStreakLevel = Mathf.Clamp(testStreakLevel, 1, 5);
+        
+        // Only update if the test level changed and we're in play mode
+        if (Application.isPlaying && testStreakLevel != _lastTestLevel)
+        {
+            _lastTestLevel = testStreakLevel;
+            SetStreakLevel(testStreakLevel);
+            Debug.Log($"StreakFlameEffect: Test level changed to {testStreakLevel}");
+        }
     }
     
     public void SetStreakLevel(int level)

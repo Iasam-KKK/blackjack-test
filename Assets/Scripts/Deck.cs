@@ -136,6 +136,7 @@ public class Deck : MonoBehaviour
         UpdateRoundDisplay();
         UpdateBlindDisplay();
         UpdateGoalProgress();
+        UpdateStreakUI(); // Initialize streak display with 1x flame
         
         // Set the button text to "Next Round" at the start
         SetButtonTextToNextRound();
@@ -1221,32 +1222,32 @@ public class Deck : MonoBehaviour
     // Update streak UI
     private void UpdateStreakUI()
     {
+        // Always show the streak panel
+        if (streakPanel != null)
+        {
+            streakPanel.SetActive(true);
+        }
+        
         if (streakText != null)
         {
             if (_currentStreak > 0)
             {
                 // Display streak count and multiplier
                 float multiplier = CalculateWinMultiplier();
-                streakText.text = "Streak: " + _currentStreak + " (" + multiplier.ToString("0.0") + "x)";
-                
-                if (streakPanel != null)
-                {
-                    streakPanel.SetActive(true);
-                }
+                streakText.text = multiplier.ToString("0.0") + "x";
             }
             else
             {
-                if (streakPanel != null)
-                {
-                    streakPanel.SetActive(false);
-                }
+                // Show base multiplier when no streak
+                streakText.text = "1x";
             }
         }
         
-        // Update flame effect if available
+        // Update flame effect if available - always pass at least level 1
         if (streakFlameEffect != null)
         {
-            streakFlameEffect.SetStreakLevel(_streakMultiplier);
+            int flameLevel = _streakMultiplier > 0 ? _streakMultiplier : 1;
+            streakFlameEffect.SetStreakLevel(flameLevel);
         }
     }
 }
