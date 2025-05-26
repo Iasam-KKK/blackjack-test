@@ -39,12 +39,17 @@ public class StreakFlameEffect : MonoBehaviour
         // Clamp test level to valid range
         testStreakLevel = Mathf.Clamp(testStreakLevel, 1, 5);
         
-        // Only update if the test level changed and we're in play mode
+        // Update if the test level changed and we're in play mode
         if (Application.isPlaying && testStreakLevel != _lastTestLevel)
         {
+            Debug.Log($"StreakFlameEffect: Test level changing from {_lastTestLevel} to {testStreakLevel}");
             _lastTestLevel = testStreakLevel;
             SetStreakLevel(testStreakLevel);
-            Debug.Log($"StreakFlameEffect: Test level changed to {testStreakLevel}");
+        }
+        // Also update _lastTestLevel in edit mode to track changes
+        else if (!Application.isPlaying)
+        {
+            _lastTestLevel = testStreakLevel;
         }
     }
     
@@ -61,6 +66,14 @@ public class StreakFlameEffect : MonoBehaviour
         // Convert streak multiplier to display level
         int displayLevel = (level <= 0) ? 1 : level;
         UpdateFlame(displayLevel);
+    }
+    
+    // Manual test method - call this to force update the flame to the test level
+    [ContextMenu("Test Current Level")]
+    public void TestCurrentLevel()
+    {
+        Debug.Log($"StreakFlameEffect: Manual test - setting level to {testStreakLevel}");
+        SetStreakLevel(testStreakLevel);
     }
     
     private void UpdateFlame(int level)

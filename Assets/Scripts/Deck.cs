@@ -85,6 +85,9 @@ public class Deck : MonoBehaviour
     public Text streakText;
     public GameObject streakPanel;
     public StreakFlameEffect streakFlameEffect;
+    
+    // Game History
+    public GameHistoryManager gameHistoryManager;
 
     private uint _balance = Constants.InitialBalance;
     private uint _bet;
@@ -508,10 +511,16 @@ public class Deck : MonoBehaviour
         uint oldBalance = _balance;
         long oldEarnings = _earningsForCurrentBlind;
         
+        // Get current scores for history
+        int playerScore = GetPlayerPoints();
+        int dealerScore = GetDealerPoints();
+        string outcomeText = "";
+        
         switch (code)
         {
             case WinCode.DealerWins:
                 finalMessage.text = "You lose!";
+                outcomeText = "Lose";
                 if (_bet <= _balance) {
                     // Track losses BEFORE changing balance
                     _earningsForCurrentBlind -= _bet;
@@ -540,6 +549,7 @@ public class Deck : MonoBehaviour
                 uint winnings = (uint)(_bet * multiplier);
                 
                 finalMessage.text = "You win!";
+                outcomeText = "Win";
                 
                 // Add streak info if there's a streak
                 if (_currentStreak > 1)
@@ -554,6 +564,7 @@ public class Deck : MonoBehaviour
                 
             case WinCode.Draw:
                 finalMessage.text = "Draw!";
+                outcomeText = "Draw";
                 
                 // Reset streak on draw
                 _currentStreak = 0;
@@ -563,6 +574,28 @@ public class Deck : MonoBehaviour
             default:
                 Debug.Assert(false);    
                 break;
+        }
+        
+        // Record game history entry
+        if (gameHistoryManager != null)
+        {
+            string currentBlindName = GetCurrentBlindName();
+            GameHistoryEntry historyEntry = new GameHistoryEntry(
+                _currentRound,
+                currentBlindName,
+                playerScore,
+                dealerScore,
+                _bet,
+                oldBalance,
+                _balance,
+                outcomeText
+            );
+            Debug.Log("Recording history entry: Round " + _currentRound + ", Outcome: " + outcomeText + ", Bet: " + _bet);
+            gameHistoryManager.AddHistoryEntry(historyEntry);
+        }
+        else
+        {
+            Debug.LogWarning("GameHistoryManager is null! Cannot record history entry.");
         }
         
         // Update streak UI
@@ -1248,6 +1281,26 @@ public class Deck : MonoBehaviour
         {
             int flameLevel = _streakMultiplier > 0 ? _streakMultiplier : 1;
             streakFlameEffect.SetStreakLevel(flameLevel);
+        }
+    }
+    
+    // Get current blind name for history tracking
+    private string GetCurrentBlindName()
+    {
+        switch (_currentBlind)
+        {
+            case BlindLevel.SmallBlind:
+                return "Small Blind";
+            case BlindLevel.BigBlind:
+                return "Big Blind";
+            case BlindLevel.MegaBlind:
+                return "Mega Blind";
+            case BlindLevel.SuperBlind:
+                return "Super Blind";
+            case BlindLevel.Completed:
+                return "Completed";
+            default:
+                return "Unknown";
         }
     }
 }
