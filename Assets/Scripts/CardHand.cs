@@ -41,6 +41,75 @@ public class CardHand : MonoBehaviour
     public void FlipFirstCard() => 
         cards[0].GetComponent<CardModel>().ToggleFace(true);
     
+    // New method for creating cards without automatic positioning (for animations)
+    public GameObject CreateCard(Sprite front, int value, bool skipArrangement = false)
+    {
+        if (cards.Count >= Constants.MaxCardsInHand)
+        {
+            Debug.LogWarning("Maximum card limit reached (" + Constants.MaxCardsInHand + ")");
+            
+            Deck deck = FindObjectOfType<Deck>();
+            if (deck != null)
+            {
+                deck.UpdateScoreDisplays();
+                deck.UpdateDiscardButtonState();
+            }
+            return null;
+        }
+        
+        GameObject cardCopy = (GameObject) Instantiate(card);
+        cards.Add(cardCopy);
+        
+        // Set parent directly to this transform
+        cardCopy.transform.SetParent(transform, false);
+        cardCopy.name = "Card_" + cards.Count;
+        
+        // Apply appropriate scale for camera-based setup
+        ApplyCardScale(cardCopy);
+
+        // Position the cards within the hand (unless skipped for animation)
+        if (!skipArrangement)
+        {
+            ArrangeCardsInWindow();
+        }
+
+        CardModel cardModel = cardCopy.GetComponent<CardModel>();
+        if (cardModel == null)
+        {
+            Debug.LogError("CardModel component missing on card prefab!");
+            return null;
+        }
+        
+        cardModel.cardFront = front;
+        cardModel.value = value;
+        
+        // For dealers, the first card should show back, others show front
+        // For players, all cards should show front
+        bool shouldShowFront = true;
+        if (isDealer && cards.Count == 1)  // First dealer card
+        {
+            shouldShowFront = false;
+        }
+        
+        // Toggle the face appropriately
+        cardModel.ToggleFace(shouldShowFront);
+        
+        // Ensure BoxCollider2D is properly sized for interaction
+        BoxCollider2D boxCollider = cardCopy.GetComponent<BoxCollider2D>();
+        if (boxCollider != null && cardModel.cardFront != null)
+        {
+            // Size the collider based on the sprite bounds and scale
+            Bounds bounds = cardModel.cardFront.bounds;
+            Vector2 size = bounds.size;
+            
+            // Make collider slightly larger to ensure it covers the entire card
+            boxCollider.size = size * 0.7f;
+        }
+        
+        UpdatePoints();
+        return cardCopy;
+    }
+    
     public void Push(Sprite front, int value)
     {
         if (cards.Count >= Constants.MaxCardsInHand)
@@ -112,7 +181,7 @@ public class CardHand : MonoBehaviour
         cardObj.transform.localScale = scale;
     }
     
-    private void ArrangeCardsInWindow()
+    public void ArrangeCardsInWindow()
     {
         if (cards.Count == 0) return;
         
@@ -159,10 +228,25 @@ public class CardHand : MonoBehaviour
             if (i == cards.Count - 1)
             {
                 cards[i].transform.localPosition = targetPos;
+                // Update original position for the last card immediately
+                CardModel cardModel = cards[i].GetComponent<CardModel>();
+                if (cardModel != null)
+                {
+                    cardModel.UpdateOriginalPosition();
+                }
             } 
             else
             {
-                cards[i].transform.DOLocalMove(targetPos, 0.3f).SetEase(Ease.OutQuad);
+                GameObject currentCard = cards[i]; // Capture the card reference for the closure
+                cards[i].transform.DOLocalMove(targetPos, 0.3f).SetEase(Ease.OutQuad)
+                    .OnComplete(() => {
+                        // Update original position after movement animation completes
+                        CardModel cardModel = currentCard.GetComponent<CardModel>();
+                        if (cardModel != null)
+                        {
+                            cardModel.UpdateOriginalPosition();
+                        }
+                    });
             }
         }
     }

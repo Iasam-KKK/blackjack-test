@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DG.Tweening;
 
 internal static class Constants
 {
@@ -38,6 +39,11 @@ internal static class Constants
     public const float BaseWinMultiplier = 1.5f; // Base multiplier (bet 2, get 3 back = 1.5x)
     public const float StreakMultiplierStep = 0.25f; // How much multiplier increases per streak level
     public const int MaxStreakLevel = 5;
+    
+    // Card dealing animation constants
+    public const float CardDealDuration = 0.35f; // Duration for each card to be dealt (faster)
+    public const float CardDealDelay = 0.15f; // Delay between dealing each card (faster)
+    public const float CardDealDistance = 10f; // Distance cards travel from deck position
 }
 
 // Enum to track current blind level
@@ -62,6 +68,7 @@ public class Deck : MonoBehaviour
     public Sprite[] faces;
     public GameObject dealer;
     public GameObject player;
+    public Transform deckPosition; // Position where cards are dealt from (optional)
 
     public Button hitButton;
     public Button stickButton;
@@ -75,6 +82,7 @@ public class Deck : MonoBehaviour
     public Button transformButton; // Transformation button for card transformation
     public Button raiseBetButton;
     public Button lowerBetButton;
+    public Button placeBetButton; // New button to confirm bet placement
     public Text balance;
     public Text bet;
     public Text roundText; // Text to display current round
@@ -92,6 +100,7 @@ public class Deck : MonoBehaviour
     private uint _balance = Constants.InitialBalance;
     private uint _bet;
     private bool _isPeeking = false;
+    private bool _isBetPlaced = false; // Track if bet has been placed for current round
     public bool _hasUsedPeekThisRound = false; // Track if peek has been used in current round
     public bool _hasUsedTransformThisRound = false; // Track if transform has been used in current round
     
@@ -200,7 +209,14 @@ public class Deck : MonoBehaviour
             transformButton.onClick.AddListener(TransformSelectedCards);
         }
         
-        StartGame();
+        if (placeBetButton != null)
+        {
+            placeBetButton.onClick.RemoveAllListeners();
+            placeBetButton.onClick.AddListener(PlaceBet);
+        }
+        
+        // Initialize game in betting state (no cards dealt yet)
+        InitializeBettingState();
     }
  
     private void InitCardValues()
@@ -272,28 +288,17 @@ public class Deck : MonoBehaviour
 
     private void StartGame()
     {
+        // Only start if bet has been placed
+        if (!_isBetPlaced)
+        {
+            Debug.LogWarning("Cannot start game: No bet placed");
+            return;
+        }
+        
         StopCoroutine(NewGame());
         
-        // Reset tarot ability usage for new round
-        _hasUsedPeekThisRound = false;
-        _hasUsedTransformThisRound = false;
-
-        for (int i = 0; i < Constants.InitialCardsDealt; ++i)
-        {
-            PushPlayer();
-            PushDealer();
-        }
-        UpdateScoreDisplays(); 
-        UpdateDiscardButtonState();  
-        UpdatePeekButtonState();
-        UpdateTransformButtonState();
-
-        if (Blackjack(player, true))
-        {
-            if (Blackjack(dealer, false)) { EndHand(WinCode.Draw); }        
-            else { EndHand(WinCode.PlayerWins); }                          
-        }
-        else if (Blackjack(dealer, false)) { EndHand(WinCode.DealerWins); }  
+        // Start animated card dealing
+        StartCoroutine(DealInitialCardsAnimated());
     }
 
     private bool Blackjack(GameObject whoever, bool isPlayer)
@@ -459,6 +464,12 @@ public class Deck : MonoBehaviour
 
     public void Hit()
     { 
+        if (!_isBetPlaced)
+        {
+            Debug.LogWarning("Cannot hit: No bet placed");
+            return;
+        }
+        
         CardHand playerHand = player.GetComponent<CardHand>();
         if (!playerHand.CanAddMoreCards())
         {
@@ -466,10 +477,23 @@ public class Deck : MonoBehaviour
             return;
         }
 
-        PushPlayer();
-        // FlipDealerCard(); // Dealer card is not flipped on player hit generally
+        // Start animated hit
+        StartCoroutine(HitAnimated());
+    }
+
+    private IEnumerator HitAnimated()
+    {
+        // Disable buttons during animation
+        hitButton.interactable = false;
+        stickButton.interactable = false;
         
-        UpdateScoreDisplays();  
+        // Deal card with animation
+        yield return StartCoroutine(PushPlayerAnimated());
+        
+        // Re-enable buttons
+        hitButton.interactable = true;
+        stickButton.interactable = true;
+        
         UpdateDiscardButtonState();  
  
         if (Blackjack(player, true)) { EndHand(WinCode.PlayerWins); }
@@ -478,15 +502,39 @@ public class Deck : MonoBehaviour
 
     public void Stand()
     {
+        if (!_isBetPlaced)
+        {
+            Debug.LogWarning("Cannot stand: No bet placed");
+            return;
+        }
+        
+        // Start animated stand sequence
+        StartCoroutine(StandAnimated());
+    }
+
+    private IEnumerator StandAnimated()
+    {
+        // Disable buttons during animation
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        
         int playerPoints = player.GetComponent<CardHand>().points;
         int dealerPoints = dealer.GetComponent<CardHand>().points;  
 
-        FlipDealerCard();  
+        AnimateFlipDealerCard();
+        
+        // Wait a moment for the flip animation
+        yield return new WaitForSeconds(0.25f);
+        
+        // Dealer draws cards with animation until reaching 17 or more
         while (dealerPoints < Constants.DealerStand)
         {
-            PushDealer();
+            yield return StartCoroutine(PushDealerAnimated());
             dealerPoints = dealer.GetComponent<CardHand>().points;
-            UpdateScoreDisplays();  
+            UpdateScoreDisplays();
+            
+            // Small delay between dealer cards for dramatic effect
+            yield return new WaitForSeconds(Constants.CardDealDelay);
         }
         
         UpdateScoreDisplays();  
@@ -503,6 +551,35 @@ public class Deck : MonoBehaviour
     {
         dealer.GetComponent<CardHand>().FlipFirstCard();
         UpdateScoreDisplays(); 
+    }
+
+    private void AnimateFlipDealerCard()
+    {
+        CardHand dealerHand = dealer.GetComponent<CardHand>();
+        if (dealerHand.cards.Count > 0)
+        {
+            GameObject firstCard = dealerHand.cards[0];
+            
+            // Create a flip animation
+            Sequence flipSequence = DOTween.Sequence();
+            
+            // Scale down on Y axis (flip effect)
+            flipSequence.Append(firstCard.transform.DOScaleY(0, 0.1f).SetEase(Ease.InQuart));
+            
+            // Change the card face at the middle of the flip
+            flipSequence.AppendCallback(() => {
+                dealerHand.FlipFirstCard();
+                UpdateScoreDisplays();
+            });
+            
+            // Scale back up
+            flipSequence.Append(firstCard.transform.DOScaleY(firstCard.transform.localScale.y, 0.1f).SetEase(Ease.OutQuart));
+        }
+        else
+        {
+            // Fallback to regular flip if no cards
+            FlipDealerCard();
+        }
     }
 
     private void EndHand(WinCode code)
@@ -618,6 +695,7 @@ public class Deck : MonoBehaviour
         transformButton.interactable = false;
         raiseBetButton.interactable = false;
         lowerBetButton.interactable = false;
+        placeBetButton.interactable = false;
         
         // Enable the next round button when the round is over
         playAgainButton.interactable = true;
@@ -640,12 +718,23 @@ public class Deck : MonoBehaviour
             {
                 buttonText.text = "Play Again";
             }
-            StartCoroutine(NewGame());
+            // Don't automatically start NewGame coroutine - let user click Play Again
         }
     }
 
     public void PlayAgain()
     {   
+        // Check if this is a game over scenario (balance is 0 or button text is "Play Again")
+        Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+        bool isGameOver = (Balance == 0 || (buttonText != null && buttonText.text == "Play Again"));
+        
+        if (isGameOver)
+        {
+            // Instant restart - reload the scene immediately
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            return;
+        }
+        
         // Increment round
         _currentRound++;
         
@@ -676,12 +765,12 @@ public class Deck : MonoBehaviour
                 finalMessage.text = "Goal not met! Game Over!\nYou earned $" + displayEarnings + 
                                     " but needed $" + _goalForCurrentBlind;
                 // Change button text to "Play Again" since it's game over
-                Text buttonText = playAgainButton.GetComponentInChildren<Text>();
-                if (buttonText != null)
+                Text playAgainText = playAgainButton.GetComponentInChildren<Text>();
+                if (playAgainText != null)
                 {
-                    buttonText.text = "Play Again";
+                    playAgainText.text = "Play Again";
                 }
-                StartCoroutine(NewGame());
+                // Don't automatically start NewGame coroutine - let user click Play Again
                 return;
             }
         }
@@ -691,21 +780,10 @@ public class Deck : MonoBehaviour
         UpdateBlindDisplay();
         UpdateGoalProgress();
         
-        // Reset GUI
-        hitButton.interactable = true;
-        stickButton.interactable = true;
-        raiseBetButton.interactable = true;
-        lowerBetButton.interactable = true;
-        // Disable the next round button during gameplay
-        playAgainButton.interactable = false;
-        _hasUsedPeekThisRound = false; // Reset peek usage for new round
-        _hasUsedTransformThisRound = false; // Reset transform usage for new round
-        UpdateDiscardButtonState();  
-        UpdatePeekButtonState();
-        UpdateTransformButtonState();
-        UpdateStreakUI(); // Update streak UI for new round
-        finalMessage.text = "";
-
+        // Reset bet for new round
+        _bet = 0;
+        bet.text = _bet.ToString() + " $";
+        
         // Clear hand
         player.GetComponent<CardHand>().Clear();
         dealer.GetComponent<CardHand>().Clear();          
@@ -719,8 +797,10 @@ public class Deck : MonoBehaviour
         }
         
         ShuffleCards();
-        StartGame();
-        UpdateScoreDisplays();  
+        UpdateStreakUI(); // Update streak UI for new round
+        
+        // Go back to betting state instead of immediately starting game
+        InitializeBettingState();  
     }
 
     public void RaiseBet()
@@ -729,7 +809,12 @@ public class Deck : MonoBehaviour
         {
             _bet += Constants.BetIncrement;
             bet.text = _bet.ToString() + " $";
-            playAgainButton.interactable = true;
+            
+            // Update place bet button state
+            if (placeBetButton != null)
+            {
+                placeBetButton.interactable = (_bet > 0);
+            }
         }
     }
     
@@ -739,12 +824,52 @@ public class Deck : MonoBehaviour
         {
             _bet -= Constants.BetIncrement;
             bet.text = _bet.ToString() + " $";
+            
+            // Update place bet button state
+            if (placeBetButton != null)
+            {
+                placeBetButton.interactable = (_bet > 0);
+            }
         }
     }
 
-    IEnumerator NewGame()
+    public void PlaceBet()
+    {
+        if (_bet <= 0)
+        {
+            Debug.LogWarning("Cannot place bet: Bet amount is 0");
+            return;
+        }
+        
+        if (_bet > _balance)
+        {
+            Debug.LogWarning("Cannot place bet: Bet amount exceeds balance");
+            return;
+        }
+        
+        // Mark bet as placed
+        _isBetPlaced = true;
+        
+        // Disable betting buttons
+        raiseBetButton.interactable = false;
+        lowerBetButton.interactable = false;
+        placeBetButton.interactable = false;
+        
+        // Clear the betting message
+        finalMessage.text = "";
+        
+        Debug.Log("Bet placed: $" + _bet + " - Starting game");
+        
+        // Now start the actual game
+        StartGame();
+    }
+
+    IEnumerator NewGame(bool withDelay = true)
     {   
-        yield return new WaitForSeconds(Constants.NewGameCountdown);
+        if (withDelay)
+        {
+            yield return new WaitForSeconds(Constants.NewGameCountdown);
+        }
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
@@ -827,7 +952,7 @@ public class Deck : MonoBehaviour
         if (discardButton != null)
         {
             bool hasSelectedCard = player.GetComponent<CardHand>().HasSelectedCard();
-            discardButton.interactable = hasSelectedCard;
+            discardButton.interactable = (_isBetPlaced && hasSelectedCard);
             
             // Visual feedback on button
             var buttonImage = discardButton.GetComponent<Image>();
@@ -854,6 +979,12 @@ public class Deck : MonoBehaviour
     public void DiscardSelectedCard()
     {
         Debug.Log("DiscardSelectedCard method called");
+        
+        if (!_isBetPlaced)
+        {
+            Debug.LogWarning("Cannot discard: No bet placed");
+            return;
+        }
         
         CardHand playerHand = player.GetComponent<CardHand>();
         
@@ -884,8 +1015,8 @@ public class Deck : MonoBehaviour
     {
         if (peekButton != null)
         {
-            // Only enable if: game is active, not currently peeking, and hasn't used peek this round
-            peekButton.interactable = (hitButton.interactable && !_isPeeking && !_hasUsedPeekThisRound);
+            // Only enable if: bet placed, game is active, not currently peeking, and hasn't used peek this round
+            peekButton.interactable = (_isBetPlaced && hitButton.interactable && !_isPeeking && !_hasUsedPeekThisRound);
             
             // Visual feedback on button
             var buttonImage = peekButton.GetComponent<Image>();
@@ -907,6 +1038,12 @@ public class Deck : MonoBehaviour
     public void PeekAtDealerCard()
     {
         Debug.Log("PeekAtDealerCard method called");
+        
+        if (!_isBetPlaced)
+        {
+            Debug.LogWarning("Cannot peek: No bet placed");
+            return;
+        }
         
         if (_isPeeking || _hasUsedPeekThisRound)
         {
@@ -996,8 +1133,8 @@ public class Deck : MonoBehaviour
             bool has2CardsSelected = selectedCount == Constants.MaxSelectedCards;
             bool notUsedThisRound = !_hasUsedTransformThisRound;
             
-            // Enable only if: game is active, exactly 2 cards selected, and hasn't used transform this round
-            transformButton.interactable = (gameActive && has2CardsSelected && notUsedThisRound);
+            // Enable only if: bet placed, game is active, exactly 2 cards selected, and hasn't used transform this round
+            transformButton.interactable = (_isBetPlaced && gameActive && has2CardsSelected && notUsedThisRound);
             
             // Debug log to track transformation button state
             if (has2CardsSelected)
@@ -1032,6 +1169,12 @@ public class Deck : MonoBehaviour
     public void TransformSelectedCards()
     {
         Debug.Log("TransformSelectedCards method called, Used this round: " + _hasUsedTransformThisRound);
+        
+        if (!_isBetPlaced)
+        {
+            Debug.LogWarning("Cannot transform: No bet placed");
+            return;
+        }
         
         CardHand playerHand = player.GetComponent<CardHand>();
         int selectedCount = playerHand ? playerHand.GetSelectedCardCount() : 0;
@@ -1302,5 +1445,240 @@ public class Deck : MonoBehaviour
             default:
                 return "Unknown";
         }
+    }
+
+    private void InitializeBettingState()
+    {
+        // Reset bet placement state
+        _isBetPlaced = false;
+        
+        // Clear any existing cards
+        if (player != null && player.GetComponent<CardHand>() != null)
+        {
+            player.GetComponent<CardHand>().Clear();
+        }
+        if (dealer != null && dealer.GetComponent<CardHand>() != null)
+        {
+            dealer.GetComponent<CardHand>().Clear();
+        }
+        
+        // Disable game action buttons until bet is placed
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        discardButton.interactable = false;
+        peekButton.interactable = false;
+        transformButton.interactable = false;
+        playAgainButton.interactable = false;
+        
+        // Enable betting buttons
+        raiseBetButton.interactable = true;
+        lowerBetButton.interactable = true;
+        placeBetButton.interactable = (_bet > 0); // Only enable if there's a bet amount
+        
+        // Clear score displays
+        playerScoreText.text = "Score: 0";
+        dealerScoreText.text = "Score: 0";
+        probMessage.text = "";
+        finalMessage.text = "Place your bet to start the round!";
+        
+        // Reset tarot ability usage for new round
+        _hasUsedPeekThisRound = false;
+        _hasUsedTransformThisRound = false;
+        
+        Debug.Log("Initialized betting state - waiting for bet placement");
+    }
+
+    private IEnumerator DealInitialCardsAnimated()
+    {
+        // Disable game action buttons during dealing
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        
+        // Deal cards alternately: player, dealer, player, dealer
+        for (int i = 0; i < Constants.InitialCardsDealt; ++i)
+        {
+            // Deal to player first
+            yield return StartCoroutine(PushPlayerAnimated());
+            yield return new WaitForSeconds(Constants.CardDealDelay);
+            
+            // Then deal to dealer
+            yield return StartCoroutine(PushDealerAnimated());
+            yield return new WaitForSeconds(Constants.CardDealDelay);
+        }
+        
+        // Enable game action buttons after dealing is complete
+        hitButton.interactable = true;
+        stickButton.interactable = true;
+        
+        UpdateScoreDisplays(); 
+        UpdateDiscardButtonState();  
+        UpdatePeekButtonState();
+        UpdateTransformButtonState();
+
+        // Check for blackjack after all cards are dealt
+        if (Blackjack(player, true))
+        {
+            if (Blackjack(dealer, false)) { EndHand(WinCode.Draw); }        
+            else { EndHand(WinCode.PlayerWins); }                          
+        }
+        else if (Blackjack(dealer, false)) { EndHand(WinCode.DealerWins); }  
+    }
+
+    private IEnumerator PushPlayerAnimated()
+    {
+        yield return StartCoroutine(PushAnimated(player, true));
+        UpdateScoreDisplays();
+        CalculateProbabilities();
+    }
+
+    private IEnumerator PushDealerAnimated()
+    {
+        yield return StartCoroutine(PushAnimated(dealer, false));
+    }
+
+    private IEnumerator PushAnimated(GameObject handOwner, bool isPlayer)
+    {
+        // Check if we're reaching the end of the deck and need to reshuffle
+        if (cardIndex >= values.Length - 1)
+        {
+            Debug.Log((isPlayer ? "Player" : "Dealer") + " drawing - Deck is almost empty, reshuffling...");
+            ShuffleCards();
+            cardIndex = 0;
+        }
+
+        CardHand hand = handOwner.GetComponent<CardHand>();
+        
+        // Check if hand can accept more cards
+        if (hand.cards.Count >= Constants.MaxCardsInHand)
+        {
+            Debug.LogWarning("Maximum card limit reached (" + Constants.MaxCardsInHand + ")");
+            yield break;
+        }
+        
+        // Create the card without automatic positioning for animation
+        GameObject newCard = hand.CreateCard(faces[cardIndex], values[cardIndex], true);
+        cardIndex++;
+        
+        if (newCard != null)
+        {
+            // Calculate final position before animation
+            Vector3 finalPosition = CalculateFinalCardPosition(hand, hand.cards.Count - 1);
+            
+            // Animate the card from deck position to its final position
+            yield return StartCoroutine(AnimateCardDealing(newCard, finalPosition));
+            
+            // Arrange all cards after animation completes
+            hand.ArrangeCardsInWindow();
+        }
+    }
+
+    private Vector3 CalculateFinalCardPosition(CardHand hand, int cardIndex)
+    {
+        // Calculate where this card should end up in the hand
+        float panelWidth = 20f;
+        float cardSpacing = 3.2f; // CARD_SPACING from CardHand
+        float cardScale = 7.5f; // CARD_SCALE from CardHand
+        
+        SpriteRenderer cardSprite = hand.card.GetComponent<SpriteRenderer>();
+        float cardWidth = 0;
+        
+        if (cardSprite != null && cardSprite.sprite != null)
+        {
+            cardWidth = cardSprite.sprite.bounds.size.x * cardScale * 0.8f;
+        }
+        else
+        {
+            cardWidth = 1f * cardScale;
+        }
+        
+        cardWidth = Mathf.Min(cardWidth, 3f);
+        cardWidth = Mathf.Max(cardWidth, 0.2f);
+        
+        int totalCards = hand.cards.Count;
+        float availableWidth = panelWidth;
+        float actualSpacing = Mathf.Min(cardSpacing, (availableWidth - (cardWidth * totalCards)) / Mathf.Max(1, totalCards - 1));
+        actualSpacing = Mathf.Max(actualSpacing, -cardWidth * 0.5f);
+        
+        float totalWidth = (totalCards > 1) ? 
+            cardWidth + (actualSpacing * (totalCards - 1)) : 
+            cardWidth;
+            
+        float startX = -totalWidth / 2 + (cardWidth / 2);
+        float posX = startX + (cardIndex * (cardWidth + actualSpacing));
+        
+        return new Vector3(posX, 0, 0);
+    }
+
+    private IEnumerator AnimateCardDealing(GameObject card, Vector3 finalPosition)
+    {
+        if (card == null) yield break;
+        
+        // Store the final scale
+        Vector3 finalScale = card.transform.localScale;
+        
+        // Determine start position
+        Vector3 startPosition;
+        if (deckPosition != null)
+        {
+            // Convert deck world position to local position relative to the card's parent
+            startPosition = card.transform.parent.InverseTransformPoint(deckPosition.position);
+        }
+        else
+        {
+            // Default: start from center and slightly above
+            startPosition = new Vector3(0, Constants.CardDealDistance, 0);
+        }
+        
+        // Set initial state
+        card.transform.localPosition = startPosition;
+        card.transform.localScale = Vector3.zero;
+        
+        // Create animation sequence
+        Sequence dealSequence = DOTween.Sequence();
+        
+        // Scale up the card with a nice bounce effect
+        dealSequence.Append(card.transform.DOScale(finalScale, Constants.CardDealDuration * 0.3f)
+            .SetEase(Ease.OutBack, 1.1f));
+        
+        // Move to final position (overlapping with scale)
+        dealSequence.Join(card.transform.DOLocalMove(finalPosition, Constants.CardDealDuration)
+            .SetEase(Ease.OutQuart));
+        
+        // Add a slight rotation for more dynamic feel
+        card.transform.rotation = Quaternion.Euler(0, 0, Random.Range(-15f, 15f));
+        dealSequence.Join(card.transform.DORotate(Vector3.zero, Constants.CardDealDuration * 0.6f)
+            .SetEase(Ease.OutQuart));
+        
+        // Add a subtle "land" effect at the end
+        dealSequence.AppendCallback(() => {
+            // Small bounce when card lands
+            card.transform.DOPunchScale(Vector3.one * 0.08f, 0.15f, 1, 0.3f);
+            
+            // Hook for sound effects (can be implemented later)
+            OnCardDealt();
+        });
+        
+        // Wait for animation to complete
+        yield return dealSequence.WaitForCompletion();
+        
+        // Ensure final position and scale are exact
+        card.transform.localPosition = finalPosition;
+        card.transform.localScale = finalScale;
+        card.transform.rotation = Quaternion.identity;
+        
+        // Update the card's original position after animation is complete
+        CardModel cardModel = card.GetComponent<CardModel>();
+        if (cardModel != null)
+        {
+            cardModel.UpdateOriginalPosition();
+        }
+    }
+
+    // Hook for sound effects and other card dealing events
+    private void OnCardDealt()
+    {
+        // This can be used to trigger sound effects, particle effects, etc.
+        // For now, just log the event
+        Debug.Log("Card dealt with animation");
     }
 }

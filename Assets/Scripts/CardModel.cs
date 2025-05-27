@@ -16,7 +16,7 @@ public class CardModel : MonoBehaviour
     private CardHand ownerHand;
     
     // Card selection constants
-    private const float SELECTION_RAISE_AMOUNT = 0.5f; // Increased raise amount for camera setup
+    private const float SELECTION_RAISE_AMOUNT = 0.1f; // Small raise amount for camera setup
     public static float SELECTION_SCALE_INCREASE = 1.15f; // Scale up selected cards by 15%
     private const float COLLIDER_SIZE_MULTIPLIER = 1.5f; // Make collider larger than sprite
 
@@ -185,16 +185,21 @@ public class CardModel : MonoBehaviour
         }
     }
     
+    // Method to update the original position after animations complete
+    public void UpdateOriginalPosition()
+    {
+        originalPosition = transform.localPosition;
+        Debug.Log("Updated original position for card " + name + " to: " + originalPosition);
+    }
+    
     public void SelectCard()
     {
         if (!isSelected && isInitialized)
         {
             isSelected = true;
              
-            if (originalPosition == Vector3.zero)
-            {
-                originalPosition = transform.localPosition;
-            }
+            // Always update original position when selecting to ensure it's current
+            originalPosition = transform.localPosition;
              
             transform.DOKill();
             
