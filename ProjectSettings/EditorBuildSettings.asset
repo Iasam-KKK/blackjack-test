@@ -8,4 +8,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: 31473a545c038a843bcefaa28e093c8c
+  - enabled: 1
+    path: Assets/Scenes/Blackjack.unity
+    guid: c0d794b0976451043ae2241f21ac9959
   m_configObjects: {}
