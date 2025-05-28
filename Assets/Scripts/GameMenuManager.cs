@@ -1,116 +1,161 @@
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class GameMenuManager : MonoBehaviour
 {
     [Header("UI References")]
-    public Button mainMenuButton;
-    public Button restartButton;
-    public GameObject pauseMenu;
-    public KeyCode pauseKey = KeyCode.Escape;
+    public Button pauseButton;        // Button to toggle pause menu
+    public Button resumeButton;       // Button to resume game (hide panel)
+    public Button mainMenuButton;     // Optional: return to main menu
+    public Button restartButton;      // Optional: restart game
+    public GameObject pauseMenuPanel; // The panel that slides down
+
+    [Header("Animation Settings")]
+    public float animationDuration = 0.5f;
+    public float slideDistance = 500f;
 
     private bool isPaused = false;
+    private Vector3 originalPosition;
+    private Vector3 hiddenPosition;
+    private RectTransform panelRect;
 
     private void Start()
     {
-        // Setup button listeners
-        if (mainMenuButton != null)
-            mainMenuButton.onClick.AddListener(OnMainMenuButtonClicked);
-        
-        if (restartButton != null)
-            restartButton.onClick.AddListener(OnRestartButtonClicked);
+        // Get the panel's RectTransform
+        if (pauseMenuPanel != null)
+            panelRect = pauseMenuPanel.GetComponent<RectTransform>();
 
-        // Make sure pause menu is closed initially
-        if (pauseMenu != null)
-            pauseMenu.SetActive(false);
-    }
-
-    private void Update()
-    {
-        // Handle pause key input
-        if (Input.GetKeyDown(pauseKey))
+        // Store positions
+        if (panelRect != null)
         {
-            TogglePauseMenu();
+            originalPosition = panelRect.anchoredPosition;
+            hiddenPosition = new Vector3(originalPosition.x, originalPosition.y + slideDistance, originalPosition.z);
+        }
+
+        // Setup button listeners
+        if (pauseButton != null)
+            pauseButton.onClick.AddListener(TogglePauseMenu);
+
+        if (resumeButton != null)
+            resumeButton.onClick.AddListener(HidePauseMenu);
+
+        if (mainMenuButton != null)
+            mainMenuButton.onClick.AddListener(GoToMainMenu);
+
+        if (restartButton != null)
+            restartButton.onClick.AddListener(RestartGame);
+
+        // Hide panel initially
+        if (pauseMenuPanel != null)
+        {
+            pauseMenuPanel.SetActive(false);
         }
     }
 
     /// <summary>
-    /// Called when Main Menu button is clicked
+    /// Toggle pause menu - called when pause button is clicked
     /// </summary>
-    public void OnMainMenuButtonClicked()
+    public void TogglePauseMenu()
     {
-        // Resume time before switching scenes
+        if (isPaused)
+        {
+            HidePauseMenu();
+        }
+        else
+        {
+            ShowPauseMenu();
+        }
+    }
+
+    /// <summary>
+    /// Show pause menu
+    /// </summary>
+    public void ShowPauseMenu()
+    {
+        if (isPaused) return;
+
+        isPaused = true;
+        Time.timeScale = 0f; // Pause the game
+
+        // Show panel
+        pauseMenuPanel.SetActive(true);
+
+        // Set to hidden position first
+        panelRect.anchoredPosition = hiddenPosition;
+
+        // Animate sliding down
+        panelRect.DOAnchorPos(originalPosition, animationDuration)
+            .SetEase(Ease.OutBack)
+            .SetUpdate(true); // Ignore time scale
+    }
+
+    /// <summary>
+    /// Hide pause menu - called by both pause button (toggle) and resume button
+    /// </summary>
+    public void HidePauseMenu()
+    {
+        if (!isPaused) return;
+
+        // Animate sliding up
+        panelRect.DOAnchorPos(hiddenPosition, animationDuration)
+            .SetEase(Ease.InBack)
+            .SetUpdate(true)
+            .OnComplete(() => {
+                pauseMenuPanel.SetActive(false);
+                isPaused = false;
+                Time.timeScale = 1f; // Resume the game
+            });
+    }
+
+    /// <summary>
+    /// Go to main menu
+    /// </summary>
+    public void GoToMainMenu()
+    {
         Time.timeScale = 1f;
-        
         if (GameSceneManager.Instance != null)
         {
             GameSceneManager.Instance.LoadMainMenu();
         }
         else
         {
-            // Fallback if GameSceneManager instance is not available
             UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
         }
     }
 
     /// <summary>
-    /// Called when Restart button is clicked
+    /// Restart the game
     /// </summary>
-    public void OnRestartButtonClicked()
+    public void RestartGame()
     {
-        // Resume time before restarting
         Time.timeScale = 1f;
-        
         if (GameSceneManager.Instance != null)
         {
             GameSceneManager.Instance.RestartCurrentScene();
         }
         else
         {
-            // Fallback if GameSceneManager instance is not available
             UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
         }
     }
 
-    /// <summary>
-    /// Toggle the pause menu
-    /// </summary>
-    public void TogglePauseMenu()
-    {
-        isPaused = !isPaused;
-        
-        if (pauseMenu != null)
-        {
-            pauseMenu.SetActive(isPaused);
-        }
-
-        // Pause/unpause the game
-        Time.timeScale = isPaused ? 0f : 1f;
-    }
-
-    /// <summary>
-    /// Resume the game
-    /// </summary>
-    public void ResumeGame()
-    {
-        isPaused = false;
-        
-        if (pauseMenu != null)
-            pauseMenu.SetActive(false);
-        
-        Time.timeScale = 1f;
-    }
-
     private void OnDestroy()
     {
-        // Clean up button listeners
+        // Clean up
+        if (pauseButton != null)
+            pauseButton.onClick.RemoveListener(TogglePauseMenu);
+
+        if (resumeButton != null)
+            resumeButton.onClick.RemoveListener(HidePauseMenu);
+
         if (mainMenuButton != null)
-            mainMenuButton.onClick.RemoveListener(OnMainMenuButtonClicked);
-        
+            mainMenuButton.onClick.RemoveListener(GoToMainMenu);
+
         if (restartButton != null)
-            restartButton.onClick.RemoveListener(OnRestartButtonClicked);
-        
-        // Make sure time scale is reset
+            restartButton.onClick.RemoveListener(RestartGame);
+
+        DOTween.Kill(this);
         Time.timeScale = 1f;
     }
 } 

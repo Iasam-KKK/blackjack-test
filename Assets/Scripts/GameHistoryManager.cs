@@ -7,8 +7,8 @@ public class GameHistoryManager : MonoBehaviour
 {
     [Header("History Panel")]
     public GameObject historyPanel;
-    public Button showHistoryButton;
-    public Button closeHistoryButton;
+    public Button showHistoryButton;    // Toggle button - shows/hides history
+    public Button closeHistoryButton;   // Dedicated close button inside panel
     public Button clearHistoryButton;
     
     [Header("History Entry Prefab")]
@@ -33,6 +33,7 @@ public class GameHistoryManager : MonoBehaviour
     
     // Animation state
     private bool isAnimating = false;
+    private bool isHistoryOpen = false;
     private Vector3 originalScale;
     private Vector3 originalPosition;
     
@@ -41,7 +42,7 @@ public class GameHistoryManager : MonoBehaviour
         // Set up button listeners
         if (showHistoryButton != null)
         {
-            showHistoryButton.onClick.AddListener(ShowHistory);
+            showHistoryButton.onClick.AddListener(ToggleHistory);
         }
         
         if (closeHistoryButton != null)
@@ -62,6 +63,7 @@ public class GameHistoryManager : MonoBehaviour
             originalPosition = historyPanel.transform.localPosition;
             
             historyPanel.SetActive(false);
+            isHistoryOpen = false;
         }
     }
     
@@ -77,11 +79,30 @@ public class GameHistoryManager : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// Toggle history panel - called when show history button is clicked
+    /// </summary>
+    public void ToggleHistory()
+    {
+        if (isHistoryOpen)
+        {
+            CloseHistory();
+        }
+        else
+        {
+            ShowHistory();
+        }
+    }
+    
+    /// <summary>
+    /// Show history panel
+    /// </summary>
     public void ShowHistory()
     {
-        if (historyPanel != null && !isAnimating)
+        if (historyPanel != null && !isAnimating && !isHistoryOpen)
         {
             isAnimating = true;
+            isHistoryOpen = true;
             
             // Set initial state for animation (off-screen to the left, small scale)
             historyPanel.transform.localPosition = new Vector3(originalPosition.x - Screen.width, originalPosition.y, originalPosition.z);
@@ -111,9 +132,12 @@ public class GameHistoryManager : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// Close history panel - called by both toggle button and close button
+    /// </summary>
     public void CloseHistory()
     {
-        if (historyPanel != null && !isAnimating)
+        if (historyPanel != null && !isAnimating && isHistoryOpen)
         {
             isAnimating = true;
             
@@ -135,6 +159,7 @@ public class GameHistoryManager : MonoBehaviour
             // Deactivate panel and reset transform when animation completes
             closeSequence.OnComplete(() => {
                 historyPanel.SetActive(false);
+                isHistoryOpen = false;
                 
                 // Reset transform for next time
                 historyPanel.transform.localPosition = originalPosition;
