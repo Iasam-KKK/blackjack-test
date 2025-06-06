@@ -85,8 +85,8 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     // Called when the mouse enters the card area
     public void OnPointerEnter(PointerEventData eventData)
     {
-        // Show tooltip with card description
-        if (TooltipManager.Instance != null && cardData != null)
+        // Show tooltip with card description - ONLY for tarot cards (not shop items)
+        if (TooltipManager.Instance != null && cardData != null && !isInShop)
         {
             // Get default descriptions based on card type if description is empty
             string description = cardData.description;
@@ -109,7 +109,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 }
             }
             
-            TooltipManager.Instance.ShowTooltip(cardData.cardName, description, transform.position);
+            TooltipManager.Instance.ShowTooltip(cardData.cardName, description, transform.position, true);
         }
         
         // Visual feedback
@@ -119,8 +119,8 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     // Called when the mouse exits the card area
     public void OnPointerExit(PointerEventData eventData)
     {
-        // Hide tooltip
-        if (TooltipManager.Instance != null)
+        // Hide tooltip - only if it was shown (not for shop items)
+        if (TooltipManager.Instance != null && !isInShop)
         {
             TooltipManager.Instance.HideTooltip();
         }

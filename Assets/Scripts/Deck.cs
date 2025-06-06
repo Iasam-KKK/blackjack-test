@@ -36,8 +36,8 @@ internal static class Constants
     
     // Streak system constants
     public const int StreakMultiplierIncrement = 1;
-    public const float BaseWinMultiplier = 1.5f; // Base multiplier (bet 2, get 3 back = 1.5x)
-    public const float StreakMultiplierStep = 0.25f; // How much multiplier increases per streak level
+    public const float BaseWinMultiplier = 1.0f; // Base bonus multiplier (1.0 = no bonus, profit = bet amount)
+    public const float StreakMultiplierStep = 0.5f; // How much bonus increases per streak level (was 0.25f)
     public const int MaxStreakLevel = 5;
     
     // Card dealing animation constants
@@ -117,6 +117,12 @@ public class Deck : MonoBehaviour
     // Streak variables
     private int _currentStreak = 0;
     private int _streakMultiplier = 1;
+    
+    // Button hold variables
+    private bool _isHoldingRaiseBet = false;
+    private bool _isHoldingLowerBet = false;
+    private Coroutine _raiseBetCoroutine = null;
+    private Coroutine _lowerBetCoroutine = null;
 
     // Public property to access balance
     public uint Balance
@@ -214,6 +220,9 @@ public class Deck : MonoBehaviour
             placeBetButton.onClick.RemoveAllListeners();
             placeBetButton.onClick.AddListener(PlaceBet);
         }
+        
+        // Configure bet button hold functionality
+        SetupBetButtonHoldListeners();
         
         // Initialize game in betting state (no cards dealt yet)
         InitializeBettingState();
@@ -599,9 +608,9 @@ public class Deck : MonoBehaviour
                 finalMessage.text = "You lose!";
                 outcomeText = "Lose";
                 if (_bet <= _balance) {
-                    // Track losses BEFORE changing balance
-                    _earningsForCurrentBlind -= _bet;
-                    Balance -= _bet;
+                    // FIXED: Track net loss (bet amount) toward earnings
+                    _earningsForCurrentBlind -= _bet; // Lose the bet amount
+                    Balance -= _bet; // Lose the bet from balance
                 } else {
                     // Safety check
                     Debug.LogWarning("Bet amount greater than balance! Setting balance to 0.");
@@ -612,6 +621,8 @@ public class Deck : MonoBehaviour
                 // Reset streak on loss
                 _currentStreak = 0;
                 _streakMultiplier = 0;
+                
+                Debug.Log("Loss calculation: Lost Bet=$" + _bet + ", Earnings Impact=-$" + _bet);
                 break;
                 
             case WinCode.PlayerWins:
@@ -622,8 +633,14 @@ public class Deck : MonoBehaviour
                 _streakMultiplier = Mathf.Min(_currentStreak / Constants.StreakMultiplierIncrement, Constants.MaxStreakLevel);
                 float multiplier = CalculateWinMultiplier();
                 
-                // Apply multiplier to winnings
-                uint winnings = (uint)(_bet * multiplier);
+                // FIXED: Calculate profit correctly for blackjack
+                // In blackjack: you get your bet back + profit
+                // Base profit = bet amount (1:1 payout)
+                // Streak bonus multiplies the profit only
+                uint baseProfit = _bet; // Standard blackjack 1:1 payout
+                uint streakBonus = (uint)(baseProfit * (multiplier - 1.0f)); // Extra bonus from streak
+                uint totalWinnings = _bet + baseProfit + streakBonus; // Bet returned + base profit + streak bonus
+                uint netEarnings = baseProfit + streakBonus; // Only profit counts toward earnings (not returned bet)
                 
                 finalMessage.text = "You win!";
                 outcomeText = "Win";
@@ -631,12 +648,17 @@ public class Deck : MonoBehaviour
                 // Add streak info if there's a streak
                 if (_currentStreak > 1)
                 {
-                    finalMessage.text += "\nStreak: " + _currentStreak + " (" + multiplier.ToString("0.0") + "x)";
+                    finalMessage.text += "\nStreak: " + _currentStreak + " (" + multiplier.ToString("0.0") + "x bonus)";
                 }
                 
-                // Track winnings BEFORE changing balance
-                _earningsForCurrentBlind += winnings;
-                Balance += winnings;
+                // Track only NET EARNINGS (profit) toward blind goals
+                _earningsForCurrentBlind += netEarnings;
+                // Add total winnings (including returned bet) to balance
+                Balance += totalWinnings;
+                
+                Debug.Log("Win calculation: Bet=$" + _bet + ", Base Profit=$" + baseProfit + 
+                         ", Streak Bonus=$" + streakBonus + ", Total Winnings=$" + totalWinnings + 
+                         ", Net Earnings=$" + netEarnings + ", Multiplier=" + multiplier.ToString("F2") + "x");
                 break;
                 
             case WinCode.Draw:
@@ -805,31 +827,53 @@ public class Deck : MonoBehaviour
 
     public void RaiseBet()
     {
-        if (_bet < Balance)
-        {
-            _bet += Constants.BetIncrement;
-            bet.text = _bet.ToString() + " $";
-            
-            // Update place bet button state
-            if (placeBetButton != null)
-            {
-                placeBetButton.interactable = (_bet > 0);
-            }
-        }
+        RaiseBetWithMultiplier(1);
     }
     
     public void LowerBet()
     {
-        if (_bet > 0)
+        LowerBetWithMultiplier(1);
+    }
+    
+    private void RaiseBetWithMultiplier(int multiplier)
+    {
+        uint increment = Constants.BetIncrement * (uint)multiplier;
+        if (_bet + increment <= Balance)
         {
-            _bet -= Constants.BetIncrement;
-            bet.text = _bet.ToString() + " $";
-            
-            // Update place bet button state
-            if (placeBetButton != null)
-            {
-                placeBetButton.interactable = (_bet > 0);
-            }
+            _bet += increment;
+        }
+        else if (_bet < Balance)
+        {
+            _bet = Balance; // Set to max possible bet
+        }
+        
+        bet.text = _bet.ToString() + " $";
+        
+        // Update place bet button state
+        if (placeBetButton != null)
+        {
+            placeBetButton.interactable = (_bet > 0);
+        }
+    }
+    
+    private void LowerBetWithMultiplier(int multiplier)
+    {
+        uint decrement = Constants.BetIncrement * (uint)multiplier;
+        if (_bet >= decrement)
+        {
+            _bet -= decrement;
+        }
+        else
+        {
+            _bet = 0; // Set to minimum bet
+        }
+        
+        bet.text = _bet.ToString() + " $";
+        
+        // Update place bet button state
+        if (placeBetButton != null)
+        {
+            placeBetButton.interactable = (_bet > 0);
         }
     }
 
@@ -1680,5 +1724,167 @@ public class Deck : MonoBehaviour
         // This can be used to trigger sound effects, particle effects, etc.
         // For now, just log the event
         Debug.Log("Card dealt with animation");
+    }
+    
+    // Setup hold functionality for bet buttons
+    private void SetupBetButtonHoldListeners()
+    {
+        if (raiseBetButton != null)
+        {
+            // Add event trigger for pointer down/up events
+            UnityEngine.EventSystems.EventTrigger raiseTrigger = raiseBetButton.gameObject.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+            if (raiseTrigger == null)
+            {
+                raiseTrigger = raiseBetButton.gameObject.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+            }
+            
+            // Clear existing entries
+            raiseTrigger.triggers.Clear();
+            
+            // Pointer down event
+            UnityEngine.EventSystems.EventTrigger.Entry pointerDownEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
+            pointerDownEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerDown;
+            pointerDownEntry.callback.AddListener((data) => { StartRaiseBetHold(); });
+            raiseTrigger.triggers.Add(pointerDownEntry);
+            
+            // Pointer up event
+            UnityEngine.EventSystems.EventTrigger.Entry pointerUpEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
+            pointerUpEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerUp;
+            pointerUpEntry.callback.AddListener((data) => { StopRaiseBetHold(); });
+            raiseTrigger.triggers.Add(pointerUpEntry);
+            
+            // Pointer exit event (in case pointer leaves button while held)
+            UnityEngine.EventSystems.EventTrigger.Entry pointerExitEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
+            pointerExitEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit;
+            pointerExitEntry.callback.AddListener((data) => { StopRaiseBetHold(); });
+            raiseTrigger.triggers.Add(pointerExitEntry);
+        }
+        
+        if (lowerBetButton != null)
+        {
+            // Add event trigger for pointer down/up events
+            UnityEngine.EventSystems.EventTrigger lowerTrigger = lowerBetButton.gameObject.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+            if (lowerTrigger == null)
+            {
+                lowerTrigger = lowerBetButton.gameObject.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+            }
+            
+            // Clear existing entries
+            lowerTrigger.triggers.Clear();
+            
+            // Pointer down event
+            UnityEngine.EventSystems.EventTrigger.Entry pointerDownEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
+            pointerDownEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerDown;
+            pointerDownEntry.callback.AddListener((data) => { StartLowerBetHold(); });
+            lowerTrigger.triggers.Add(pointerDownEntry);
+            
+            // Pointer up event
+            UnityEngine.EventSystems.EventTrigger.Entry pointerUpEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
+            pointerUpEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerUp;
+            pointerUpEntry.callback.AddListener((data) => { StopLowerBetHold(); });
+            lowerTrigger.triggers.Add(pointerUpEntry);
+            
+            // Pointer exit event (in case pointer leaves button while held)
+            UnityEngine.EventSystems.EventTrigger.Entry pointerExitEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
+            pointerExitEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit;
+            pointerExitEntry.callback.AddListener((data) => { StopLowerBetHold(); });
+            lowerTrigger.triggers.Add(pointerExitEntry);
+        }
+    }
+    
+    // Start holding raise bet button
+    private void StartRaiseBetHold()
+    {
+        if (!_isHoldingRaiseBet && raiseBetButton.interactable)
+        {
+            _isHoldingRaiseBet = true;
+            _raiseBetCoroutine = StartCoroutine(RaiseBetHoldCoroutine());
+        }
+    }
+    
+    // Stop holding raise bet button
+    private void StopRaiseBetHold()
+    {
+        _isHoldingRaiseBet = false;
+        if (_raiseBetCoroutine != null)
+        {
+            StopCoroutine(_raiseBetCoroutine);
+            _raiseBetCoroutine = null;
+        }
+    }
+    
+    // Start holding lower bet button
+    private void StartLowerBetHold()
+    {
+        if (!_isHoldingLowerBet && lowerBetButton.interactable)
+        {
+            _isHoldingLowerBet = true;
+            _lowerBetCoroutine = StartCoroutine(LowerBetHoldCoroutine());
+        }
+    }
+    
+    // Stop holding lower bet button
+    private void StopLowerBetHold()
+    {
+        _isHoldingLowerBet = false;
+        if (_lowerBetCoroutine != null)
+        {
+            StopCoroutine(_lowerBetCoroutine);
+            _lowerBetCoroutine = null;
+        }
+    }
+    
+    // Coroutine for raise bet hold functionality
+    private IEnumerator RaiseBetHoldCoroutine()
+    {
+        // Initial delay before starting rapid increments
+        yield return new WaitForSeconds(0.5f);
+        
+        float holdTime = 0f;
+        int multiplier = 1;
+        
+        while (_isHoldingRaiseBet && raiseBetButton.interactable)
+        {
+            RaiseBetWithMultiplier(multiplier);
+            
+            holdTime += 0.1f;
+            
+            // Increase multiplier based on hold time
+            if (holdTime > 3f) multiplier = 10;      // After 3 seconds, 10x speed
+            else if (holdTime > 2f) multiplier = 5;  // After 2 seconds, 5x speed
+            else if (holdTime > 1f) multiplier = 2;  // After 1 second, 2x speed
+            else multiplier = 1;                     // First second, normal speed
+            
+            // Faster interval as time progresses
+            float interval = holdTime > 2f ? 0.05f : 0.1f;
+            yield return new WaitForSeconds(interval);
+        }
+    }
+    
+    // Coroutine for lower bet hold functionality
+    private IEnumerator LowerBetHoldCoroutine()
+    {
+        // Initial delay before starting rapid decrements
+        yield return new WaitForSeconds(0.5f);
+        
+        float holdTime = 0f;
+        int multiplier = 1;
+        
+        while (_isHoldingLowerBet && lowerBetButton.interactable)
+        {
+            LowerBetWithMultiplier(multiplier);
+            
+            holdTime += 0.1f;
+            
+            // Increase multiplier based on hold time
+            if (holdTime > 3f) multiplier = 10;      // After 3 seconds, 10x speed
+            else if (holdTime > 2f) multiplier = 5;  // After 2 seconds, 5x speed
+            else if (holdTime > 1f) multiplier = 2;  // After 1 second, 2x speed
+            else multiplier = 1;                     // First second, normal speed
+            
+            // Faster interval as time progresses
+            float interval = holdTime > 2f ? 0.05f : 0.1f;
+            yield return new WaitForSeconds(interval);
+        }
     }
 }

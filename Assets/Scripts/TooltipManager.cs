@@ -20,6 +20,7 @@ public class TooltipManager : MonoBehaviour
     
     // For smooth fade in/out
     private CanvasGroup canvasGroup;
+    private Coroutine hideDelayCoroutine;
     
     [Header("Tooltip Descriptions")]
     [TextArea(3, 5)]
@@ -51,6 +52,9 @@ public class TooltipManager : MonoBehaviour
             canvasGroup = tooltipPanel.AddComponent<CanvasGroup>();
         }
         
+        // Prevent tooltip from blocking raycasts to avoid flickering
+        canvasGroup.blocksRaycasts = false;
+        
         // Hide tooltip initially
         HideTooltip();
         
@@ -60,8 +64,14 @@ public class TooltipManager : MonoBehaviour
         tooltipDescriptions.Add("Discard", discardDescription);
     }
     
-    public void ShowTooltip(string title, string description, Vector3 position)
+    public void ShowTooltip(string title, string description, Vector3 position, bool isTarotCard = true)
     {
+        // Only show tooltips for tarot cards, not shop items
+        if (!isTarotCard)
+        {
+            return;
+        }
+        
         // Check for null references
         if (tooltipPanel == null || titleText == null || descriptionText == null)
         {
@@ -69,14 +79,18 @@ public class TooltipManager : MonoBehaviour
             return;
         }
 
+        // Cancel any pending hide operation
+        if (hideDelayCoroutine != null)
+        {
+            StopCoroutine(hideDelayCoroutine);
+            hideDelayCoroutine = null;
+        }
+
         // Set text
         titleText.text = title;
         descriptionText.text = description;
         
-        // Position tooltip
-        PositionTooltip(position);
-        
-        // Show tooltip
+        // Show tooltip (position is manually set in Unity editor)
         tooltipPanel.SetActive(true);
         
         // Fade in
@@ -88,62 +102,32 @@ public class TooltipManager : MonoBehaviour
     // Overload for backward compatibility
     public void ShowTooltip(string title, Vector3 position)
     {
-        ShowTooltip(title, "", position);
+        ShowTooltip(title, "", position, true);
     }
     
     public void HideTooltip()
     {
+        // Add a small delay to prevent flickering when mouse moves slightly
+        if (hideDelayCoroutine != null)
+        {
+            StopCoroutine(hideDelayCoroutine);
+        }
+        hideDelayCoroutine = StartCoroutine(HideTooltipDelayed());
+    }
+    
+    private IEnumerator HideTooltipDelayed()
+    {
+        // Small delay to prevent flickering
+        yield return new WaitForSeconds(0.1f);
+        
         // Fade out and hide
         DOTween.Kill(tooltipPanel);
         canvasGroup.DOFade(0f, fadeTime).OnComplete(() => {
             tooltipPanel.SetActive(false);
         });
+        
+        hideDelayCoroutine = null;
     }
     
-    private void PositionTooltip(Vector3 targetPosition)
-    {
-        // Get canvas for screen space positioning
-        Canvas canvas = GetComponentInParent<Canvas>();
-        
-        if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceOverlay)
-        {
-            // For screen space overlay
-            Vector2 screenPoint = targetPosition;
-            
-            // Get tooltip size
-            RectTransform tooltipRect = tooltipPanel.GetComponent<RectTransform>();
-            Vector2 tooltipSize = tooltipRect.sizeDelta;
-            
-            // Position tooltip to avoid going off-screen
-            float screenWidth = Screen.width;
-            float screenHeight = Screen.height;
-            
-            // Adjust X position to keep tooltip on screen
-            if (screenPoint.x + tooltipSize.x + offset > screenWidth)
-            {
-                screenPoint.x = screenPoint.x - tooltipSize.x - offset;
-            }
-            else
-            {
-                screenPoint.x += offset;
-            }
-            
-            // Adjust Y position to keep tooltip on screen
-            if (screenPoint.y + tooltipSize.y + offset > screenHeight)
-            {
-                screenPoint.y = screenPoint.y - tooltipSize.y - offset;
-            }
-            else
-            {
-                screenPoint.y += offset;
-            }
-            
-            tooltipPanel.transform.position = screenPoint;
-        }
-        else
-        {
-            // For world space or camera space canvas
-            tooltipPanel.transform.position = targetPosition + new Vector3(offset, offset, 0);
-        }
-    }
+
 } 
