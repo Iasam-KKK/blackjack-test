@@ -21,8 +21,6 @@ public class ShopManager : MonoBehaviour
     public List<Transform> tarotSlots = new List<Transform>();
     
     [Header("Streak Reward Settings")]
-    public Text discardTokensText; // UI text to display discard tokens
-    public int discardTokens = 0;
     public GameObject streakRewardNotification; // Notification panel for streak rewards
     public float notificationDuration = 3f; // Duration to show notification
 
@@ -33,8 +31,6 @@ public class ShopManager : MonoBehaviour
             SetupShop();
         }
         
-        UpdateDiscardTokensDisplay();
-        
         // Hide notification if it exists
         if (streakRewardNotification != null)
         {
@@ -42,22 +38,7 @@ public class ShopManager : MonoBehaviour
         }
     }
     
-    // Method to add discard tokens as streak reward
-    public void AddDiscardTokens(int amount)
-    {
-        discardTokens += amount;
-        UpdateDiscardTokensDisplay();
-        ShowRewardNotification("+" + amount + " Discard Token" + (amount > 1 ? "s" : "") + "!");
-    }
-    
-    // Method to update the discard tokens display
-    private void UpdateDiscardTokensDisplay()
-    {
-        if (discardTokensText != null)
-        {
-            discardTokensText.text = discardTokens.ToString();
-        }
-    }
+
     
     // Method to give a random tarot card as streak reward
     public void GiveRandomTarotCard()
@@ -77,8 +58,6 @@ public class ShopManager : MonoBehaviour
         if (emptySlot == null)
         {
             Debug.LogWarning("No empty slots available for free tarot card!");
-            // Give discard tokens instead as a fallback
-            AddDiscardTokens(2);
             return;
         }
         
@@ -138,17 +117,7 @@ public class ShopManager : MonoBehaviour
         }
     }
     
-    // Method to use a discard token (called when player uses discard)
-    public bool UseDiscardToken()
-    {
-        if (discardTokens > 0)
-        {
-            discardTokens--;
-            UpdateDiscardTokensDisplay();
-            return true;
-        }
-        return false;
-    }
+
     
     public void SetupShop()
     {

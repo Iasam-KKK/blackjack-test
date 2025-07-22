@@ -103,6 +103,9 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     case TarotCardType.Transform:
                         description = "Transformation: Replace the first selected card with a duplicate of the second selected card. Can only be used once per round.";
                         break;
+                    case TarotCardType.WitchDoctor:
+                        description = "Witch Doctor: Automatically refunds 10% of your bet when you lose a hand. Passive ability.";
+                        break;
                     default:
                         description = "A mystical tarot card with special powers.";
                         break;
@@ -151,6 +154,13 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             
             // Deduct balance
             deck.Balance -= cost;
+            
+            // Add card to PlayerStats
+            if (PlayerStats.instance != null && cardData != null)
+            {
+                PlayerStats.instance.ownedCards.Add(cardData);
+                Debug.Log("Added " + cardData.cardName + " to player's owned cards");
+            }
             
             // Notify the deck about the purchase
             deck.OnCardPurchased(cost);
@@ -318,6 +328,11 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     {
                         Debug.Log("Select exactly " + Constants.MaxSelectedCards + " cards to transform");
                     }
+                    break;
+                    
+                case TarotCardType.WitchDoctor:
+                    Debug.Log("Witch Doctor card is active and will provide 10% refund on losses");
+                    effectApplied = true; // Mark as used so it shows visual feedback
                     break;
                     
                 default:

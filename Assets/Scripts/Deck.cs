@@ -691,6 +691,9 @@ public class Deck : MonoBehaviour
                 finalMessage.text = "Draw!";
                 outcomeText = "Draw";
                 
+                Balance += _bet;
+                Debug.Log("Draw: Refunded bet amount $" + _bet + " back to player");
+                
                 // Reset streak on draw
                 _currentStreak = 0;
                 _streakMultiplier = 0;
@@ -953,6 +956,9 @@ public class Deck : MonoBehaviour
         _balance -= _bet;
         PlayerPrefs.SetInt("UserCash", (int)_balance);
         PlayerPrefs.Save();
+        
+        // Update balance display immediately
+        UpdateBalanceDisplay();
 
         Debug.Log("Bet placed: $" + _bet + " | New Balance: $" + _balance);
 
@@ -1052,7 +1058,7 @@ public class Deck : MonoBehaviour
     {
         playerScoreText.text = "Score: " + GetVisibleScore(player, true);
         dealerScoreText.text = "Score: " + GetVisibleScore(dealer, false);
-    }
+        }
     
     // Make UpdateDiscardButtonState public so it can be called from CardModel
     public void UpdateDiscardButtonState()
