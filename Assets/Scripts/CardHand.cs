@@ -296,7 +296,7 @@ public class CardHand : MonoBehaviour
                 return cardObj;
             }
         }
-        return null;
+                return null;
     }
     
     public void DiscardSelectedCard()
@@ -304,34 +304,6 @@ public class CardHand : MonoBehaviour
         GameObject selectedCard = GetSelectedCard();
         if (selectedCard != null)
         {
-            // Check if this is a player hand (not dealer) and requires a token
-            if (!isDealer)
-            {
-                // Find ShopManager to check for discard tokens
-                ShopManager shopManager = FindObjectOfType<ShopManager>();
-                if (shopManager != null)
-                {
-                    // If no discard tokens available, show a message and don't discard
-                    if (shopManager.discardTokens <= 0)
-                    {
-                        Deck deck = FindObjectOfType<Deck>();
-                        if (deck != null && deck.finalMessage != null)
-                        {
-                            deck.finalMessage.text = "No discard tokens available!";
-                        }
-                        
-                        // Deselect the card
-                        CardModel cardModelComponent = selectedCard.GetComponent<CardModel>();
-                        cardModelComponent.DeselectCard();
-                        
-                        return;
-                    }
-                    
-                    // Use a discard token
-                    shopManager.UseDiscardToken();
-                }
-            }
-
             CardModel cardModel = selectedCard.GetComponent<CardModel>();
             Debug.Log("Discarding card with value: " + cardModel.value);
              
@@ -375,6 +347,7 @@ public class CardHand : MonoBehaviour
                     {
                         Debug.Log("Updating score display after discard, new points: " + points);
                         deck.UpdateScoreDisplays();
+                        deck.UpdateDiscardButtonState();
                     }
                     else
                     {
@@ -387,7 +360,7 @@ public class CardHand : MonoBehaviour
             Debug.LogError("No selected card found to discard!");
         }
     }
-     
+    
     private void RearrangeCards()
     {
         ArrangeCardsInWindow();
@@ -504,6 +477,7 @@ public class CardHand : MonoBehaviour
             if (deck != null)
             {
                 deck.UpdateScoreDisplays();
+                deck.UpdateDiscardButtonState();
             }
         });
     }
