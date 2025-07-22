@@ -123,9 +123,10 @@ public class Deck : MonoBehaviour
     private bool _isHoldingLowerBet = false;
     private Coroutine _raiseBetCoroutine = null;
     private Coroutine _lowerBetCoroutine = null;
+    
 
     // Public property to access balance
-    public uint Balance
+    /*public uint Balance
     {
         get { return _balance; }
         set 
@@ -134,8 +135,24 @@ public class Deck : MonoBehaviour
             _balance = value;
             UpdateBalanceDisplay();
             UpdateGoalProgress();
+            
+        }
+    }*/
+    public uint Balance
+    {
+        get { return _balance; }
+        set
+        {
+            _balance = value;
+
+            PlayerPrefs.SetInt("UserCash", (int)_balance); // Save to PlayerPrefs
+            PlayerPrefs.Save();
+
+            UpdateBalanceDisplay();
+            UpdateGoalProgress();
         }
     }
+
 
     public int[] values = new int[Constants.DeckCards];
     int cardIndex = 0;  
@@ -145,6 +162,10 @@ public class Deck : MonoBehaviour
 
     private void Start()
     {
+        _balance = (uint)PlayerPrefs.GetInt("UserCash", 1000); // Default to 1000 if not saved
+        bet.text = _bet.ToString() + " $";
+        UpdateBalanceDisplay();
+
         ShuffleCards();
         
         _startingBalanceForBlind = _balance;
@@ -611,6 +632,11 @@ public class Deck : MonoBehaviour
                     // FIXED: Track net loss (bet amount) toward earnings
                     _earningsForCurrentBlind -= _bet; // Lose the bet amount
                     Balance -= _bet; // Lose the bet from balance
+                    if (PlayerStats.instance.PlayerHasCard(TarotCardType.WitchDoctor)) {
+                        int refund = Mathf.RoundToInt(_bet * 0.1f);
+                        Balance += (uint)refund;
+                        Debug.Log("Witch Doctor refunded 10% of your bet: " + refund);
+                    }
                 } else {
                     // Safety check
                     Debug.LogWarning("Bet amount greater than balance! Setting balance to 0.");
@@ -877,6 +903,7 @@ public class Deck : MonoBehaviour
         }
     }
 
+    /*
     public void PlaceBet()
     {
         if (_bet <= 0)
@@ -907,6 +934,43 @@ public class Deck : MonoBehaviour
         // Now start the actual game
         StartGame();
     }
+    */
+    public void PlaceBet()
+    {
+        if (_bet <= 0)
+        {
+            Debug.LogWarning("Cannot place bet: Bet amount is 0");
+            return;
+        }
+
+        if (_bet > _balance)
+        {
+            Debug.LogWarning("Cannot place bet: Bet amount exceeds balance");
+            return;
+        }
+
+        // Deduct the bet from the balance and save it
+        _balance -= _bet;
+        PlayerPrefs.SetInt("UserCash", (int)_balance);
+        PlayerPrefs.Save();
+
+        Debug.Log("Bet placed: $" + _bet + " | New Balance: $" + _balance);
+
+        // Mark bet as placed
+        _isBetPlaced = true;
+
+        // Disable betting buttons
+        raiseBetButton.interactable = false;
+        lowerBetButton.interactable = false;
+        placeBetButton.interactable = false;
+
+        // Clear the betting message
+        finalMessage.text = "";
+
+        // Start the game
+        StartGame();
+    }
+
 
     IEnumerator NewGame(bool withDelay = true)
     {   
@@ -1397,6 +1461,7 @@ public class Deck : MonoBehaviour
         if (balance != null)
         {
             balance.text = " " + _balance.ToString() + " $";
+            
         }
     }
 

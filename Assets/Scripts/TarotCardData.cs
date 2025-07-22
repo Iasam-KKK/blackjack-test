@@ -27,5 +27,7 @@ public enum TarotCardType
 {
     Peek,       // Peek at dealer's card
     Discard,    // Discard a card from hand
-    Transform   // Transform one card into another
+    Transform,   // Transform one card into another
+    WitchDoctor // NEW: Rescues 10% of bet if you lose
+    
 } 
