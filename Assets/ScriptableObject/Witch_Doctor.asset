@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Witch_Doctor
   m_EditorClassIdentifier: 
   cardName: Witch_Doctor
-  cardImage: {fileID: 21300000, guid: 753a7d974b7c6f945be4336f0e19732f, type: 3}
+  cardImage: {fileID: 21300000, guid: 5954435ef408ac44eb563b7e9224ae53, type: 3}
   price: 100
   description: Rescues 10% of your bet if you lose
   cardType: 3

@@ -1485,10 +1485,24 @@ public class Deck : MonoBehaviour
     }
 
     // Method to calculate win multiplier based on streak level
-    private float CalculateWinMultiplier()
+    /*private float CalculateWinMultiplier()
     {
         return Constants.BaseWinMultiplier + (_streakMultiplier * Constants.StreakMultiplierStep);
+    }*/
+    private float CalculateWinMultiplier()
+    {
+        float baseMultiplier = Constants.BaseWinMultiplier + (_streakMultiplier * Constants.StreakMultiplierStep);
+
+        // Apply Artificer bonus only if streak is active
+        if (_streakMultiplier > 0 && PlayerStats.instance != null && PlayerStats.instance.PlayerHasCard(TarotCardType.Artificer))
+        {
+            baseMultiplier *= 0.1f; // Add 10% to the multiplier
+            Debug.Log("Artificer card active: Multiplier increased by 10%");
+        }
+
+        return baseMultiplier;
     }
+
 
     // Method to handle streak rewards and multiplier calculation
     private void HandleStreakRewards()
