@@ -106,6 +106,21 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     case TarotCardType.WitchDoctor:
                         description = "Witch Doctor: Automatically refunds 10% of your bet when you lose a hand. Passive ability.";
                         break;
+                    case TarotCardType.Artificer:
+                        description = "Artificer: Boosts win multiplier by 10% when you have an active streak. Passive ability.";
+                        break;
+                    case TarotCardType.Botanist:
+                        description = "The Botanist: Adds a +50 bonus for each club (clover) card in your winning hand. Passive ability.";
+                        break;
+                    case TarotCardType.Assassin:
+                        description = "The Assassin: Adds a +50 bonus for each spade card in your winning hand. Passive ability.";
+                        break;
+                    case TarotCardType.SecretLover:
+                        description = "The Secret Lover: Adds a +50 bonus for each heart card in your winning hand. Passive ability.";
+                        break;
+                    case TarotCardType.Jeweler:
+                        description = "The Jeweler: Adds a +50 bonus for each diamond card in your winning hand. Passive ability.";
+                        break;
                     default:
                         description = "A mystical tarot card with special powers.";
                         break;
@@ -332,7 +347,32 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     
                 case TarotCardType.WitchDoctor:
                     Debug.Log("Witch Doctor card is active and will provide 10% refund on losses");
-                    effectApplied = true; // Mark as used so it shows visual feedback
+                    // Don't mark as used - it's a passive effect
+                    break;
+
+                case TarotCardType.Artificer:
+                    Debug.Log("Artificer card is active and will boost win multiplier by 10% when you have a streak");
+                    // Don't mark as used - it's a passive effect
+                    break;
+
+                case TarotCardType.Botanist:
+                    Debug.Log("The Botanist card is active and will provide +50 bonus per club in winning hands");
+                    // Don't mark as used - it's a passive effect
+                    break;
+
+                case TarotCardType.Assassin:
+                    Debug.Log("The Assassin card is active and will provide +50 bonus per spade in winning hands");
+                    // Don't mark as used - it's a passive effect
+                    break;
+
+                case TarotCardType.SecretLover:
+                    Debug.Log("The Secret Lover card is active and will provide +50 bonus per heart in winning hands");
+                    // Don't mark as used - it's a passive effect
+                    break;
+
+                case TarotCardType.Jeweler:
+                    Debug.Log("The Jeweler card is active and will provide +50 bonus per diamond in winning hands");
+                    // Don't mark as used - it's a passive effect
                     break;
                     
                 default:

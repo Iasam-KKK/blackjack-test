@@ -1,5 +1,14 @@
 using UnityEngine;
 
+// Define the different card suits
+public enum CardSuit
+{
+    Hearts,    // 0-12
+    Diamonds,  // 13-25
+    Clubs,     // 26-38
+    Spades     // 39-51
+}
+
 [CreateAssetMenu(fileName = "NewTarotCard", menuName = "BlackJack/Tarot Card", order = 1)]
 public class TarotCardData : ScriptableObject
 {
@@ -29,6 +38,9 @@ public enum TarotCardType
     Discard,    // Discard a card from hand (no tokens needed)
     Transform,   // Transform one card into another
     WitchDoctor, // NEW: Rescues 10% of bet if you lose
-    Artificer     // NEW: Boosts win multiplier by 10% if streak is active
-    
+    Artificer,   // NEW: Boosts win multiplier by 10% if streak is active
+    Botanist,    // NEW: Adds +50 bonus per clover in winning hand
+    Assassin,    // NEW: Adds +50 bonus per spade in winning hand
+    SecretLover, // NEW: Adds +50 bonus per heart in winning hand
+    Jeweler      // NEW: Adds +50 bonus per diamond in winning hand
 } 

@@ -8,6 +8,46 @@ using System.Collections.Generic;
 using System.Linq;
 using DG.Tweening;
 
+// Struct to hold complete card information
+[System.Serializable]
+public struct CardInfo
+{
+    public int index;           // Index in the deck (0-51)
+    public int value;           // Card value (1-10, J/Q/K = 10)
+    public CardSuit suit;       // Heart, Diamond, Club, Spade
+    public int suitIndex;       // Index within the suit (0-12: A, 2-10, J, Q, K)
+    public string cardName;     // Human readable name (e.g., "Ace of Hearts", "King of Spades")
+    public Sprite cardSprite;   // The actual card sprite
+
+    public CardInfo(int deckIndex, int cardValue, Sprite sprite, Sprite[] allSprites)
+    {
+        index = deckIndex;
+        value = cardValue;
+        suit = GetSuitFromIndex(deckIndex);
+        suitIndex = deckIndex % Constants.CardsPerSuit;
+        cardSprite = sprite;
+        cardName = GenerateCardName(cardValue, suit, suitIndex);
+    }
+    
+    private static CardSuit GetSuitFromIndex(int deckIndex)
+    {
+        int suitNumber = deckIndex / Constants.CardsPerSuit;
+        return (CardSuit)suitNumber;
+    }
+    
+    private static string GenerateCardName(int value, CardSuit suit, int suitIndex)
+    {
+        string valueName;
+        if (suitIndex == 0) valueName = "Ace";
+        else if (value == 10 && suitIndex == 10) valueName = "Jack";
+        else if (value == 10 && suitIndex == 11) valueName = "Queen"; 
+        else if (value == 10 && suitIndex == 12) valueName = "King";
+        else valueName = value.ToString();
+        
+        return valueName + " of " + suit.ToString();
+    }
+}
+
 internal static class Constants
 {
     public const int DeckCards = 52;
@@ -44,6 +84,10 @@ internal static class Constants
     public const float CardDealDuration = 0.35f; // Duration for each card to be dealt (faster)
     public const float CardDealDelay = 0.15f; // Delay between dealing each card (faster)
     public const float CardDealDistance = 10f; // Distance cards travel from deck position
+    
+    // Suit bonus constants
+    public const int SuitBonusAmount = 50; // Bonus amount per card of matching suit
+    public const int CardsPerSuit = 13; // Number of cards per suit (A, 2-10, J, Q, K)
 }
 
 // Enum to track current blind level
@@ -659,14 +703,17 @@ public class Deck : MonoBehaviour
                 _streakMultiplier = Mathf.Min(_currentStreak / Constants.StreakMultiplierIncrement, Constants.MaxStreakLevel);
                 float multiplier = CalculateWinMultiplier();
                 
+                // Calculate suit bonuses from tarot cards (explicitly use player hand)
+                uint suitBonuses = CalculateSuitBonuses(player);
+                
                 // FIXED: Calculate profit correctly for blackjack
                 // In blackjack: you get your bet back + profit
                 // Base profit = bet amount (1:1 payout)
                 // Streak bonus multiplies the profit only
                 uint baseProfit = _bet; // Standard blackjack 1:1 payout
                 uint streakBonus = (uint)(baseProfit * (multiplier - 1.0f)); // Extra bonus from streak
-                uint totalWinnings = _bet + baseProfit + streakBonus; // Bet returned + base profit + streak bonus
-                uint netEarnings = baseProfit + streakBonus; // Only profit counts toward earnings (not returned bet)
+                uint totalWinnings = _bet + baseProfit + streakBonus + suitBonuses; // Bet returned + base profit + streak bonus + suit bonuses
+                uint netEarnings = baseProfit + streakBonus + suitBonuses; // Only profit counts toward earnings (not returned bet)
                 
                 finalMessage.text = "You win!";
                 outcomeText = "Win";
@@ -677,14 +724,21 @@ public class Deck : MonoBehaviour
                     finalMessage.text += "\nStreak: " + _currentStreak + " (" + multiplier.ToString("0.0") + "x bonus)";
                 }
                 
+                // Add suit bonus info if there are any
+                if (suitBonuses > 0)
+                {
+                    finalMessage.text += "\nSuit Bonus: +" + suitBonuses;
+                }
+                
                 // Track only NET EARNINGS (profit) toward blind goals
                 _earningsForCurrentBlind += netEarnings;
                 // Add total winnings (including returned bet) to balance
                 Balance += totalWinnings;
                 
                 Debug.Log("Win calculation: Bet=$" + _bet + ", Base Profit=$" + baseProfit + 
-                         ", Streak Bonus=$" + streakBonus + ", Total Winnings=$" + totalWinnings + 
-                         ", Net Earnings=$" + netEarnings + ", Multiplier=" + multiplier.ToString("F2") + "x");
+                         ", Streak Bonus=$" + streakBonus + ", Suit Bonuses=$" + suitBonuses + 
+                         ", Total Winnings=$" + totalWinnings + ", Net Earnings=$" + netEarnings + 
+                         ", Multiplier=" + multiplier.ToString("F2") + "x");
                 break;
                 
             case WinCode.Draw:
@@ -1499,17 +1553,476 @@ public class Deck : MonoBehaviour
     {
         float baseMultiplier = Constants.BaseWinMultiplier + (_streakMultiplier * Constants.StreakMultiplierStep);
 
-        // Apply Artificer bonus only if streak is active
-        if (_streakMultiplier > 0 && PlayerStats.instance != null && PlayerStats.instance.PlayerHasCard(TarotCardType.Artificer))
+        // Apply Artificer bonus only if streak is active AND player has Artificer card
+        bool hasArtificer = PlayerActuallyHasCard(TarotCardType.Artificer);
+        Debug.Log("Artificer check: streak=" + _streakMultiplier + ", hasArtificer=" + hasArtificer);
+        
+        if (_streakMultiplier > 0 && hasArtificer)
         {
-            baseMultiplier *= 0.1f; // Add 10% to the multiplier
+            baseMultiplier *= 1.1f; // FIXED: Add 10% to the multiplier (was 0.1f which was reducing it)
             Debug.Log("Artificer card active: Multiplier increased by 10%");
         }
 
         return baseMultiplier;
     }
 
+    // CARD UTILITY FUNCTIONS - Easy access to card data
+    
+    /// <summary>
+    /// Get complete information about a card by its deck index
+    /// </summary>
+    public CardInfo GetCardInfo(int deckIndex)
+    {
+        if (deckIndex < 0 || deckIndex >= Constants.DeckCards)
+        {
+            Debug.LogWarning("Invalid card index: " + deckIndex);
+            return new CardInfo();
+        }
+        
+        return new CardInfo(deckIndex, values[deckIndex], faces[deckIndex], faces);
+    }
+    
+    /// <summary>
+    /// Get complete information about a card by its sprite
+    /// </summary>
+    public CardInfo GetCardInfoBySprite(Sprite cardSprite)
+    {
+        for (int i = 0; i < faces.Length; i++)
+        {
+            if (faces[i] == cardSprite)
+            {
+                return GetCardInfo(i);
+            }
+        }
+        
+        Debug.LogWarning("Card sprite not found in deck");
+        return new CardInfo();
+    }
+    
+    /// <summary>
+    /// Get all cards of a specific suit from the deck
+    /// </summary>
+    public List<CardInfo> GetCardsOfSuit(CardSuit suit)
+    {
+        List<CardInfo> suitCards = new List<CardInfo>();
+        int startIndex = (int)suit * Constants.CardsPerSuit;
+        int endIndex = startIndex + Constants.CardsPerSuit;
+        
+        for (int i = startIndex; i < endIndex; i++)
+        {
+            suitCards.Add(GetCardInfo(i));
+        }
+        
+        return suitCards;
+    }
+    
+    /// <summary>
+    /// Get all card information for cards currently in a hand
+    /// </summary>
+    public List<CardInfo> GetHandCardInfo(GameObject handOwner)
+    {
+        List<CardInfo> handCards = new List<CardInfo>();
+        CardHand hand = handOwner.GetComponent<CardHand>();
+        
+        if (hand == null || hand.cards == null)
+        {
+            return handCards;
+        }
+        
+        foreach (GameObject cardObject in hand.cards)
+        {
+            CardModel cardModel = cardObject.GetComponent<CardModel>();
+            if (cardModel != null && cardModel.cardFront != null)
+            {
+                CardInfo cardInfo = GetCardInfoBySprite(cardModel.cardFront);
+                handCards.Add(cardInfo);
+            }
+        }
+        
+        return handCards;
+    }
+    
+    /// <summary>
+    /// Filter hand cards by suit
+    /// </summary>
+    public List<CardInfo> GetHandCardsBySuit(GameObject handOwner, CardSuit targetSuit)
+    {
+        List<CardInfo> allHandCards = GetHandCardInfo(handOwner);
+        return allHandCards.Where(card => card.suit == targetSuit).ToList();
+    }
+    
+    /// <summary>
+    /// Get count of cards by suit in a hand (optimized version)
+    /// </summary>
+    public int GetHandSuitCount(GameObject handOwner, CardSuit targetSuit)
+    {
+        return GetHandCardsBySuit(handOwner, targetSuit).Count;
+    }
+    
+    /// <summary>
+    /// Get all suit counts for a hand at once
+    /// </summary>
+    public Dictionary<CardSuit, int> GetAllHandSuitCounts(GameObject handOwner)
+    {
+        Dictionary<CardSuit, int> suitCounts = new Dictionary<CardSuit, int>();
+        
+        // Initialize all suits to 0
+        foreach (CardSuit suit in System.Enum.GetValues(typeof(CardSuit)))
+        {
+            suitCounts[suit] = 0;
+        }
+        
+        // Count cards in hand
+        List<CardInfo> handCards = GetHandCardInfo(handOwner);
+        foreach (CardInfo card in handCards)
+        {
+            suitCounts[card.suit]++;
+        }
+        
+        return suitCounts;
+    }
+    
+    /// <summary>
+    /// Check if a specific card (by value and suit) exists in hand
+    /// </summary>
+    public bool HandContainsCard(GameObject handOwner, int value, CardSuit suit)
+    {
+        List<CardInfo> handCards = GetHandCardInfo(handOwner);
+        return handCards.Any(card => card.value == value && card.suit == suit);
+    }
+    
+    /// <summary>
+    /// Get the deck index for a specific card value and suit
+    /// </summary>
+    public int GetCardIndex(int suitIndex, CardSuit suit)
+    {
+        if (suitIndex < 0 || suitIndex >= Constants.CardsPerSuit)
+        {
+            Debug.LogWarning("Invalid suit index: " + suitIndex);
+            return -1;
+        }
+        
+        return ((int)suit * Constants.CardsPerSuit) + suitIndex;
+    }
+    
+    // Method to determine the suit of a card based on its index in the deck
+    private CardSuit GetCardSuit(int cardIndex)
+    {
+        // Each suit has 13 cards (A, 2-10, J, Q, K)
+        // Hearts: 0-12, Diamonds: 13-25, Clubs: 26-38, Spades: 39-51
+        int suitIndex = cardIndex / Constants.CardsPerSuit;
+        
+        switch (suitIndex)
+        {
+            case 0: return CardSuit.Hearts;
+            case 1: return CardSuit.Diamonds;
+            case 2: return CardSuit.Clubs;
+            case 3: return CardSuit.Spades;
+            default: 
+                Debug.LogWarning("Invalid card index: " + cardIndex);
+                return CardSuit.Hearts; // Default fallback
+        }
+    }
 
+    // Method to count cards of a specific suit in a hand (legacy - use GetHandSuitCount instead)
+    private int CountCardsOfSuit(GameObject handOwner, CardSuit targetSuit)
+    {
+        return GetHandSuitCount(handOwner, targetSuit);
+    }
+
+    // HELPER FUNCTION - Check if player actually has a tarot card in the panel (more reliable than PlayerStats)
+    private bool PlayerActuallyHasCard(TarotCardType cardType)
+    {
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager == null || shopManager.tarotPanel == null)
+        {
+            Debug.LogWarning("Cannot find ShopManager or tarot panel");
+            return false;
+        }
+        
+        TarotCard[] actualCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
+        foreach (var card in actualCards)
+        {
+            if (card.cardData != null && card.cardData.cardType == cardType && !card.isInShop)
+            {
+                Debug.Log("Found " + cardType + " in tarot panel: " + card.cardData.cardName);
+                return true;
+            }
+        }
+        
+        Debug.Log("Did NOT find " + cardType + " in tarot panel");
+        return false;
+    }
+
+    // TAROT CARD BONUS FUNCTIONS - Individual calculations for each suit-based tarot card
+    
+    /// <summary>
+    /// Calculate The Botanist bonus (+50 per club in winning hand)
+    /// </summary>
+    public uint CalculateBotanistBonus(GameObject handOwner = null)
+    {
+        if (!PlayerActuallyHasCard(TarotCardType.Botanist))
+            return 0;
+            
+        GameObject targetHand = handOwner ?? player;
+        int clubCount = GetHandSuitCount(targetHand, CardSuit.Clubs);
+        uint bonus = (uint)(clubCount * Constants.SuitBonusAmount);
+        
+        if (bonus > 0)
+        {
+            Debug.Log("Botanist bonus: " + clubCount + " clubs = +" + bonus);
+        }
+        
+        return bonus;
+    }
+    
+    /// <summary>
+    /// Calculate The Assassin bonus (+50 per spade in winning hand)
+    /// </summary>
+    public uint CalculateAssassinBonus(GameObject handOwner = null)
+    {
+        if (!PlayerActuallyHasCard(TarotCardType.Assassin))
+            return 0;
+            
+        GameObject targetHand = handOwner ?? player;
+        int spadeCount = GetHandSuitCount(targetHand, CardSuit.Spades);
+        uint bonus = (uint)(spadeCount * Constants.SuitBonusAmount);
+        
+        if (bonus > 0)
+        {
+            Debug.Log("Assassin bonus: " + spadeCount + " spades = +" + bonus);
+        }
+        
+        return bonus;
+    }
+    
+    /// <summary>
+    /// Calculate The Secret Lover bonus (+50 per heart in winning hand)
+    /// </summary>
+    public uint CalculateSecretLoverBonus(GameObject handOwner = null)
+    {
+        if (!PlayerActuallyHasCard(TarotCardType.SecretLover))
+            return 0;
+            
+        GameObject targetHand = handOwner ?? player;
+        
+        // Debug: Print actual cards in hand
+        List<CardInfo> handCards = GetHandCardInfo(targetHand);
+        Debug.Log("Secret Lover - Checking hand with " + handCards.Count + " cards:");
+        foreach (CardInfo card in handCards)
+        {
+            Debug.Log("  Card: " + card.cardName + " (suit: " + card.suit + ")");
+        }
+        
+        int heartCount = GetHandSuitCount(targetHand, CardSuit.Hearts);
+        uint bonus = (uint)(heartCount * Constants.SuitBonusAmount);
+        
+        Debug.Log("Secret Lover bonus: " + heartCount + " hearts = +" + bonus + " (checking " + (targetHand == player ? "player" : "dealer") + " hand)");
+        
+        return bonus;
+    }
+    
+    /// <summary>
+    /// Calculate The Jeweler bonus (+50 per diamond in winning hand)
+    /// </summary>
+    public uint CalculateJewelerBonus(GameObject handOwner = null)
+    {
+        if (!PlayerActuallyHasCard(TarotCardType.Jeweler))
+            return 0;
+            
+        GameObject targetHand = handOwner ?? player;
+        int diamondCount = GetHandSuitCount(targetHand, CardSuit.Diamonds);
+        uint bonus = (uint)(diamondCount * Constants.SuitBonusAmount);
+        
+        if (bonus > 0)
+        {
+            Debug.Log("Jeweler bonus: " + diamondCount + " diamonds = +" + bonus);
+        }
+        
+        return bonus;
+    }
+    
+    /// <summary>
+    /// Calculate all suit bonuses for winning hands
+    /// </summary>
+    public uint CalculateSuitBonuses(GameObject handOwner = null)
+    {
+        if (PlayerStats.instance == null)
+            return 0;
+            
+        GameObject targetHand = handOwner ?? player;
+        
+        Debug.Log("=== CALCULATING SUIT BONUSES FOR " + (targetHand == player ? "PLAYER" : "DEALER") + " ===");
+        
+        // Debug: Print owned tarot cards vs actual tarot panel
+        if (PlayerStats.instance != null && PlayerStats.instance.ownedCards != null)
+        {
+            Debug.Log("PlayerStats thinks player owns " + PlayerStats.instance.ownedCards.Count + " tarot cards:");
+            foreach (var card in PlayerStats.instance.ownedCards)
+            {
+                Debug.Log("  - " + card.cardName + " (Type: " + card.cardType + ")");
+            }
+        }
+        
+        // Check what's actually in the tarot panel
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager != null && shopManager.tarotPanel != null)
+        {
+            TarotCard[] actualCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
+            Debug.Log("Tarot panel actually contains " + actualCards.Length + " cards:");
+            foreach (var card in actualCards)
+            {
+                if (card.cardData != null)
+                {
+                    Debug.Log("  - " + card.cardData.cardName + " (Type: " + card.cardData.cardType + ")");
+                }
+            }
+        }
+        
+        uint botanistBonus = CalculateBotanistBonus(targetHand);
+        uint assassinBonus = CalculateAssassinBonus(targetHand);
+        uint secretLoverBonus = CalculateSecretLoverBonus(targetHand);
+        uint jewelerBonus = CalculateJewelerBonus(targetHand);
+        
+        uint totalBonus = botanistBonus + assassinBonus + secretLoverBonus + jewelerBonus;
+        
+        Debug.Log("Bonus breakdown: Botanist=" + botanistBonus + ", Assassin=" + assassinBonus + 
+                 ", SecretLover=" + secretLoverBonus + ", Jeweler=" + jewelerBonus + ", Total=" + totalBonus);
+
+        return totalBonus;
+    }
+    
+    /// <summary>
+    /// Get detailed breakdown of all suit bonuses (useful for UI display)
+    /// </summary>
+    public Dictionary<TarotCardType, uint> GetSuitBonusBreakdown(GameObject handOwner = null)
+    {
+        Dictionary<TarotCardType, uint> breakdown = new Dictionary<TarotCardType, uint>();
+        
+        if (PlayerStats.instance == null)
+            return breakdown;
+            
+        GameObject targetHand = handOwner ?? player;
+        
+        breakdown[TarotCardType.Botanist] = CalculateBotanistBonus(targetHand);
+        breakdown[TarotCardType.Assassin] = CalculateAssassinBonus(targetHand);
+        breakdown[TarotCardType.SecretLover] = CalculateSecretLoverBonus(targetHand);
+        breakdown[TarotCardType.Jeweler] = CalculateJewelerBonus(targetHand);
+        
+        return breakdown;
+    }
+
+    // Debug method to test suit detection (can be called from Unity Inspector or console)
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void DebugTestSuitDetection()
+    {
+        Debug.Log("=== SUIT DETECTION TEST ===");
+        
+        // Test a few example cards from each suit
+        int[] testIndices = { 0, 5, 12, 13, 18, 25, 26, 31, 38, 39, 44, 51 };
+        string[] expectedSuits = { "Hearts", "Hearts", "Hearts", "Diamonds", "Diamonds", "Diamonds", 
+                                 "Clubs", "Clubs", "Clubs", "Spades", "Spades", "Spades" };
+        
+        for (int i = 0; i < testIndices.Length; i++)
+        {
+            int cardIndex = testIndices[i];
+            CardSuit detectedSuit = GetCardSuit(cardIndex);
+            string suitName = detectedSuit.ToString();
+            bool isCorrect = suitName == expectedSuits[i];
+            
+            Debug.Log("Card Index " + cardIndex + ": Expected " + expectedSuits[i] + 
+                     ", Got " + suitName + " - " + (isCorrect ? "✓" : "✗"));
+        }
+        
+        Debug.Log("=== END SUIT DETECTION TEST ===");
+    }
+
+    // Debug method to test current hand suit counts
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void DebugCurrentHandSuits()
+    {
+        Debug.Log("=== CURRENT HAND ANALYSIS ===");
+        
+        // Get detailed hand information
+        List<CardInfo> playerCards = GetHandCardInfo(player);
+        Dictionary<CardSuit, int> suitCounts = GetAllHandSuitCounts(player);
+        
+        Debug.Log("Player Hand Cards (" + playerCards.Count + " total):");
+        foreach (CardInfo card in playerCards)
+        {
+            Debug.Log("  - " + card.cardName + " (Index: " + card.index + ", Value: " + card.value + ")");
+        }
+        
+        Debug.Log("Suit Counts - Hearts: " + suitCounts[CardSuit.Hearts] + 
+                 ", Diamonds: " + suitCounts[CardSuit.Diamonds] + 
+                 ", Clubs: " + suitCounts[CardSuit.Clubs] + 
+                 ", Spades: " + suitCounts[CardSuit.Spades]);
+        
+        // Test individual tarot bonuses
+        Debug.Log("--- TAROT BONUS BREAKDOWN ---");
+        uint botanistBonus = CalculateBotanistBonus();
+        uint assassinBonus = CalculateAssassinBonus();
+        uint secretLoverBonus = CalculateSecretLoverBonus();
+        uint jewelerBonus = CalculateJewelerBonus();
+        uint totalBonuses = CalculateSuitBonuses();
+        
+        Debug.Log("Botanist (Clubs): +" + botanistBonus);
+        Debug.Log("Assassin (Spades): +" + assassinBonus);
+        Debug.Log("Secret Lover (Hearts): +" + secretLoverBonus);
+        Debug.Log("Jeweler (Diamonds): +" + jewelerBonus);
+        Debug.Log("Total Suit Bonuses: +" + totalBonuses);
+        
+        Debug.Log("=== END HAND ANALYSIS ===");
+    }
+    
+    // Debug method to show complete deck organization
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void DebugDeckStructure()
+    {
+        Debug.Log("=== DECK STRUCTURE ANALYSIS ===");
+        
+        foreach (CardSuit suit in System.Enum.GetValues(typeof(CardSuit)))
+        {
+            Debug.Log("--- " + suit.ToString().ToUpper() + " ---");
+            List<CardInfo> suitCards = GetCardsOfSuit(suit);
+            
+            for (int i = 0; i < suitCards.Count; i++)
+            {
+                CardInfo card = suitCards[i];
+                Debug.Log("Index " + card.index + ": " + card.cardName + " (Value: " + card.value + ")");
+            }
+        }
+        
+        Debug.Log("=== END DECK STRUCTURE ===");
+    }
+    
+    // Debug method to test specific card lookups
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void DebugCardLookupTest()
+    {
+        Debug.Log("=== CARD LOOKUP TEST ===");
+        
+        // Test specific card lookups
+        int aceOfHeartsIndex = GetCardIndex(0, CardSuit.Hearts);
+        int kingOfSpadesIndex = GetCardIndex(12, CardSuit.Spades);
+        
+        CardInfo aceOfHearts = GetCardInfo(aceOfHeartsIndex);
+        CardInfo kingOfSpades = GetCardInfo(kingOfSpadesIndex);
+        
+        Debug.Log("Ace of Hearts - Index: " + aceOfHearts.index + ", Name: " + aceOfHearts.cardName);
+        Debug.Log("King of Spades - Index: " + kingOfSpades.index + ", Name: " + kingOfSpades.cardName);
+        
+        // Test hand contains specific cards
+        bool hasAceOfHearts = HandContainsCard(player, 1, CardSuit.Hearts);
+        bool hasKingOfSpades = HandContainsCard(player, 10, CardSuit.Spades);
+        
+        Debug.Log("Player has Ace of Hearts: " + hasAceOfHearts);
+        Debug.Log("Player has King of Spades: " + hasKingOfSpades);
+        
+        Debug.Log("=== END CARD LOOKUP TEST ===");
+    }
+
+    
     // Method to handle streak rewards and multiplier calculation
     private void HandleStreakRewards()
     {
