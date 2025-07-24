@@ -42,7 +42,7 @@ public class CardHand : MonoBehaviour
         cards[0].GetComponent<CardModel>().ToggleFace(true);
     
     // New method for creating cards without automatic positioning (for animations)
-    public GameObject CreateCard(Sprite front, int value, bool skipArrangement = false)
+    public GameObject CreateCard(Sprite front, int value, bool skipArrangement = false, int originalDeckIndex = -1)
     {
         if (cards.Count >= Constants.MaxCardsInHand)
         {
@@ -82,6 +82,7 @@ public class CardHand : MonoBehaviour
         
         cardModel.cardFront = front;
         cardModel.value = value;
+        cardModel.originalDeckIndex = originalDeckIndex;
         
         // For dealers, the first card should show back, others show front
         // For players, all cards should show front
@@ -110,7 +111,7 @@ public class CardHand : MonoBehaviour
         return cardCopy;
     }
     
-    public void Push(Sprite front, int value)
+    public void Push(Sprite front, int value, int originalDeckIndex = -1)
     {
         if (cards.Count >= Constants.MaxCardsInHand)
         {
@@ -147,6 +148,7 @@ public class CardHand : MonoBehaviour
         
         cardModel.cardFront = front;
         cardModel.value = value;
+        cardModel.originalDeckIndex = originalDeckIndex;
         
         // For dealers, the first card should show back, others show front
         // For players, all cards should show front

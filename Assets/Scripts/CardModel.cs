@@ -8,6 +8,7 @@ public class CardModel : MonoBehaviour
     public Sprite cardBack;
     public Sprite cardFront;
     public int value;
+    public int originalDeckIndex = -1; // Store the original deck index before shuffle
     public bool isSelected = false;
     private Vector3 originalPosition;
     private bool isInitialized = false;
