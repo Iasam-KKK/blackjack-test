@@ -121,6 +121,24 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     case TarotCardType.Jeweler:
                         description = "The Jeweler: Adds a +50 bonus for each diamond card in your winning hand. Passive ability.";
                         break;
+                    case TarotCardType.Scavenger:
+                        description = "The Scavenger: Removes all cards with value less than 7 from your hand. Can only be used once per round.";
+                        break;
+                    case TarotCardType.Gardener:
+                        description = "The Gardener: Removes all club (clover) cards from both your hand and the dealer's hand. Can only be used once per round.";
+                        break;
+                    case TarotCardType.BetrayedCouple:
+                        description = "The Betrayed Couple: Removes all heart cards from both your hand and the dealer's hand. Can only be used once per round.";
+                        break;
+                    case TarotCardType.Blacksmith:
+                        description = "The Blacksmith: Removes all spade cards from both your hand and the dealer's hand. Can only be used once per round.";
+                        break;
+                    case TarotCardType.TaxCollector:
+                        description = "The Tax Collector: Removes all diamond cards from both your hand and the dealer's hand. Can only be used once per round.";
+                        break;
+                    case TarotCardType.HouseKeeper:
+                        description = "The House Keeper: Adds a +10 bonus for each Jack, Queen, or King card in your winning hand. Passive ability.";
+                        break;
                     default:
                         description = "A mystical tarot card with special powers.";
                         break;
@@ -375,6 +393,141 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     // Don't mark as used - it's a passive effect
                     break;
                     
+                case TarotCardType.Scavenger:
+                    CardHand playerHand = deck.player.GetComponent<CardHand>();
+                    if (playerHand != null && playerHand.cards.Count > 0)
+                    {
+                        // Find all cards with value < 7
+                        var cardsToRemove = new System.Collections.Generic.List<GameObject>();
+                        foreach (GameObject card in playerHand.cards)
+                        {
+                            CardModel cardModel = card.GetComponent<CardModel>();
+                            if (cardModel != null && cardModel.value < 7)
+                            {
+                                cardsToRemove.Add(card);
+                            }
+                        }
+                        
+                        // Animate and remove the cards with staggered timing
+                        if (cardsToRemove.Count > 0)
+                        {
+                            Debug.Log("The Scavenger is removing " + cardsToRemove.Count + " cards with value < 7");
+                            
+                            // Keep track of completed animations
+                            int animationsCompleted = 0;
+                            int totalAnimations = cardsToRemove.Count;
+                            
+                            for (int i = 0; i < cardsToRemove.Count; i++)
+                            {
+                                GameObject cardToRemove = cardsToRemove[i];
+                                
+                                // Deselect the card if it's selected
+                                CardModel cardModel = cardToRemove.GetComponent<CardModel>();
+                                if (cardModel != null && cardModel.isSelected)
+                                {
+                                    cardModel.DeselectCard();
+                                }
+                                
+                                // Calculate staggered delay for dramatic effect
+                                float delay = i * 0.15f; // 150ms between each card animation
+                                
+                                // Create dramatic whoosh animation sequence
+                                Sequence whooshSequence = DOTween.Sequence();
+                                
+                                // Small delay for staggered effect
+                                whooshSequence.AppendInterval(delay);
+                                
+                                // Scale up slightly and rotate for dramatic effect
+                                whooshSequence.Append(cardToRemove.transform.DOScale(cardToRemove.transform.localScale * 1.2f, 0.2f)
+                                    .SetEase(Ease.OutQuad));
+                                whooshSequence.Join(cardToRemove.transform.DORotate(new Vector3(0, 0, Random.Range(-30f, 30f)), 0.2f)
+                                    .SetEase(Ease.OutQuad));
+                                
+                                // Whoosh the card down off-screen
+                                Vector3 whooshTarget = new Vector3(
+                                    cardToRemove.transform.localPosition.x + Random.Range(-200f, 200f), // Random horizontal spread
+                                    cardToRemove.transform.localPosition.y - 1000f, // Move far down off-screen
+                                    cardToRemove.transform.localPosition.z
+                                );
+                                
+                                whooshSequence.Append(cardToRemove.transform.DOLocalMove(whooshTarget, 0.8f)
+                                    .SetEase(Ease.InQuart)); // Fast acceleration downward
+                                
+                                // Fade out during the whoosh
+                                SpriteRenderer spriteRenderer = cardToRemove.GetComponent<SpriteRenderer>();
+                                if (spriteRenderer != null)
+                                {
+                                    whooshSequence.Join(spriteRenderer.DOFade(0f, 0.6f).SetDelay(0.2f));
+                                }
+                                
+                                // Complete the animation
+                                whooshSequence.OnComplete(() => {
+                                    // Remove from the cards list and destroy
+                                    if (playerHand.cards.Contains(cardToRemove))
+                                    {
+                                        playerHand.cards.Remove(cardToRemove);
+                                    }
+                                    Destroy(cardToRemove);
+                                    
+                                    animationsCompleted++;
+                                    
+                                    // When all animations are complete, update the hand
+                                    if (animationsCompleted >= totalAnimations)
+                                    {
+                                        // Rearrange remaining cards and update points
+                                        playerHand.ArrangeCardsInWindow();
+                                        playerHand.UpdatePoints();
+                                        
+                                        // Update displays after all cards are removed
+                                        deck.UpdateScoreDisplays();
+                                        deck.UpdateDiscardButtonState();
+                                        deck.UpdateTransformButtonState();
+                                        
+                                        Debug.Log("The Scavenger finished removing all low-value cards");
+                                    }
+                                });
+                            }
+                            
+                            effectApplied = true;
+                        }
+                        else
+                        {
+                            Debug.Log("No cards with value < 7 found in hand");
+                            effectApplied = true; // Still counts as used even if no cards were removed
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("No cards in hand to scavenge");
+                        effectApplied = true; // Still counts as used
+                    }
+                    break;
+                    
+                case TarotCardType.Gardener:
+                    RemoveCardsBySuitFromBothHands(CardSuit.Clubs, "The Gardener", "club");
+                    effectApplied = true;
+                    break;
+                    
+                case TarotCardType.BetrayedCouple:
+                    RemoveCardsBySuitFromBothHands(CardSuit.Hearts, "The Betrayed Couple", "heart");
+                    effectApplied = true;
+                    break;
+                    
+                case TarotCardType.Blacksmith:
+                    RemoveCardsBySuitFromBothHands(CardSuit.Spades, "The Blacksmith", "spade");
+                    effectApplied = true;
+                    break;
+                    
+                case TarotCardType.TaxCollector:
+                    RemoveCardsBySuitFromBothHands(CardSuit.Diamonds, "The Tax Collector", "diamond");
+                    effectApplied = true;
+                    break;
+                    
+                case TarotCardType.HouseKeeper:
+                    Debug.Log("The House Keeper card is active and will provide +10 bonus per Jack/Queen/King in winning hands");
+                    // Don't mark as used - it's a passive effect
+                    break;
+                    
                 default:
                     Debug.LogWarning("Unknown card type: " + cardData.cardType);
                     return;
@@ -387,6 +540,150 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 // Visual indication it's been used
                 cardImage.color = new Color(0.5f, 0.5f, 0.5f);
             }
+        }
+    }
+    
+    // Helper method to remove cards of a specific suit from both player and dealer hands
+    private void RemoveCardsBySuitFromBothHands(CardSuit suit, string cardName, string suitName)
+    {
+        Debug.Log($"{cardName} is active and will remove all {suitName} cards from both hands.");
+        
+        // Get player's hand
+        CardHand playerHand = deck.player.GetComponent<CardHand>();
+        if (playerHand == null)
+        {
+            Debug.LogError("Player's CardHand not found!");
+            return;
+        }
+
+        // Get dealer's hand
+        CardHand dealerHand = deck.dealer.GetComponent<CardHand>();
+        if (dealerHand == null)
+        {
+            Debug.LogError("Dealer's CardHand not found!");
+            return;
+        }
+
+        // Find all cards of the specified suit in both hands using deck's utility methods
+        var cardsToRemove = new System.Collections.Generic.List<GameObject>();
+        
+        // Check player's hand
+        foreach (GameObject card in playerHand.cards)
+        {
+            CardModel cardModel = card.GetComponent<CardModel>();
+            if (cardModel != null)
+            {
+                // Use deck's method to get card info including suit
+                CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+                if (cardInfo.suit == suit)
+                {
+                    cardsToRemove.Add(card);
+                }
+            }
+        }
+        
+        // Check dealer's hand
+        foreach (GameObject card in dealerHand.cards)
+        {
+            CardModel cardModel = card.GetComponent<CardModel>();
+            if (cardModel != null)
+            {
+                // Use deck's method to get card info including suit
+                CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+                if (cardInfo.suit == suit)
+                {
+                    cardsToRemove.Add(card);
+                }
+            }
+        }
+
+        if (cardsToRemove.Count > 0)
+        {
+            Debug.Log($"Removing {cardsToRemove.Count} {suitName} cards from both hands.");
+            
+            // Keep track of completed animations
+            int animationsCompleted = 0;
+            int totalAnimations = cardsToRemove.Count;
+            
+            for (int i = 0; i < cardsToRemove.Count; i++)
+            {
+                GameObject cardToRemove = cardsToRemove[i];
+                
+                // Deselect the card if it's selected
+                CardModel cardModel = cardToRemove.GetComponent<CardModel>();
+                if (cardModel != null && cardModel.isSelected)
+                {
+                    cardModel.DeselectCard();
+                }
+                
+                // Calculate staggered delay for dramatic effect
+                float delay = i * 0.15f; // 150ms between each card animation
+                
+                // Create dramatic whoosh animation sequence
+                Sequence whooshSequence = DOTween.Sequence();
+                
+                // Small delay for staggered effect
+                whooshSequence.AppendInterval(delay);
+                
+                // Scale up slightly and rotate for dramatic effect
+                whooshSequence.Append(cardToRemove.transform.DOScale(cardToRemove.transform.localScale * 1.2f, 0.2f)
+                    .SetEase(Ease.OutQuad));
+                whooshSequence.Join(cardToRemove.transform.DORotate(new Vector3(0, 0, Random.Range(-30f, 30f)), 0.2f)
+                    .SetEase(Ease.OutQuad));
+                
+                // Whoosh the card down off-screen
+                Vector3 whooshTarget = new Vector3(
+                    cardToRemove.transform.localPosition.x + Random.Range(-200f, 200f), // Random horizontal spread
+                    cardToRemove.transform.localPosition.y - 1000f, // Move far down off-screen
+                    cardToRemove.transform.localPosition.z
+                );
+                
+                whooshSequence.Append(cardToRemove.transform.DOLocalMove(whooshTarget, 0.8f)
+                    .SetEase(Ease.InQuart)); // Fast acceleration downward
+                
+                // Fade out during the whoosh
+                SpriteRenderer spriteRenderer = cardToRemove.GetComponent<SpriteRenderer>();
+                if (spriteRenderer != null)
+                {
+                    whooshSequence.Join(spriteRenderer.DOFade(0f, 0.6f).SetDelay(0.2f));
+                }
+                
+                // Complete the animation
+                whooshSequence.OnComplete(() => {
+                    // Remove from the cards list and destroy
+                    if (playerHand.cards.Contains(cardToRemove))
+                    {
+                        playerHand.cards.Remove(cardToRemove);
+                    }
+                    if (dealerHand.cards.Contains(cardToRemove))
+                    {
+                        dealerHand.cards.Remove(cardToRemove);
+                    }
+                    Destroy(cardToRemove);
+                    
+                    animationsCompleted++;
+                    
+                    // When all animations are complete, update the hands
+                    if (animationsCompleted >= totalAnimations)
+                    {
+                        playerHand.ArrangeCardsInWindow();
+                        playerHand.UpdatePoints();
+                        dealerHand.ArrangeCardsInWindow();
+                        dealerHand.UpdatePoints();
+                        
+                        // Update displays after all cards are removed
+                        deck.UpdateScoreDisplays();
+                        deck.UpdateDiscardButtonState();
+                        deck.UpdateTransformButtonState();
+                        
+                        Debug.Log($"{cardName} finished removing all {suitName} cards.");
+                    }
+                });
+            }
+        }
+        else
+        {
+            Debug.Log($"No {suitName} cards found in either hand.");
         }
     }
     

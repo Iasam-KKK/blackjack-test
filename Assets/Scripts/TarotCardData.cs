@@ -42,5 +42,11 @@ public enum TarotCardType
     Botanist,    // NEW: Adds +50 bonus per clover in winning hand
     Assassin,    // NEW: Adds +50 bonus per spade in winning hand
     SecretLover, // NEW: Adds +50 bonus per heart in winning hand
-    Jeweler      // NEW: Adds +50 bonus per diamond in winning hand
+    Jeweler,     // NEW: Adds +50 bonus per diamond in winning hand
+    Scavenger,   // NEW: Removes all cards with value < 7 from player's hand
+    Gardener,    // NEW: Removes all club cards from both player and dealer hands
+    BetrayedCouple, // NEW: Removes all heart cards from both player and dealer hands
+    Blacksmith,  // NEW: Removes all spade cards from both player and dealer hands
+    TaxCollector, // NEW: Removes all diamond cards from both player and dealer hands
+    HouseKeeper  // NEW: Adds +10 bonus per Jack/Queen/King in player's winning hand
 } 
