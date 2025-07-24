@@ -432,24 +432,37 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 case TarotCardType.WhisperOfThePast:
                     if (!hasBeenUsedThisRound)
                     {
-                        Debug.Log("[Whisper of the Past] Triggered: Losing ¼ of bet and wiping player cards.");
+                        // Deduct ¼ of the current bet
+                        int quarterBet = Mathf.FloorToInt(deck._bet * 0.75f);
+                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - quarterBet);
+                        deck.bet.text = quarterBet.ToString();  // Optional: You can keep showing the full bet here if needed
+                        Debug.Log($"[WhisperOfThePast] Deducted ¼ of the bet: -{quarterBet}");
 
-                        // Optional: prevent clicking when there's no hand dealt
-                        if (deck.player == null || deck.player.GetComponent<CardHand>() == null) break;
-
-                        // Lose ¼ of the bet
-                        int lostAmount = Mathf.FloorToInt(deck.GetCurrentBet() * 0.25f); // Assumes you have a getter
-                        deck.Balance = Mathf.Max(0, deck.Balance - lostAmount); // Deduct balance safely
-                        Debug.Log("Lost " + lostAmount + " due to Whisper of the Past.");
-
-                        // Wipe only the player's cards
+                        // Activate the card's effect
+                        Debug.Log("[WhisperOfThePast] Removing player cards and re-dealing...");
                         deck.StartCoroutine(deck.ActivateWhisperOfThePastEffect());
 
                         effectApplied = true;
-                        hasBeenUsedThisRound = true;
-                        cardImage.color = new Color(0.5f, 0.5f, 0.5f);
                     }
                     break;
+                case TarotCardType.Saboteur:
+                    if (!hasBeenUsedThisRound)
+                    {
+                        // Deduct ¼ of the current bet
+                        int quarterBet = Mathf.FloorToInt(deck._bet * 0.75f);
+                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - quarterBet);
+                        deck.bet.text = quarterBet.ToString();  // Optional: you might want to show the full bet instead
+                        Debug.Log($"[Saboteur] Deducted ¼ of the bet: -{quarterBet}");
+
+                        // Activate the dealer-hand clearing effect
+                        Debug.Log("[Saboteur] Removing dealer cards...");
+                        deck.StartCoroutine(deck.ActivateSaboteurEffect());
+
+                        effectApplied = true;
+                    }
+                    break;
+
+
 
                     
                 case TarotCardType.Scavenger:

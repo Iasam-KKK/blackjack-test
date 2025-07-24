@@ -156,6 +156,7 @@ public class Deck : MonoBehaviour
     private uint _startingBalanceForBlind;
     private uint _goalForCurrentBlind = Constants.SmallBlindGoal;
     private int _totalRoundsForBlind = Constants.SmallBlindRounds;
+    
 
     // Add a new field to track blackjack earnings
     private long _earningsForCurrentBlind = 0;
@@ -2468,7 +2469,6 @@ public class Deck : MonoBehaviour
         
         Debug.Log("Initialized betting state - waiting for bet placement");
     }
-
     private IEnumerator DealInitialCardsAnimated()
     {
         // Disable game action buttons during dealing
@@ -2522,8 +2522,6 @@ public class Deck : MonoBehaviour
             EndHand(WinCode.DealerWins);
         }
     }
-    
-
     private IEnumerator ReplaceCardWithInitialAnimation(CardModel clickedCard)
     {
         CardHand hand = player.GetComponent<CardHand>();
@@ -2543,12 +2541,10 @@ public class Deck : MonoBehaviour
 
         Debug.Log("[Makeup Artist] Replaced card using normal deal animation.");
     }
-
     public void TriggerCursedHourglassEffect()
     {
         StartCoroutine(ActivateCursedHourglassEffect());
     }
-
     public IEnumerator ActivateCursedHourglassEffect()
     {
         Debug.Log("[CursedHourglass] Activated: Removing all cards and re-dealing...");
@@ -2602,6 +2598,68 @@ public class Deck : MonoBehaviour
 
         UpdateScoreDisplays();
     }
+    public IEnumerator ActivateWhisperOfThePastEffect()
+    {
+        Debug.Log("[WhisperOfThePast] Start effect");
+
+        // Clear player hand logic
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand != null)
+        {
+            playerHand.ClearHand();
+        }
+
+        // Destroy all visual cards under player
+        foreach (Transform card in player.transform)
+        {
+            Destroy(card.gameObject);
+        }
+
+        yield return new WaitForSeconds(0.4f); // small delay for visual clarity
+
+        // ✅ Do NOT deal new cards here — player will hit manually later
+
+        // Update the UI after discarding cards
+        UpdateScoreDisplays();
+        UpdateDiscardButtonState();
+        UpdatePeekButtonState();
+        UpdateTransformButtonState();
+
+        // Re-enable hit/stick buttons if needed
+        hitButton.interactable = true;
+        stickButton.interactable = true;
+    }
+    public IEnumerator ActivateSaboteurEffect()
+    {
+        Debug.Log("[Saboteur] Effect triggered.");
+
+        // 1. Remove all dealer cards
+        if (dealer != null)
+        {
+            CardHand dh = dealer.GetComponent<CardHand>();
+            dh?.ClearHand(); // Clear logic
+            foreach (Transform c in dealer.transform)
+            {
+                if (c != null) Destroy(c.gameObject); // Clear visuals
+            }
+        }
+
+        yield return new WaitForSeconds(0.3f); // Small delay
+
+        // 2. Re-deal 2 new cards to the dealer only
+        for (int i = 0; i < Constants.InitialCardsDealt; ++i)
+        {
+            yield return StartCoroutine(PushDealerAnimated());
+            yield return new WaitForSeconds(Constants.CardDealDelay);
+        }
+
+        // 3. Refresh score and UI
+        UpdateScoreDisplays();
+        UpdateDiscardButtonState();
+        UpdatePeekButtonState();
+        UpdateTransformButtonState();
+    }
+
 
     private IEnumerator PushPlayerAnimated()
     {
