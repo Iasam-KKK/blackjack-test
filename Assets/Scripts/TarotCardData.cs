@@ -42,5 +42,8 @@ public enum TarotCardType
     Botanist,    // NEW: Adds +50 bonus per clover in winning hand
     Assassin,    // NEW: Adds +50 bonus per spade in winning hand
     SecretLover, // NEW: Adds +50 bonus per heart in winning hand
-    Jeweler      // NEW: Adds +50 bonus per diamond in winning hand
+    Jeweler,      // NEW: Adds +50 bonus per diamond in winning hand
+    MakeupArtist, //Allows to select a card and allow to pass it for another
+    CursedHourglass, //Lose half of your bet, but temporarily discard all cards in play from both sides
+    WhisperOfThePast //Lose ¼ of your bet, temporarily discard all cards from your played side
 } 

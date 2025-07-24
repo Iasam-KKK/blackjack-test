@@ -143,7 +143,7 @@ public class Deck : MonoBehaviour
     public GameHistoryManager gameHistoryManager;
 
     private uint _balance = Constants.InitialBalance;
-    private uint _bet;
+    public uint _bet;
     private bool _isPeeking = false;
     private bool _isBetPlaced = false; // Track if bet has been placed for current round
     public bool _hasUsedPeekThisRound = false; // Track if peek has been used in current round
@@ -168,7 +168,9 @@ public class Deck : MonoBehaviour
     private bool _isHoldingLowerBet = false;
     private Coroutine _raiseBetCoroutine = null;
     private Coroutine _lowerBetCoroutine = null;
-    
+    public CardModel selectedCardForMakeupArtist;
+
+
 
     // Public property to access balance
     /*public uint Balance
@@ -1770,7 +1772,7 @@ public class Deck : MonoBehaviour
     }
 
     // HELPER FUNCTION - Check if player actually has a tarot card in the panel (more reliable than PlayerStats)
-    private bool PlayerActuallyHasCard(TarotCardType cardType)
+    public bool PlayerActuallyHasCard(TarotCardType cardType)
     {
         ShopManager shopManager = FindObjectOfType<ShopManager>();
         if (shopManager == null || shopManager.tarotPanel == null)
@@ -2420,35 +2422,133 @@ public class Deck : MonoBehaviour
         // Disable game action buttons during dealing
         hitButton.interactable = false;
         stickButton.interactable = false;
-        
+
         // Deal cards alternately: player, dealer, player, dealer
         for (int i = 0; i < Constants.InitialCardsDealt; ++i)
         {
             // Deal to player first
             yield return StartCoroutine(PushPlayerAnimated());
             yield return new WaitForSeconds(Constants.CardDealDelay);
-            
+
             // Then deal to dealer
             yield return StartCoroutine(PushDealerAnimated());
             yield return new WaitForSeconds(Constants.CardDealDelay);
         }
-        
+
+        // 🔮 Cursed Hourglass effect check — trigger redeal
+        /*if (PlayerActuallyHasCard(TarotCardType.CursedHourglass))
+        {
+            Debug.Log("[CursedHourglass] Active — wiping and redealing hands.");
+            yield return StartCoroutine(ActivateCursedHourglassEffect());
+            yield break; // Stop here — cards are already redealt in the effect
+        }*/
+
         // Enable game action buttons after dealing is complete
         hitButton.interactable = true;
         stickButton.interactable = true;
-        
-        UpdateScoreDisplays(); 
-        UpdateDiscardButtonState();  
+
+        // Update UI and states
+        UpdateScoreDisplays();
+        UpdateDiscardButtonState();
         UpdatePeekButtonState();
         UpdateTransformButtonState();
 
         // Check for blackjack after all cards are dealt
         if (Blackjack(player, true))
         {
-            if (Blackjack(dealer, false)) { EndHand(WinCode.Draw); }        
-            else { EndHand(WinCode.PlayerWins); }                          
+            if (Blackjack(dealer, false))
+            {
+                EndHand(WinCode.Draw);
+            }
+            else
+            {
+                EndHand(WinCode.PlayerWins);
+            }
         }
-        else if (Blackjack(dealer, false)) { EndHand(WinCode.DealerWins); }  
+        else if (Blackjack(dealer, false))
+        {
+            EndHand(WinCode.DealerWins);
+        }
+    }
+    
+
+    private IEnumerator ReplaceCardWithInitialAnimation(CardModel clickedCard)
+    {
+        CardHand hand = player.GetComponent<CardHand>();
+        if (hand == null) yield break;
+
+        // Step 1: Remove the clicked card from hand and destroy it
+        hand.cards.Remove(clickedCard.gameObject);
+        Destroy(clickedCard.gameObject);
+
+        yield return new WaitForSeconds(0.1f); // tiny delay before adding new card
+
+        // Step 2: Add a new card using your standard PushPlayerAnimated animation
+        yield return StartCoroutine(PushPlayerAnimated());
+
+        // Step 3: Update UI
+        UpdateScoreDisplays();
+
+        Debug.Log("[Makeup Artist] Replaced card using normal deal animation.");
+    }
+
+    public void TriggerCursedHourglassEffect()
+    {
+        StartCoroutine(ActivateCursedHourglassEffect());
+    }
+
+    public IEnumerator ActivateCursedHourglassEffect()
+    {
+        Debug.Log("[CursedHourglass] Activated: Removing all cards and re-dealing...");
+
+        // 1. Clear card logic references first
+        if (player != null) player.GetComponent<CardHand>()?.ClearHand();
+        if (dealer != null) dealer.GetComponent<CardHand>()?.ClearHand();
+
+        // 2. Destroy visual GameObjects AFTER logic is cleared
+        foreach (Transform card in player.transform)
+        {
+            if (card != null) Destroy(card.gameObject);
+        }
+
+        foreach (Transform card in dealer.transform)
+        {
+            if (card != null) Destroy(card.gameObject);
+        }
+
+        // 3. Wait a short moment to allow destroy animations (optional)
+        yield return new WaitForSeconds(0.4f);
+
+        // 4. Re-deal cards like initial game start
+      //  yield return StartCoroutine(DealInitialCardsAnimated());
+      // Manually deal exactly 2 new cards
+      for (int i = 0; i < 2; i++)
+      {
+          yield return StartCoroutine(PushPlayerAnimated());
+          yield return new WaitForSeconds(Constants.CardDealDelay);
+
+          yield return StartCoroutine(PushDealerAnimated());
+          yield return new WaitForSeconds(Constants.CardDealDelay);
+      }
+
+    }
+    public IEnumerator ReplaceCardWithMakeupArtist(CardModel cardToReplace)
+    {
+        Debug.Log("[Makeup Artist] Replacing selected card...");
+
+        CardHand hand = player.GetComponent<CardHand>();
+        if (hand == null || cardToReplace == null) yield break;
+
+        // Remove from hand logic
+        hand.cards.Remove(cardToReplace.gameObject);
+        Destroy(cardToReplace.gameObject);
+
+        yield return new WaitForSeconds(0.2f);
+
+        // Deal one new card to player
+        yield return StartCoroutine(PushPlayerAnimated());
+
+        UpdateScoreDisplays();
     }
 
     private IEnumerator PushPlayerAnimated()
