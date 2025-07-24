@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3dab666e5dc8c504aad31dbedeb22634, type: 3}
-  m_Name: The Scavenger
+  m_Name: The Gardener
   m_EditorClassIdentifier: 
-  cardName: The Scavenger
-  cardImage: {fileID: 21300000, guid: 39927ce8f882e7449a4c89c58eb1b5d3, type: 3}
+  cardName: The Gardener
+  cardImage: {fileID: 21300000, guid: 9b27190cc5feb6749aeb41de54adf5e5, type: 3}
   price: 100
-  description: Removes all cards played from your side lower than 7 in value
-  cardType: 9
+  description: Removes all clover cards played from your side or the enemy's
+  cardType: 10
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

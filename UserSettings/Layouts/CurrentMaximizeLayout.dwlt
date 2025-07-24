@@ -639,10 +639,10 @@ MonoBehaviour:
     serializedVersion: 2
     x: 725.6
     y: 0
-    width: 246.40002
-    height: 722.8
-  m_MinSize: {x: 202, y: 221}
-  m_MaxSize: {x: 4002, y: 4021}
+    width: 411
+    height: 1299
+  m_MinSize: {x: 200, y: 200}
+  m_MaxSize: {x: 4000, y: 4000}
   m_ActualView: {fileID: 8}
   m_Panes:
   - {fileID: 8}
@@ -686,9 +686,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 50990000
-      m_LastClickedID: 39248
-      m_ExpandedIDs: a0daffff16dbffffb2f5ffff
+      m_SelectedIDs: 32c40000
+      m_LastClickedID: 0
+      m_ExpandedIDs: 3698feff16fbffff28fbffffbe65000004660000966600001c680000
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 

@@ -88,6 +88,7 @@ internal static class Constants
     // Suit bonus constants
     public const int SuitBonusAmount = 50; // Bonus amount per card of matching suit
     public const int CardsPerSuit = 13; // Number of cards per suit (A, 2-10, J, Q, K)
+    public const int HouseKeeperBonusAmount = 10; // Bonus amount per Jack/Queen/King card
 }
 
 // Enum to track current blind level
@@ -2103,6 +2104,52 @@ public class Deck : MonoBehaviour
     }
     
     /// <summary>
+    /// Calculate The House Keeper bonus (+10 per Jack/Queen/King in winning hand)
+    /// </summary>
+    public uint CalculateHouseKeeperBonus(GameObject handOwner = null)
+    {
+        if (!PlayerActuallyHasCard(TarotCardType.HouseKeeper))
+            return 0;
+            
+        GameObject targetHand = handOwner ?? player;
+        
+        // Ensure we're only checking the player's hand for bonuses
+        if (targetHand != player)
+        {
+            Debug.Log("House Keeper bonus: Skipping - not checking player hand");
+            return 0;
+        }
+        
+        // Get actual cards in player's hand and count Jack/Queen/King cards
+        List<CardInfo> handCards = GetHandCardInfo(targetHand);
+        List<CardInfo> faceCards = handCards.Where(card => 
+            card.suitIndex == 10 || // Jack
+            card.suitIndex == 11 || // Queen  
+            card.suitIndex == 12    // King
+        ).ToList();
+        
+        if (faceCards.Count > 0)
+        {
+            Debug.Log("House Keeper bonus calculation:");
+            Debug.Log("  Player hand contains " + handCards.Count + " total cards");
+            Debug.Log("  Face cards (J/Q/K) found in player hand:");
+            foreach (CardInfo card in faceCards)
+            {
+                Debug.Log("    - " + card.cardName);
+            }
+        }
+        
+        uint bonus = (uint)(faceCards.Count * Constants.HouseKeeperBonusAmount);
+        
+        if (bonus > 0)
+        {
+            Debug.Log("House Keeper bonus: " + faceCards.Count + " face cards = +" + bonus + " (only counting player hand)");
+        }
+        
+        return bonus;
+    }
+    
+    /// <summary>
     /// Calculate all suit bonuses for winning hands
     /// </summary>
     public uint CalculateSuitBonuses(GameObject handOwner = null)
@@ -2162,11 +2209,13 @@ public class Deck : MonoBehaviour
         uint assassinBonus = CalculateAssassinBonus(targetHand);
         uint secretLoverBonus = CalculateSecretLoverBonus(targetHand);
         uint jewelerBonus = CalculateJewelerBonus(targetHand);
+        uint houseKeeperBonus = CalculateHouseKeeperBonus(targetHand);
         
-        uint totalBonus = botanistBonus + assassinBonus + secretLoverBonus + jewelerBonus;
+        uint totalBonus = botanistBonus + assassinBonus + secretLoverBonus + jewelerBonus + houseKeeperBonus;
         
         Debug.Log("Bonus breakdown: Botanist=" + botanistBonus + ", Assassin=" + assassinBonus + 
-                 ", SecretLover=" + secretLoverBonus + ", Jeweler=" + jewelerBonus + ", Total=" + totalBonus);
+                 ", SecretLover=" + secretLoverBonus + ", Jeweler=" + jewelerBonus + 
+                 ", HouseKeeper=" + houseKeeperBonus + ", Total=" + totalBonus);
 
         return totalBonus;
     }
@@ -2195,6 +2244,7 @@ public class Deck : MonoBehaviour
         breakdown[TarotCardType.Assassin] = CalculateAssassinBonus(targetHand);
         breakdown[TarotCardType.SecretLover] = CalculateSecretLoverBonus(targetHand);
         breakdown[TarotCardType.Jeweler] = CalculateJewelerBonus(targetHand);
+        breakdown[TarotCardType.HouseKeeper] = CalculateHouseKeeperBonus(targetHand);
         
         return breakdown;
     }
@@ -2251,12 +2301,14 @@ public class Deck : MonoBehaviour
         uint assassinBonus = CalculateAssassinBonus();
         uint secretLoverBonus = CalculateSecretLoverBonus();
         uint jewelerBonus = CalculateJewelerBonus();
+        uint houseKeeperBonus = CalculateHouseKeeperBonus();
         uint totalBonuses = CalculateSuitBonuses();
         
         Debug.Log("Botanist (Clubs): +" + botanistBonus);
         Debug.Log("Assassin (Spades): +" + assassinBonus);
         Debug.Log("Secret Lover (Hearts): +" + secretLoverBonus);
         Debug.Log("Jeweler (Diamonds): +" + jewelerBonus);
+        Debug.Log("House Keeper (J/Q/K): +" + houseKeeperBonus);
         Debug.Log("Total Suit Bonuses: +" + totalBonuses);
         
         Debug.Log("=== END HAND ANALYSIS ===");
