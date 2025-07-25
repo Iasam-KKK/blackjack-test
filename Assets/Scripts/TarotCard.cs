@@ -139,6 +139,24 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     case TarotCardType.HouseKeeper:
                         description = "The House Keeper: Adds a +10 bonus for each Jack, Queen, or King card in your winning hand. Passive ability.";
                         break;
+                    case TarotCardType.Spy:
+                        description = "The Spy: Allows you to peek at the next card that would be dealt to the dealer. Can only be used once per round.";
+                        break;
+                    case TarotCardType.BlindSeer:
+                        description = "The Blind Seer: Reveals all cards currently in the dealer's hand, including hidden cards. Can only be used once per round.";
+                        break;
+                    case TarotCardType.CorruptJudge:
+                        description = "The Corrupt Judge: Peek at the next three cards in the deck and rearrange the first two if desired. Can only be used once per round.";
+                        break;
+                    case TarotCardType.Hitman:
+                        description = "The Hitman: Peek at the next three cards in the deck and remove one from play permanently. Can only be used once per round.";
+                        break;
+                    case TarotCardType.FortuneTeller:
+                        description = "The Fortune Teller: Take a peek at the next two cards that will be dealt from the deck. Can only be used once per round.";
+                        break;
+                    case TarotCardType.MadWriter:
+                        description = "The Mad Writer: Look at the next card in the deck and choose to shuffle the entire deck if desired. Can only be used once per round.";
+                        break;
                     default:
                         description = "A mystical tarot card with special powers.";
                         break;
@@ -526,6 +544,79 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 case TarotCardType.HouseKeeper:
                     Debug.Log("The House Keeper card is active and will provide +10 bonus per Jack/Queen/King in winning hands");
                     // Don't mark as used - it's a passive effect
+                    break;
+                    
+                // NEW PREVIEW CARDS
+                case TarotCardType.Spy:
+                    if (!deck._hasUsedSpyThisRound)
+                    {
+                        deck.UseSpyCard();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("Spy ability already used this round");
+                    }
+                    break;
+                    
+                case TarotCardType.BlindSeer:
+                    if (!deck._hasUsedBlindSeerThisRound)
+                    {
+                        deck.UseBlindSeerCard();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("Blind Seer ability already used this round");
+                    }
+                    break;
+                    
+                case TarotCardType.CorruptJudge:
+                    if (!deck._hasUsedCorruptJudgeThisRound)
+                    {
+                        deck.UseCorruptJudgeCard();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("Corrupt Judge ability already used this round");
+                    }
+                    break;
+                    
+                case TarotCardType.Hitman:
+                    if (!deck._hasUsedHitmanThisRound)
+                    {
+                        deck.UseHitmanCard();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("Hitman ability already used this round");
+                    }
+                    break;
+                    
+                case TarotCardType.FortuneTeller:
+                    if (!deck._hasUsedFortuneTellerThisRound)
+                    {
+                        deck.UseFortuneTellerCard();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("Fortune Teller ability already used this round");
+                    }
+                    break;
+                    
+                case TarotCardType.MadWriter:
+                    if (!deck._hasUsedMadWriterThisRound)
+                    {
+                        deck.UseMadWriterCard();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("Mad Writer ability already used this round");
+                    }
                     break;
                     
                 default:

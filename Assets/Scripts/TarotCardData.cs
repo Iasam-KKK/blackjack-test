@@ -48,5 +48,13 @@ public enum TarotCardType
     BetrayedCouple, // NEW: Removes all heart cards from both player and dealer hands
     Blacksmith,  // NEW: Removes all spade cards from both player and dealer hands
     TaxCollector, // NEW: Removes all diamond cards from both player and dealer hands
-    HouseKeeper  // NEW: Adds +10 bonus per Jack/Queen/King in player's winning hand
+    HouseKeeper, // NEW: Adds +10 bonus per Jack/Queen/King in player's winning hand
+    
+    // NEW PREVIEW CARDS - Allow peeking at future cards
+    Spy,         // NEW: Allows to peek at the next enemy card (dealer's next card)
+    BlindSeer,   // NEW: Allows to see the next cards to be played from dealer's hand  
+    CorruptJudge, // NEW: Peek into the next three cards in your hand and rearrange the first two if desired
+    Hitman,      // NEW: Peek into the first three cards on your deck and remove one at discretion from play
+    FortuneTeller, // NEW: Take a peek into the next two cards on your deck
+    MadWriter    // NEW: Take a look at the next card and shuffle the whole deck if desired
 } 

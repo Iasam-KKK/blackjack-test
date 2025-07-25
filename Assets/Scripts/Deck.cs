@@ -143,12 +143,23 @@ public class Deck : MonoBehaviour
     // Game History
     public GameHistoryManager gameHistoryManager;
 
+    // Card Preview System for new tarot cards
+    public CardPreviewManager cardPreviewManager;
+
     private uint _balance = Constants.InitialBalance;
     private uint _bet;
     private bool _isPeeking = false;
     private bool _isBetPlaced = false; // Track if bet has been placed for current round
     public bool _hasUsedPeekThisRound = false; // Track if peek has been used in current round
     public bool _hasUsedTransformThisRound = false; // Track if transform has been used in current round
+    
+    // NEW: Track usage of preview cards
+    public bool _hasUsedSpyThisRound = false;
+    public bool _hasUsedBlindSeerThisRound = false;
+    public bool _hasUsedCorruptJudgeThisRound = false;
+    public bool _hasUsedHitmanThisRound = false;
+    public bool _hasUsedFortuneTellerThisRound = false;
+    public bool _hasUsedMadWriterThisRound = false;
     
     // Blind progression variables
     private BlindLevel _currentBlind = BlindLevel.SmallBlind;
@@ -920,6 +931,14 @@ public class Deck : MonoBehaviour
             shopManager.ResetTarotCardsForNewRound();
         }
         
+        // Reset new tarot card usage tracking
+        _hasUsedSpyThisRound = false;
+        _hasUsedBlindSeerThisRound = false;
+        _hasUsedCorruptJudgeThisRound = false;
+        _hasUsedHitmanThisRound = false;
+        _hasUsedFortuneTellerThisRound = false;
+        _hasUsedMadWriterThisRound = false;
+        
         ShuffleCards();
         UpdateStreakUI(); // Update streak UI for new round
         
@@ -1306,6 +1325,327 @@ public class Deck : MonoBehaviour
         _isPeeking = false;
         UpdatePeekButtonState();
         Debug.Log("Peek coroutine completed");
+    }
+
+    // NEW TAROT CARD METHODS FOR PREVIEW FUNCTIONALITY
+    
+    /// <summary>
+    /// The Spy - Allows to peek at the next enemy card (dealer's next card)
+    /// </summary>
+    public void UseSpyCard()
+    {
+        if (_hasUsedSpyThisRound || !_isBetPlaced)
+        {
+            Debug.Log("Spy card already used this round or no bet placed");
+            return;
+        }
+        
+        _hasUsedSpyThisRound = true;
+        
+        // Get the next card that would be dealt to the dealer
+        if (cardIndex < values.Length)
+        {
+            CardInfo nextCard = GetCardInfo(cardIndex);
+            List<CardInfo> previewCards = new List<CardInfo> { nextCard };
+            
+                    if (cardPreviewManager != null)
+        {
+            Debug.Log("CardPreviewManager found! Showing preview for: " + nextCard.cardName);
+            cardPreviewManager.ShowPreview(
+                previewCards,
+                "The Spy - Next Dealer Card",
+                false, // No rearranging
+                false, // No removing
+                0,
+                null, // No confirm callback needed
+                null  // No cancel callback needed
+            );
+        }
+        else
+        {
+            Debug.LogWarning("CardPreviewManager not found! Check if it's assigned in Deck component.");
+        }
+        }
+        else
+        {
+            Debug.Log("No more cards in deck");
+        }
+    }
+    
+    /// <summary>
+    /// The Blind Seer - Allows to see the next cards to be played from dealer's hand
+    /// </summary>
+    public void UseBlindSeerCard()
+    {
+        if (_hasUsedBlindSeerThisRound || !_isBetPlaced)
+        {
+            Debug.Log("Blind Seer card already used this round or no bet placed");
+            return;
+        }
+        
+        _hasUsedBlindSeerThisRound = true;
+        
+        // Show current dealer's hand (all cards including hidden ones)
+        CardHand dealerHand = dealer.GetComponent<CardHand>();
+        if (dealerHand != null && dealerHand.cards.Count > 0)
+        {
+            List<CardInfo> dealerCards = GetHandCardInfo(dealer);
+            
+            if (cardPreviewManager != null)
+            {
+                cardPreviewManager.ShowPreview(
+                    dealerCards,
+                    "The Blind Seer - Dealer's Hand",
+                    false, // No rearranging
+                    false, // No removing
+                    0,
+                    null, // No confirm callback needed
+                    null  // No cancel callback needed
+                );
+            }
+        }
+        else
+        {
+            Debug.Log("Dealer has no cards to reveal");
+        }
+    }
+    
+    /// <summary>
+    /// The Corrupt Judge - Peek into the next three cards in your hand and rearrange the first two if desired
+    /// </summary>
+    public void UseCorruptJudgeCard()
+    {
+        if (_hasUsedCorruptJudgeThisRound || !_isBetPlaced)
+        {
+            Debug.Log("Corrupt Judge card already used this round or no bet placed");
+            return;
+        }
+        
+        _hasUsedCorruptJudgeThisRound = true;
+        
+        // Get next 3 cards from deck that would go to player
+        List<CardInfo> nextCards = new List<CardInfo>();
+        int cardsToShow = Mathf.Min(3, values.Length - cardIndex);
+        
+        for (int i = 0; i < cardsToShow; i++)
+        {
+            if (cardIndex + i < values.Length)
+            {
+                nextCards.Add(GetCardInfo(cardIndex + i));
+            }
+        }
+        
+        if (nextCards.Count > 0 && cardPreviewManager != null)
+        {
+            cardPreviewManager.ShowPreview(
+                nextCards,
+                "The Corrupt Judge - Rearrange First Two Cards",
+                true, // Allow rearranging
+                false, // No removing
+                0,
+                (rearrangedCards) => OnCorruptJudgeConfirm(rearrangedCards),
+                null
+            );
+        }
+    }
+    
+    private void OnCorruptJudgeConfirm(List<CardInfo> rearrangedCards)
+    {
+        // Apply the rearrangement to the actual deck
+        // Only the first two cards can be rearranged
+        if (rearrangedCards.Count >= 2)
+        {
+            // Update the deck arrays with the new order
+            for (int i = 0; i < Mathf.Min(2, rearrangedCards.Count); i++)
+            {
+                int deckPosition = cardIndex + i;
+                if (deckPosition < values.Length)
+                {
+                    // Find the original index of this card and update deck
+                    for (int j = 0; j < faces.Length; j++)
+                    {
+                        if (faces[j] == rearrangedCards[i].cardSprite)
+                        {
+                            faces[deckPosition] = rearrangedCards[i].cardSprite;
+                            values[deckPosition] = rearrangedCards[i].value;
+                            originalIndices[deckPosition] = rearrangedCards[i].index;
+                            break;
+                        }
+                    }
+                }
+            }
+            Debug.Log("Corrupt Judge rearranged the first two upcoming cards");
+        }
+    }
+    
+    /// <summary>
+    /// The Hitman - Peek into the first three cards on your deck and remove one at discretion from play
+    /// </summary>
+    public void UseHitmanCard()
+    {
+        if (_hasUsedHitmanThisRound || !_isBetPlaced)
+        {
+            Debug.Log("Hitman card already used this round or no bet placed");
+            return;
+        }
+        
+        _hasUsedHitmanThisRound = true;
+        
+        // Get next 3 cards from deck
+        List<CardInfo> nextCards = new List<CardInfo>();
+        int cardsToShow = Mathf.Min(3, values.Length - cardIndex);
+        
+        for (int i = 0; i < cardsToShow; i++)
+        {
+            if (cardIndex + i < values.Length)
+            {
+                nextCards.Add(GetCardInfo(cardIndex + i));
+            }
+        }
+        
+        if (nextCards.Count > 0 && cardPreviewManager != null)
+        {
+            cardPreviewManager.ShowPreview(
+                nextCards,
+                "The Hitman - Remove One Card",
+                false, // No rearranging
+                true,  // Allow removing
+                1,     // Max remove 1
+                (remainingCards) => OnHitmanConfirm(nextCards, remainingCards),
+                null
+            );
+        }
+    }
+    
+    private void OnHitmanConfirm(List<CardInfo> originalCards, List<CardInfo> remainingCards)
+    {
+        // Find which card was removed
+        if (remainingCards.Count < originalCards.Count)
+        {
+            // Compact the deck by removing the selected card
+            for (int i = 0; i < originalCards.Count; i++)
+            {
+                bool cardStillExists = false;
+                foreach (var remaining in remainingCards)
+                {
+                    if (remaining.index == originalCards[i].index)
+                    {
+                        cardStillExists = true;
+                        break;
+                    }
+                }
+                
+                if (!cardStillExists)
+                {
+                    // Remove this card from the deck
+                    RemoveCardFromDeck(cardIndex + i);
+                    Debug.Log("Hitman removed: " + originalCards[i].cardName);
+                    break;
+                }
+            }
+        }
+    }
+    
+    private void RemoveCardFromDeck(int indexToRemove)
+    {
+        if (indexToRemove < 0 || indexToRemove >= values.Length) return;
+        
+        // Shift all cards after the removed index forward
+        for (int i = indexToRemove; i < values.Length - 1; i++)
+        {
+            values[i] = values[i + 1];
+            faces[i] = faces[i + 1];
+            originalIndices[i] = originalIndices[i + 1];
+        }
+        
+        // Create new smaller arrays
+        int[] newValues = new int[values.Length - 1];
+        Sprite[] newFaces = new Sprite[faces.Length - 1];
+        int[] newOriginalIndices = new int[originalIndices.Length - 1];
+        
+        System.Array.Copy(values, newValues, newValues.Length);
+        System.Array.Copy(faces, newFaces, newFaces.Length);
+        System.Array.Copy(originalIndices, newOriginalIndices, newOriginalIndices.Length);
+        
+        values = newValues;
+        faces = newFaces;
+        originalIndices = newOriginalIndices;
+    }
+    
+    /// <summary>
+    /// The Fortune Teller - Take a peek into the next two cards on your deck
+    /// </summary>
+    public void UseFortuneTellerCard()
+    {
+        if (_hasUsedFortuneTellerThisRound || !_isBetPlaced)
+        {
+            Debug.Log("Fortune Teller card already used this round or no bet placed");
+            return;
+        }
+        
+        _hasUsedFortuneTellerThisRound = true;
+        
+        // Get next 2 cards from deck
+        List<CardInfo> nextCards = new List<CardInfo>();
+        int cardsToShow = Mathf.Min(2, values.Length - cardIndex);
+        
+        for (int i = 0; i < cardsToShow; i++)
+        {
+            if (cardIndex + i < values.Length)
+            {
+                nextCards.Add(GetCardInfo(cardIndex + i));
+            }
+        }
+        
+        if (nextCards.Count > 0 && cardPreviewManager != null)
+        {
+            cardPreviewManager.ShowPreview(
+                nextCards,
+                "The Fortune Teller - Next Two Cards",
+                false, // No rearranging
+                false, // No removing
+                0,
+                null, // No confirm callback needed
+                null  // No cancel callback needed
+            );
+        }
+    }
+    
+    /// <summary>
+    /// The Mad Writer - Take a look at the next card and shuffle the whole deck if desired
+    /// </summary>
+    public void UseMadWriterCard()
+    {
+        if (_hasUsedMadWriterThisRound || !_isBetPlaced)
+        {
+            Debug.Log("Mad Writer card already used this round or no bet placed");
+            return;
+        }
+        
+        _hasUsedMadWriterThisRound = true;
+        
+        // Get next card from deck
+        if (cardIndex < values.Length)
+        {
+            CardInfo nextCard = GetCardInfo(cardIndex);
+            
+            if (cardPreviewManager != null)
+            {
+                cardPreviewManager.ShowMadWriterPreview(
+                    nextCard,
+                    () => Debug.Log("Mad Writer chose to keep deck order"),
+                    () => {
+                        ShuffleCards();
+                        Debug.Log("Mad Writer shuffled the deck!");
+                    },
+                    null
+                );
+            }
+        }
+        else
+        {
+            Debug.Log("No more cards in deck");
+        }
     }
 
     // Make UpdateTransformButtonState public
@@ -2463,6 +2803,14 @@ public class Deck : MonoBehaviour
         // Reset tarot ability usage for new round
         _hasUsedPeekThisRound = false;
         _hasUsedTransformThisRound = false;
+        
+        // Reset new tarot card usage for new round
+        _hasUsedSpyThisRound = false;
+        _hasUsedBlindSeerThisRound = false;
+        _hasUsedCorruptJudgeThisRound = false;
+        _hasUsedHitmanThisRound = false;
+        _hasUsedFortuneTellerThisRound = false;
+        _hasUsedMadWriterThisRound = false;
         
         Debug.Log("Initialized betting state - waiting for bet placement");
     }
