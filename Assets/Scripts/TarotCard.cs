@@ -22,7 +22,8 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     public Deck deck; // Reference to the game deck
     private ShopManager shopManager; // Reference to the shop manager
     private RectTransform rectTransform;
-    
+    private bool hasActivatedCursedHourglass = false;
+
     private void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
@@ -363,7 +364,6 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                         Debug.Log("Select a card to discard first");
                     }
                     break;
-                    
                 case TarotCardType.Transform:
                     if (!deck._hasUsedTransformThisRound && 
                         deck.player.GetComponent<CardHand>().GetSelectedCardCount() == Constants.MaxSelectedCards)
@@ -380,37 +380,110 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                         Debug.Log("Select exactly " + Constants.MaxSelectedCards + " cards to transform");
                     }
                     break;
-                    
                 case TarotCardType.WitchDoctor:
                     Debug.Log("Witch Doctor card is active and will provide 10% refund on losses");
                     // Don't mark as used - it's a passive effect
                     break;
-
                 case TarotCardType.Artificer:
                     Debug.Log("Artificer card is active and will boost win multiplier by 10% when you have a streak");
                     // Don't mark as used - it's a passive effect
                     break;
-
                 case TarotCardType.Botanist:
                     Debug.Log("The Botanist card is active and will provide +50 bonus per club in winning hands");
                     // Don't mark as used - it's a passive effect
                     break;
-
                 case TarotCardType.Assassin:
                     Debug.Log("The Assassin card is active and will provide +50 bonus per spade in winning hands");
                     // Don't mark as used - it's a passive effect
                     break;
-
                 case TarotCardType.SecretLover:
                     Debug.Log("The Secret Lover card is active and will provide +50 bonus per heart in winning hands");
                     // Don't mark as used - it's a passive effect
                     break;
-
                 case TarotCardType.Jeweler:
                     Debug.Log("The Jeweler card is active and will provide +50 bonus per diamond in winning hands");
                     // Don't mark as used - it's a passive effect
                     break;
-                    
+                case TarotCardType.CursedHourglass:
+                    if (!hasBeenUsedThisRound)
+                    {
+                        // Deduct half of the current bet from the player's balance
+                        int halfBet = Mathf.FloorToInt(deck._bet / 2f);
+                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - halfBet);
+                        deck.bet.text = halfBet.ToString();
+                        Debug.Log($"[CursedHourglass] Deducted half of the bet: -{halfBet}");
+
+                        // Activate the card's effect
+                        Debug.Log("Cursed Hourglass triggered!");
+                        deck.StartCoroutine(deck.ActivateCursedHourglassEffect());
+
+                        effectApplied = true;
+                    }
+                    break;
+                case TarotCardType.MakeupArtist:
+                    if (!hasBeenUsedThisRound)
+                    {
+                        if (deck.selectedCardForMakeupArtist != null)
+                        {
+                            deck.StartCoroutine(deck.ReplaceCardWithMakeupArtist(deck.selectedCardForMakeupArtist));
+                            deck.selectedCardForMakeupArtist = null;
+                            hasBeenUsedThisRound = true;
+                            cardImage.color = new Color(0.5f, 0.5f, 0.5f);
+                            effectApplied = true;
+                        }
+                        else
+                        {
+                            Debug.Log("Select a card in your hand first.");
+                        }
+                    }
+                    break;
+                case TarotCardType.WhisperOfThePast:
+                    if (!hasBeenUsedThisRound)
+                    {
+                        // Deduct ¼ of the current bet
+                        int quarterBet = Mathf.FloorToInt(deck._bet * 0.75f);
+                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - quarterBet);
+                        deck.bet.text = quarterBet.ToString();  // Optional: You can keep showing the full bet here if needed
+                        Debug.Log($"[WhisperOfThePast] Deducted ¼ of the bet: -{quarterBet}");
+
+                        // Activate the card's effect
+                        Debug.Log("[WhisperOfThePast] Removing player cards and re-dealing...");
+                        deck.StartCoroutine(deck.ActivateWhisperOfThePastEffect());
+
+                        effectApplied = true;
+                    }
+                    break;
+                case TarotCardType.Saboteur:
+                    if (!hasBeenUsedThisRound)
+                    {
+                        // Deduct ¼ of the current bet
+                        int quarterBet = Mathf.FloorToInt(deck._bet * 0.75f);
+                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - quarterBet);
+                        deck.bet.text = quarterBet.ToString();  // Optional: you might want to show the full bet instead
+                        Debug.Log($"[Saboteur] Deducted ¼ of the bet: -{quarterBet}");
+
+                        // Activate the dealer-hand clearing effect
+                        Debug.Log("[Saboteur] Removing dealer cards...");
+                        deck.StartCoroutine(deck.ActivateSaboteurEffect());
+
+                        effectApplied = true;
+                    }
+                    break;
+                case TarotCardType.Scammer:
+                    if (!hasBeenUsedThisRound)
+                    {
+                        Debug.Log("Scammer card triggered!");
+
+                        int halfBet = Mathf.FloorToInt(deck._bet * 0.5f);
+                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - halfBet);
+                        deck.bet.text = (deck._bet - halfBet).ToString();
+
+                        deck.StartCoroutine(deck.ActivateScammerEffect());
+
+                        effectApplied = true;
+                    }
+                    break;
+
                 case TarotCardType.Scavenger:
                     CardHand playerHand = deck.player.GetComponent<CardHand>();
                     if (playerHand != null && playerHand.cards.Count > 0)
@@ -520,27 +593,22 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                         effectApplied = true; // Still counts as used
                     }
                     break;
-                    
                 case TarotCardType.Gardener:
                     RemoveCardsBySuitFromBothHands(CardSuit.Clubs, "The Gardener", "club");
                     effectApplied = true;
                     break;
-                    
                 case TarotCardType.BetrayedCouple:
                     RemoveCardsBySuitFromBothHands(CardSuit.Hearts, "The Betrayed Couple", "heart");
                     effectApplied = true;
                     break;
-                    
                 case TarotCardType.Blacksmith:
                     RemoveCardsBySuitFromBothHands(CardSuit.Spades, "The Blacksmith", "spade");
                     effectApplied = true;
                     break;
-                    
                 case TarotCardType.TaxCollector:
                     RemoveCardsBySuitFromBothHands(CardSuit.Diamonds, "The Tax Collector", "diamond");
                     effectApplied = true;
                     break;
-                    
                 case TarotCardType.HouseKeeper:
                     Debug.Log("The House Keeper card is active and will provide +10 bonus per Jack/Queen/King in winning hands");
                     // Don't mark as used - it's a passive effect

@@ -140,13 +140,13 @@ public class CardModel : MonoBehaviour
             return isFrontFacing;
         }
         
-        return isPlayerCard && isFrontFacing;
+        return   isFrontFacing;
     }
-        
+
     private void OnMouseDown()
     {
         if (!CanInteract()) return;
-        
+
         if (Input.GetMouseButton(0))
         {
             if (isSelected)
@@ -158,20 +158,26 @@ public class CardModel : MonoBehaviour
                 // Find the hand this card belongs to
                 Deck deck = FindObjectOfType<Deck>();
                 CardHand hand = null;
-                
+
                 if (deck != null && deck.player != null)
                 {
                     hand = deck.player.GetComponent<CardHand>();
                 }
-                
+
                 // If we found the hand, check if we're below max selections
                 if (hand != null && hand.GetSelectedCardCount() < Constants.MaxSelectedCards)
                 {
                     SelectCard();
+
+                    // ✅ Tell the deck this is the card to replace if Makeup Artist is clicked
+                    if (deck != null && deck.PlayerActuallyHasCard(TarotCardType.MakeupArtist))
+                    {
+                        deck.selectedCardForMakeupArtist = this;
+                        Debug.Log("[Makeup Artist] Selected card for replacement: " + name);
+                    }
                 }
                 else if (hand == null)
                 {
-                    // Fallback if we can't find the hand - just allow selection
                     SelectCard();
                 }
                 else
@@ -179,12 +185,13 @@ public class CardModel : MonoBehaviour
                     Debug.Log("Cannot select more than " + Constants.MaxSelectedCards + " cards at once");
                 }
             }
-        } 
+        }
         else if (Input.GetMouseButton(1) && isSelected)
         {
             DeselectCard();
         }
     }
+
     
     // Method to update the original position after animations complete
     public void UpdateOriginalPosition()

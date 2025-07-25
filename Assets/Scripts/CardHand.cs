@@ -24,6 +24,15 @@ public class CardHand : MonoBehaviour
         // Find parent canvas if it exists
         parentCanvas = GetComponentInParent<Canvas>();
     }
+    public void ClearHand()
+    {
+        foreach (Transform card in transform)
+        {
+            Destroy(card.gameObject);
+        }
+        cards.Clear(); // Optional if you track cards in a list
+    }
+
 
     public void Clear()
     {

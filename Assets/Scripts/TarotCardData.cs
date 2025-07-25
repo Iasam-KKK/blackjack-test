@@ -43,12 +43,14 @@ public enum TarotCardType
     Assassin,    // NEW: Adds +50 bonus per spade in winning hand
     SecretLover, // NEW: Adds +50 bonus per heart in winning hand
     Jeweler,     // NEW: Adds +50 bonus per diamond in winning hand
+    MakeupArtist, //Allows to select a card and allow to pass it for another
+    CursedHourglass, //Lose half of your bet, but temporarily discard all cards in play from both sides
     Scavenger,   // NEW: Removes all cards with value < 7 from player's hand
     Gardener,    // NEW: Removes all club cards from both player and dealer hands
     BetrayedCouple, // NEW: Removes all heart cards from both player and dealer hands
     Blacksmith,  // NEW: Removes all spade cards from both player and dealer hands
     TaxCollector, // NEW: Removes all diamond cards from both player and dealer hands
-    HouseKeeper, // NEW: Adds +10 bonus per Jack/Queen/King in player's winning hand
+    HouseKeeper,, // NEW: Adds +10 bonus per Jack/Queen/King in player's winning hand
     
     // NEW PREVIEW CARDS - Allow peeking at future cards
     Spy,         // NEW: Allows to peek at the next enemy card (dealer's next card)
@@ -57,4 +59,7 @@ public enum TarotCardType
     Hitman,      // NEW: Peek into the first three cards on your deck and remove one at discretion from play
     FortuneTeller, // NEW: Take a peek into the next two cards on your deck
     MadWriter    // NEW: Take a look at the next card and shuffle the whole deck if desired
+    WhisperOfThePast, //Lose ¼ of your bet, temporarily discard all cards from your played side
+    Saboteur,     //Lose ¼ of your bet, temporarily discard all cards from the enemy's played side
+    Scammer      //Reverts the enemy's winning play discarding the played card at the cost of half the bet
 } 
