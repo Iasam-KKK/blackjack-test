@@ -4863,7 +4863,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e488145a8594a6c4bb31618fe4637f0e, type: 2}
   - {fileID: 11400000, guid: 09e25554cce79fa4fb1412db5c5a7a99, type: 2}
   - {fileID: 11400000, guid: c57ce7253a56d7f40b6b6087ac8a3990, type: 2}
-  - {fileID: 11400000, guid: 9278e0b3de17110478c3a2613f8693d2, type: 2}
+  - {fileID: 11400000, guid: bb16682f29cd6474f9e94e0468782994, type: 2}
   setupOnStart: 1
   shopSlots:
   - {fileID: 1804826164}

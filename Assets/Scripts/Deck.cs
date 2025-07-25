@@ -678,176 +678,158 @@ public class Deck : MonoBehaviour
         }
     }
 
-    private void EndHand(WinCode code)
-    {   
-        FlipDealerCard();
-        uint oldBalance = _balance;
-        long oldEarnings = _earningsForCurrentBlind;
-        
-        // Get current scores for history
-        int playerScore = GetPlayerPoints();
-        int dealerScore = GetDealerPoints();
-        string outcomeText = "";
-        
-        switch (code)
-        {
-            case WinCode.DealerWins:
-                finalMessage.text = "You lose!";
-                outcomeText = "Lose";
-                if (_bet <= _balance) {
-                    // FIXED: Track net loss (bet amount) toward earnings
-                    _earningsForCurrentBlind -= _bet; // Lose the bet amount
-                    Balance -= _bet; // Lose the bet from balance
-                    if (PlayerStats.instance.PlayerHasCard(TarotCardType.WitchDoctor)) {
-                        int refund = Mathf.RoundToInt(_bet * 0.1f);
-                        Balance += (uint)refund;
-                        Debug.Log("Witch Doctor refunded 10% of your bet: " + refund);
-                    }
-                } else {
-                    // Safety check
-                    Debug.LogWarning("Bet amount greater than balance! Setting balance to 0.");
-                    _earningsForCurrentBlind -= _balance; // Lost whatever was left
-                    Balance = 0;
-                }
-                
-                // Reset streak on loss
-                _currentStreak = 0;
-                _streakMultiplier = 0;
-                
-                Debug.Log("Loss calculation: Lost Bet=$" + _bet + ", Earnings Impact=-$" + _bet);
-                break;
-                
-            case WinCode.PlayerWins:
-                // Increment streak
-                _currentStreak++;
-                
-                // Calculate streak level and multiplier
-                _streakMultiplier = Mathf.Min(_currentStreak / Constants.StreakMultiplierIncrement, Constants.MaxStreakLevel);
-                float multiplier = CalculateWinMultiplier();
-                
-                // Calculate suit bonuses from tarot cards (explicitly use player hand)
-                uint suitBonuses = CalculateSuitBonuses(player);
-                
-                // FIXED: Calculate profit correctly for blackjack
-                // In blackjack: you get your bet back + profit
-                // Base profit = bet amount (1:1 payout)
-                // Streak bonus multiplies the profit only
-                uint baseProfit = _bet; // Standard blackjack 1:1 payout
-                uint streakBonus = (uint)(baseProfit * (multiplier - 1.0f)); // Extra bonus from streak
-                uint totalWinnings = _bet + baseProfit + streakBonus + suitBonuses; // Bet returned + base profit + streak bonus + suit bonuses
-                uint netEarnings = baseProfit + streakBonus + suitBonuses; // Only profit counts toward earnings (not returned bet)
-                
-                finalMessage.text = "You win!";
-                outcomeText = "Win";
-                
-                // Add streak info if there's a streak
-                if (_currentStreak > 1)
-                {
-                    finalMessage.text += "\nStreak: " + _currentStreak + " (" + multiplier.ToString("0.0") + "x bonus)";
-                }
-                
-                // Add suit bonus info if there are any
-                if (suitBonuses > 0)
-                {
-                    finalMessage.text += "\nSuit Bonus: +" + suitBonuses;
-                }
-                
-                // Track only NET EARNINGS (profit) toward blind goals
-                _earningsForCurrentBlind += netEarnings;
-                // Add total winnings (including returned bet) to balance
-                Balance += totalWinnings;
-                
-                Debug.Log("Win calculation: Bet=$" + _bet + ", Base Profit=$" + baseProfit + 
-                         ", Streak Bonus=$" + streakBonus + ", Suit Bonuses=$" + suitBonuses + 
-                         ", Total Winnings=$" + totalWinnings + ", Net Earnings=$" + netEarnings + 
-                         ", Multiplier=" + multiplier.ToString("F2") + "x");
-                break;
-                
-            case WinCode.Draw:
-                finalMessage.text = "Draw!";
-                outcomeText = "Draw";
-                
-                Balance += _bet;
-                Debug.Log("Draw: Refunded bet amount $" + _bet + " back to player");
-                
-                // Reset streak on draw
-                _currentStreak = 0;
-                _streakMultiplier = 0;
-                break;
-                
-            default:
-                Debug.Assert(false);    
-                break;
-        }
-        
-        // Record game history entry
-        if (gameHistoryManager != null)
-        {
-            string currentBlindName = GetCurrentBlindName();
-            GameHistoryEntry historyEntry = new GameHistoryEntry(
-                _currentRound,
-                currentBlindName,
-                playerScore,
-                dealerScore,
-                _bet,
-                oldBalance,
-                _balance,
-                outcomeText
-            );
-            Debug.Log("Recording history entry: Round " + _currentRound + ", Outcome: " + outcomeText + ", Bet: " + _bet);
-            gameHistoryManager.AddHistoryEntry(historyEntry);
-        }
-        else
-        {
-            Debug.LogWarning("GameHistoryManager is null! Cannot record history entry.");
-        }
-        
-        // Update streak UI
-        UpdateStreakUI();
-        
-        Debug.Log("Hand ended: " + code + 
-                  " - Old balance: " + oldBalance + 
-                  ", New balance: " + _balance + 
-                  ", Bet: " + _bet + 
-                  ", Balance change: " + (_balance - oldBalance) + 
-                  ", Old earnings: " + oldEarnings + 
-                  ", New earnings: " + _earningsForCurrentBlind + 
-                  ", Current streak: " + _currentStreak +
-                  ", Multiplier: " + CalculateWinMultiplier().ToString("F2") + "x");
- 
-        hitButton.interactable = false;
-        stickButton.interactable = false;
-        discardButton.interactable = false;
-        peekButton.interactable = false;
-        transformButton.interactable = false;
-        raiseBetButton.interactable = false;
-        lowerBetButton.interactable = false;
-        placeBetButton.interactable = false;
-        
-        // Enable the next round button when the round is over
-        playAgainButton.interactable = true;
- 
-        _bet = 0;
-        bet.text = _bet.ToString() + " $";
-        UpdateBalanceDisplay();
-        UpdateScoreDisplays();
-        UpdateGoalProgress(); // Update goal progress when hand ends
-        
-        // Debug print the blind state after updating the balance
-        DebugPrintBlindState("After EndHand");
+private void EndHand(WinCode code)
+{
+    FlipDealerCard();
+    uint oldBalance = _balance;
+    long oldEarnings = _earningsForCurrentBlind;
 
-        if (Balance == 0)
-        {
-            finalMessage.text += "\n - GAME OVER -";
-            // Change button text to "Play Again" when it's game over
-            Text buttonText = playAgainButton.GetComponentInChildren<Text>();
-            if (buttonText != null)
+    int playerScore = GetPlayerPoints();
+    int dealerScore = GetDealerPoints();
+    string outcomeText = "";
+
+    switch (code)
+    {
+        case WinCode.DealerWins:
+            finalMessage.text = "You lose!";
+            finalMessage.gameObject.SetActive(true); // ✅ Show result
+            outcomeText = "Lose";
+            if (_bet <= _balance)
             {
-                buttonText.text = "Play Again";
+                _earningsForCurrentBlind -= _bet;
+                Balance -= _bet;
+                if (PlayerStats.instance.PlayerHasCard(TarotCardType.WitchDoctor))
+                {
+                    int refund = Mathf.RoundToInt(_bet * 0.1f);
+                    Balance += (uint)refund;
+                    Debug.Log("Witch Doctor refunded 10% of your bet: " + refund);
+                }
             }
-            // Don't automatically start NewGame coroutine - let user click Play Again
+            else
+            {
+                Debug.LogWarning("Bet amount greater than balance! Setting balance to 0.");
+                _earningsForCurrentBlind -= _balance;
+                Balance = 0;
+            }
+
+            _currentStreak = 0;
+            _streakMultiplier = 0;
+
+            Debug.Log("Loss calculation: Lost Bet=$" + _bet + ", Earnings Impact=-$" + _bet);
+            break;
+
+        case WinCode.PlayerWins:
+            _currentStreak++;
+            _streakMultiplier = Mathf.Min(_currentStreak / Constants.StreakMultiplierIncrement, Constants.MaxStreakLevel);
+            float multiplier = CalculateWinMultiplier();
+            uint suitBonuses = CalculateSuitBonuses(player);
+
+            uint baseProfit = _bet;
+            uint streakBonus = (uint)(baseProfit * (multiplier - 1.0f));
+            uint totalWinnings = _bet + baseProfit + streakBonus + suitBonuses;
+            uint netEarnings = baseProfit + streakBonus + suitBonuses;
+
+            finalMessage.text = "You win!";
+            if (_currentStreak > 1)
+            {
+                finalMessage.text += "\nStreak: " + _currentStreak + " (" + multiplier.ToString("0.0") + "x bonus)";
+            }
+            if (suitBonuses > 0)
+            {
+                finalMessage.text += "\nSuit Bonus: +" + suitBonuses;
+            }
+            finalMessage.gameObject.SetActive(true); // ✅ Show result
+            outcomeText = "Win";
+
+            _earningsForCurrentBlind += netEarnings;
+            Balance += totalWinnings;
+
+            Debug.Log("Win calculation: Bet=$" + _bet + ", Base Profit=$" + baseProfit +
+                     ", Streak Bonus=$" + streakBonus + ", Suit Bonuses=$" + suitBonuses +
+                     ", Total Winnings=$" + totalWinnings + ", Net Earnings=$" + netEarnings +
+                     ", Multiplier=" + multiplier.ToString("F2") + "x");
+            break;
+
+        case WinCode.Draw:
+            finalMessage.text = "Draw!";
+            finalMessage.gameObject.SetActive(true); // ✅ Show result
+            outcomeText = "Draw";
+
+            Balance += _bet;
+
+            Debug.Log("Draw: Refunded bet amount $" + _bet + " back to player");
+
+            _currentStreak = 0;
+            _streakMultiplier = 0;
+            break;
+
+        default:
+            Debug.Assert(false);
+            break;
+    }
+
+    if (gameHistoryManager != null)
+    {
+        string currentBlindName = GetCurrentBlindName();
+        GameHistoryEntry historyEntry = new GameHistoryEntry(
+            _currentRound,
+            currentBlindName,
+            playerScore,
+            dealerScore,
+            _bet,
+            oldBalance,
+            _balance,
+            outcomeText
+        );
+        Debug.Log("Recording history entry: Round " + _currentRound + ", Outcome: " + outcomeText + ", Bet: " + _bet);
+        gameHistoryManager.AddHistoryEntry(historyEntry);
+    }
+    else
+    {
+        Debug.LogWarning("GameHistoryManager is null! Cannot record history entry.");
+    }
+
+    UpdateStreakUI();
+
+    Debug.Log("Hand ended: " + code +
+              " - Old balance: " + oldBalance +
+              ", New balance: " + _balance +
+              ", Bet: " + _bet +
+              ", Balance change: " + (_balance - oldBalance) +
+              ", Old earnings: " + oldEarnings +
+              ", New earnings: " + _earningsForCurrentBlind +
+              ", Current streak: " + _currentStreak +
+              ", Multiplier: " + CalculateWinMultiplier().ToString("F2") + "x");
+
+    hitButton.interactable = false;
+    stickButton.interactable = false;
+    discardButton.interactable = false;
+    peekButton.interactable = false;
+    transformButton.interactable = false;
+    raiseBetButton.interactable = false;
+    lowerBetButton.interactable = false;
+    placeBetButton.interactable = false;
+
+    playAgainButton.interactable = true;
+
+    _bet = 0;
+    bet.text = _bet.ToString() + " $";
+    UpdateBalanceDisplay();
+    UpdateScoreDisplays();
+    UpdateGoalProgress();
+
+    DebugPrintBlindState("After EndHand");
+
+    if (Balance == 0)
+    {
+        finalMessage.text += "\n - GAME OVER -";
+        Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = "Play Again";
         }
     }
+}
 
     public void PlayAgain()
     {   
@@ -2659,19 +2641,93 @@ public class Deck : MonoBehaviour
         UpdatePeekButtonState();
         UpdateTransformButtonState();
     }
-
-
     private IEnumerator PushPlayerAnimated()
     {
         yield return StartCoroutine(PushAnimated(player, true));
         UpdateScoreDisplays();
         CalculateProbabilities();
     }
-
     private IEnumerator PushDealerAnimated()
     {
         yield return StartCoroutine(PushAnimated(dealer, false));
     }
+    public IEnumerator ActivateScammerEffect()
+    {
+        Debug.Log("[Scammer] Attempting to reverse dealer win...");
+
+        if (player == null || dealer == null) yield break;
+
+        int playerScore = GetVisibleScore(player, true);
+        int dealerScore = GetVisibleScore(dealer, false);
+
+        if (dealerScore > playerScore && dealerScore <= 21)
+        {
+            CardHand dealerHand = dealer.GetComponent<CardHand>();
+            if (dealerHand != null && dealerHand.cards.Count > 0)
+            {
+                GameObject lastCard = dealerHand.cards[dealerHand.cards.Count - 1];
+                dealerHand.cards.RemoveAt(dealerHand.cards.Count - 1);
+                Destroy(lastCard);
+                Debug.Log("[Scammer] Removed dealer's last card to weaken their score.");
+            }
+
+            yield return new WaitForSeconds(0.2f);
+
+            UpdateScoreDisplays();
+
+            // 🔁 FIX: Convert existing win/lose/draw to CONTINUE
+            if (finalMessage != null)
+            {
+                finalMessage.text = "Continue";
+                finalMessage.gameObject.SetActive(true);
+                hitButton.interactable = true;
+                stickButton.interactable = true;
+            }
+
+            // ✅ Wait 1 second then hide it and resume game
+            yield return new WaitForSeconds(1f);
+
+            if (finalMessage != null)
+            {
+                finalMessage.gameObject.SetActive(false);
+            }
+
+            int newDealerScore = GetVisibleScore(dealer, false);
+
+            if (newDealerScore < 17)
+            {
+                yield return StartCoroutine(PushDealerAnimated()); // Resume dealer turn
+            }
+            else
+            {
+                // Even after dropping, dealer might be done — recheck winner
+                ResolveEndOfRound();
+            }
+        }
+        else
+        {
+            Debug.Log("[Scammer] Dealer wasn’t winning, no need to reverse.");
+        }
+    }
+    private void ResolveEndOfRound()
+    {
+        int playerScore = GetVisibleScore(player, true);
+        int dealerScore = GetVisibleScore(dealer, false);
+
+        if (dealerScore > 21 || playerScore > dealerScore)
+        {
+            EndHand(WinCode.PlayerWins);
+        }
+        else if (dealerScore == playerScore)
+        {
+            EndHand(WinCode.Draw);
+        }
+        else
+        {
+            EndHand(WinCode.DealerWins);
+        }
+    }
+
 
     private IEnumerator PushAnimated(GameObject handOwner, bool isPlayer)
     {

@@ -140,52 +140,9 @@ public class CardModel : MonoBehaviour
             return isFrontFacing;
         }
         
-        return isPlayerCard && isFrontFacing;
+        return   isFrontFacing;
     }
-        
-    /*private void OnMouseDown()
-    {
-        
-        if (!CanInteract()) return;
-        
-        if (Input.GetMouseButton(0))
-        {
-            if (isSelected)
-            {
-                DeselectCard();
-            }
-            else
-            {
-                // Find the hand this card belongs to
-                Deck deck = FindObjectOfType<Deck>();
-                CardHand hand = null;
-                
-                if (deck != null && deck.player != null)
-                {
-                    hand = deck.player.GetComponent<CardHand>();
-                }
-                
-                // If we found the hand, check if we're below max selections
-                if (hand != null && hand.GetSelectedCardCount() < Constants.MaxSelectedCards)
-                {
-                    SelectCard();
-                }
-                else if (hand == null)
-                {
-                    // Fallback if we can't find the hand - just allow selection
-                    SelectCard();
-                }
-                else
-                {
-                    Debug.Log("Cannot select more than " + Constants.MaxSelectedCards + " cards at once");
-                }
-            }
-        } 
-        else if (Input.GetMouseButton(1) && isSelected)
-        {
-            DeselectCard();
-        }
-    }*/
+
     private void OnMouseDown()
     {
         if (!CanInteract()) return;

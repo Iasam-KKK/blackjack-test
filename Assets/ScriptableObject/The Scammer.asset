@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3dab666e5dc8c504aad31dbedeb22634, type: 3}
-  m_Name: The Whisper of the Past
+  m_Name: The Scammer
   m_EditorClassIdentifier: 
-  cardName: The Whisper of the Past
-  cardImage: {fileID: 21300000, guid: 0cf4cfbbebb0897499dcdbe1dac12cf7, type: 3}
+  cardName: The Scammer
+  cardImage: {fileID: 21300000, guid: 111d64cb466d55e429289697c27b1dbb, type: 3}
   price: 100
-  description: "Lose \xBC of your bet, temporarily discard all cards from your played
-    side"
-  cardType: 17
+  description: Reverts the enemy's winning play discarding the played card at the
+    cost of half the bet
+  cardType: 19
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

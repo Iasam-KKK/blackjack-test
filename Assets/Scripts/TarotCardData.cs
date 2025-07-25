@@ -52,5 +52,6 @@ public enum TarotCardType
     TaxCollector, // NEW: Removes all diamond cards from both player and dealer hands
     HouseKeeper,  // NEW: Adds +10 bonus per Jack/Queen/King in player's winning hand
     WhisperOfThePast, //Lose ¼ of your bet, temporarily discard all cards from your played side
-    Saboteur     //Lose ¼ of your bet, temporarily discard all cards from the enemy's played side
+    Saboteur,     //Lose ¼ of your bet, temporarily discard all cards from the enemy's played side
+    Scammer      //Reverts the enemy's winning play discarding the played card at the cost of half the bet
 } 
