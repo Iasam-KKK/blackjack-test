@@ -17,7 +17,7 @@ MonoBehaviour:
   price: 100
   description: Peek into the next three cards in your hand and rearrange the first
     two if desired
-  cardType: 17
+  cardType: 19
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

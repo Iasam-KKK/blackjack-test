@@ -16,7 +16,7 @@ MonoBehaviour:
   cardImage: {fileID: 21300000, guid: e0a46cec96f7cfa49898e1e76c952ce5, type: 3}
   price: 100
   description: Allows to peek at the next enemy card (show and hide)
-  cardType: 15
+  cardType: 17
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

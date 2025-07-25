@@ -17,7 +17,7 @@ MonoBehaviour:
   price: 100
   description: Peek into the first three cards on your deck and remove one at discretion
     from play
-  cardType: 18
+  cardType: 20
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

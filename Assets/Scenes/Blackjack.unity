@@ -697,7 +697,8 @@ MonoBehaviour:
   streakPanel: {fileID: 1402587237}
   streakFlameEffect: {fileID: 1370061237}
   gameHistoryManager: {fileID: 1844360424}
-  cardPreviewManager: {fileID: 1928804806}
+  cardPreviewManager: {fileID: 0}
+  _bet: 0
   _hasUsedPeekThisRound: 0
   _hasUsedTransformThisRound: 0
   _hasUsedSpyThisRound: 0
@@ -706,6 +707,7 @@ MonoBehaviour:
   _hasUsedHitmanThisRound: 0
   _hasUsedFortuneTellerThisRound: 0
   _hasUsedMadWriterThisRound: 0
+  selectedCardForMakeupArtist: {fileID: 0}
   values: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 --- !u!1 &122759829
 GameObject:
@@ -4843,7 +4845,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0.304}
   m_AnchorMin: {x: 0.047000002, y: 0.042752832}
   m_AnchorMax: {x: 0.93500006, y: 0.3121799}
-  m_AnchoredPosition: {x: 6.0020447, y: -0.659256}
+  m_AnchoredPosition: {x: 6.002075, y: -0.659256}
   m_SizeDelta: {x: 5.826103, y: -3.7241974}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &732587966
@@ -5555,7 +5557,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2efe2e45bbefb9c458739a6ddd280426, type: 2}
   - {fileID: 11400000, guid: 9e22afdf4cf219648b94327cb33951dd, type: 2}
   - {fileID: 11400000, guid: 8a7a37f2ca8b4db4db1e920c191eb42e, type: 2}
-  - {fileID: 11400000, guid: 2e8dba622f49d834383716b7740309d9, type: 2}
+  - {fileID: 11400000, guid: bb16682f29cd6474f9e94e0468782994, type: 2}
   setupOnStart: 1
   shopSlots:
   - {fileID: 1804826164}

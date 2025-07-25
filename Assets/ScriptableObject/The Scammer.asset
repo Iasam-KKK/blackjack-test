@@ -17,7 +17,7 @@ MonoBehaviour:
   price: 100
   description: Reverts the enemy's winning play discarding the played card at the
     cost of half the bet
-  cardType: 19
+  cardType: 25
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

@@ -17,7 +17,7 @@ MonoBehaviour:
   price: 100
   description: "Lose \xBC of your bet, temporarily discard all cards from the enemy's
     played side"
-  cardType: 18
+  cardType: 24
   isReusable: 0
   animationDuration: 0.5
   animationCurve:
