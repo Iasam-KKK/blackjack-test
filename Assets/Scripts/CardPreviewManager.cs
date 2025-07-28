@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using DG.Tweening;
+using TMPro;
 
 public class CardPreviewManager : MonoBehaviour
 {
@@ -12,7 +13,7 @@ public class CardPreviewManager : MonoBehaviour
     [Header("Preview UI Components")]
     public GameObject previewPanel;
     public Transform previewContainer;
-    public GameObject previewCardPrefab;
+   // public GameObject previewCardPrefab;
     // public Text previewTitleText;
     public Button confirmButton;
     public Button cancelButton;
@@ -36,7 +37,18 @@ public class CardPreviewManager : MonoBehaviour
     private GameObject draggedCard;
     private Vector3 dragOffset;
     private int draggedCardIndex = -1;
-    
+    [Header("Single Card Preview")]
+    public Image singlePreviewImage;
+    public TextMeshProUGUI singlePreviewName;
+    [Header("Multi Card Preview")]
+    public GameObject multiPreviewPanel;
+    public Image[] previewImages; // Size 3
+    public TextMeshProUGUI[] previewNames; // Size 3
+
+    [SerializeField] private GameObject playerPreviewPanel;
+    [SerializeField] private Image[] playerPreviewImages;
+    [SerializeField] private TextMeshProUGUI[] playerPreviewNames;
+
     private void Awake()
     {
         if (Instance == null)
@@ -77,6 +89,7 @@ public class CardPreviewManager : MonoBehaviour
     /// <summary>
     /// Show preview cards with optional interaction capabilities
     /// </summary>
+    /*
     public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrange = false, bool canRemove = false, int maxRemove = 1, System.Action<List<CardInfo>> onConfirm = null, System.Action onCancel = null)
     {
         originalCardInfos = new List<CardInfo>(cardInfos);
@@ -112,7 +125,85 @@ public class CardPreviewManager : MonoBehaviour
         previewPanel.transform.localScale = Vector3.zero;
         previewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
     }
-    
+    */
+    public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrange = false, bool canRemove = false, int maxRemove = 1, System.Action<List<CardInfo>> onConfirm = null, System.Action onCancel = null)
+    {
+        if (cardInfos == null || cardInfos.Count == 0) return;
+
+        if (cardInfos.Count == 1)
+        {
+            // SINGLE PREVIEW
+            CardInfo card = cardInfos[0];
+
+            if (singlePreviewImage != null && card.cardSprite != null)
+                singlePreviewImage.sprite = card.cardSprite;
+
+            if (singlePreviewName != null)
+                singlePreviewName.text = card.cardName;
+
+            previewPanel.SetActive(true);
+            previewPanel.transform.localScale = Vector3.zero;
+            previewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+            StartCoroutine(AutoClosePanel(previewPanel, 1.5f));
+        }
+        else
+        {
+            // MULTI PREVIEW
+            multiPreviewPanel.SetActive(true);
+
+            for (int i = 0; i < previewImages.Length; i++)
+            {
+                if (i < cardInfos.Count)
+                {
+                    previewImages[i].sprite = cardInfos[i].cardSprite;
+                    previewImages[i].gameObject.SetActive(true);
+                    previewNames[i].text = cardInfos[i].cardName;
+                    previewNames[i].gameObject.SetActive(true);
+                }
+                else
+                {
+                    previewImages[i].gameObject.SetActive(false);
+                    previewNames[i].gameObject.SetActive(false);
+                }
+            }
+
+            multiPreviewPanel.transform.localScale = Vector3.zero;
+            multiPreviewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+            StartCoroutine(AutoClosePanel(multiPreviewPanel, 10f));
+        }
+    }
+    public void ShowPlayerPreview(List<CardInfo> cardInfos)
+    {
+        if (cardInfos == null || cardInfos.Count == 0) return;
+
+        playerPreviewPanel.SetActive(true);
+
+        for (int i = 0; i < playerPreviewImages.Length; i++)
+        {
+            if (i < cardInfos.Count)
+            {
+                playerPreviewImages[i].sprite = cardInfos[i].cardSprite;
+                playerPreviewImages[i].gameObject.SetActive(true);
+                playerPreviewNames[i].text = cardInfos[i].cardName;
+                playerPreviewNames[i].gameObject.SetActive(true);
+            }
+            else
+            {
+                playerPreviewImages[i].gameObject.SetActive(false);
+                playerPreviewNames[i].gameObject.SetActive(false);
+            }
+        }
+
+        playerPreviewPanel.transform.localScale = Vector3.zero;
+        playerPreviewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+        StartCoroutine(AutoClosePanel(playerPreviewPanel, 1.5f));
+    }
+
+    private IEnumerator AutoClosePanel(GameObject panel, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        panel.SetActive(false);
+    }
     /// <summary>
     /// Show preview for Mad Writer (with shuffle option)
     /// </summary>
@@ -163,14 +254,15 @@ public class CardPreviewManager : MonoBehaviour
         // Create new cards
         for (int i = 0; i < cardInfos.Count; i++)
         {
-            GameObject cardObj = CreatePreviewCard(cardInfos[i], i);
-            previewCards.Add(cardObj);
+            //GameObject cardObj = CreatePreviewCard(cardInfos[i], i);
+           // previewCards.Add(cardObj);
         }
         
         // Arrange cards
         ArrangePreviewCards();
     }
     
+    /*
     private GameObject CreatePreviewCard(CardInfo cardInfo, int index)
     {
         GameObject cardObj = Instantiate(previewCardPrefab, previewContainer);
@@ -197,6 +289,7 @@ public class CardPreviewManager : MonoBehaviour
         
         return cardObj;
     }
+    */
     
     private void AddCardInteraction(GameObject cardObj, int index)
     {
@@ -451,5 +544,11 @@ public class CardPreviewManager : MonoBehaviour
         {
             Instance = null;
         }
+    }
+
+    private IEnumerator AutoClosePanel(float dealy)
+    {
+        yield return new WaitForSeconds(dealy);
+        HidePreview();
     }
 } 
