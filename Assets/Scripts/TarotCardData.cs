@@ -61,5 +61,6 @@ public enum TarotCardType
     MadWriter,    // NEW: Take a look at the next card and shuffle the whole deck if desired
     WhisperOfThePast, //Lose ¼ of your bet, temporarily discard all cards from your played side
     Saboteur,     //Lose ¼ of your bet, temporarily discard all cards from the enemy's played side
-    Scammer      //Reverts the enemy's winning play discarding the played card at the cost of half the bet
+    Scammer,      //Reverts the enemy's winning play discarding the played card at the cost of half the bet
+    TheEscapist   //Prevents losing by destroying the last card hit by player, then destroys itself
 } 

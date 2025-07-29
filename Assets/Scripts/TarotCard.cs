@@ -158,6 +158,9 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     case TarotCardType.MadWriter:
                         description = "The Mad Writer: Look at the next card in the deck and choose to shuffle the entire deck if desired. Can only be used once per round.";
                         break;
+                                    case TarotCardType.TheEscapist:
+                    description = "The Escapist: Click to remove your last hit card and continue playing. Like an 'escape from jail' card - removes the problematic card but lets you keep playing. Destroys itself after use. Can only be used once per round.";
+                    break;
                     default:
                         description = "A mystical tarot card with special powers.";
                         break;
@@ -684,6 +687,25 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     else
                     {
                         Debug.Log("Mad Writer ability already used this round");
+                    }
+                    break;
+                    
+                case TarotCardType.TheEscapist:
+                    if (!hasBeenUsedThisRound && deck._lastHitCard != null)
+                    {
+                        Debug.Log("The Escapist activated by player click!");
+                        deck.StartCoroutine(deck.UseEscapistCard());
+                        hasBeenUsedThisRound = true;
+                        cardImage.color = new Color(0.5f, 0.5f, 0.5f);
+                        effectApplied = true;
+                    }
+                    else if (hasBeenUsedThisRound)
+                    {
+                        Debug.Log("The Escapist has already been used this round");
+                    }
+                    else if (deck._lastHitCard == null)
+                    {
+                        Debug.Log("The Escapist: No last hit card to remove - you need to hit a card first!");
                     }
                     break;
                     

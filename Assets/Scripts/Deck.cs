@@ -182,6 +182,9 @@ public class Deck : MonoBehaviour
     private Coroutine _raiseBetCoroutine = null;
     private Coroutine _lowerBetCoroutine = null;
     public CardModel selectedCardForMakeupArtist;
+    
+    // Track the last card hit by player for The Escapist
+    public GameObject _lastHitCard = null;
 
 
 
@@ -597,6 +600,14 @@ public class Deck : MonoBehaviour
         // Deal card with animation
         yield return StartCoroutine(PushPlayerAnimated());
         
+        // Track the last hit card for The Escapist
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand != null && playerHand.cards.Count > 0)
+        {
+            _lastHitCard = playerHand.cards[playerHand.cards.Count - 1];
+            Debug.Log("Tracking last hit card for The Escapist: " + (_lastHitCard?.name ?? "null"));
+        }
+        
         // Re-enable buttons
         hitButton.interactable = true;
         stickButton.interactable = true;
@@ -702,8 +713,10 @@ private void EndHand(WinCode code)
     switch (code)
     {
         case WinCode.DealerWins:
+            // Process the loss normally - The Escapist is now an active card, not passive
+            
             finalMessage.text = "You lose!";
-            finalMessage.gameObject.SetActive(true); // ✅ Show result
+            finalMessage.gameObject.SetActive(true);  
             outcomeText = "Lose";
             if (_bet <= _balance)
             {
@@ -923,6 +936,9 @@ private void EndHand(WinCode code)
         _hasUsedHitmanThisRound = false;
         _hasUsedFortuneTellerThisRound = false;
         _hasUsedMadWriterThisRound = false;
+        
+        // Reset The Escapist tracking
+        _lastHitCard = null;
         
         ShuffleCards();
         UpdateStreakUI(); // Update streak UI for new round
@@ -2106,12 +2122,18 @@ private void EndHand(WinCode code)
         }
         
         TarotCard[] actualCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
+        Debug.Log($"Checking for {cardType} - Found {actualCards.Length} cards in tarot panel");
+        
         foreach (var card in actualCards)
         {
-            if (card.cardData != null && card.cardData.cardType == cardType && !card.isInShop)
+            if (card.cardData != null)
             {
-                Debug.Log("Found " + cardType + " in tarot panel: " + card.cardData.cardName);
-                return true;
+                Debug.Log($"Card: {card.cardData.cardName} (Type: {card.cardData.cardType}, InShop: {card.isInShop})");
+                if (card.cardData.cardType == cardType && !card.isInShop)
+                {
+                    Debug.Log("Found " + cardType + " in tarot panel: " + card.cardData.cardName);
+                    return true;
+                }
             }
         }
         
@@ -2683,6 +2705,184 @@ private void EndHand(WinCode code)
         
         Debug.Log("=== END CARD LOOKUP TEST ===");
     }
+    
+
+    
+    /// <summary>
+    /// Use The Escapist card - called when player clicks on it
+    /// </summary>
+    public IEnumerator UseEscapistCard()
+    {
+        Debug.Log("=== ESCAPIST CARD ACTIVATED BY PLAYER ===");
+        
+        // Check if we have a last hit card to remove
+        if (_lastHitCard == null)
+        {
+            Debug.Log("The Escapist: No last hit card to remove");
+            yield break;
+        }
+        
+        Debug.Log("The Escapist activating! Removing last hit card: " + _lastHitCard.name);
+        
+        // Remove the last hit card from player's hand
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand != null && playerHand.cards.Contains(_lastHitCard))
+        { 
+            Debug.Log("The Escapist: Found last hit card in player's hand - activating");
+            playerHand.cards.Remove(_lastHitCard);
+             
+            // Start the animation and wait for it to complete
+            yield return StartCoroutine(AnimateEscapistCardRemoval(_lastHitCard, playerHand));
+             
+            _lastHitCard = null;
+             
+            RemoveEscapistFromTarotPanel();
+            
+                                 Debug.Log("The Escapist: Card removal completed - continuing game flow");
+                     
+                     
+                     hitButton.interactable = true;
+                     stickButton.interactable = true;
+                      
+                     finalMessage.text = "The Escapist saved you! Continue playing...";
+                     
+                     Debug.Log("The Escapist: Game continues - player can hit or stand");
+        }
+        else
+        {
+            Debug.LogWarning("The Escapist: Last hit card not found in player's hand");
+        }
+    }
+    
+    /// <summary>
+    /// Animate the removal of a card by The Escapist
+    /// </summary>
+    private IEnumerator AnimateEscapistCardRemoval(GameObject cardToRemove, CardHand playerHand)
+    {
+        if (cardToRemove == null) yield break; // Safety check
+        
+        // Create a dramatic escape animation
+        Sequence escapeSequence = DOTween.Sequence();
+        
+        // Flash the card white to indicate The Escapist's intervention
+        SpriteRenderer spriteRenderer = cardToRemove.GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+        {
+            Color originalColor = spriteRenderer.color;
+            escapeSequence.Append(spriteRenderer.DOColor(Color.white, 0.1f));
+            escapeSequence.Append(spriteRenderer.DOColor(originalColor, 0.1f));
+            escapeSequence.Append(spriteRenderer.DOColor(Color.white, 0.1f));
+            escapeSequence.Append(spriteRenderer.DOColor(originalColor, 0.1f));
+        }
+        
+        // Scale up and rotate for dramatic effect
+        escapeSequence.Append(cardToRemove.transform.DOScale(cardToRemove.transform.localScale * 1.3f, 0.2f)
+            .SetEase(Ease.OutQuad));
+        escapeSequence.Join(cardToRemove.transform.DORotate(new Vector3(0, 0, 360f), 0.3f, RotateMode.FastBeyond360)
+            .SetEase(Ease.OutQuad));
+        
+        // Fade out and shrink
+        if (spriteRenderer != null)
+        {
+            escapeSequence.Join(spriteRenderer.DOFade(0f, 0.3f));
+        }
+        escapeSequence.Join(cardToRemove.transform.DOScale(Vector3.zero, 0.3f)
+            .SetEase(Ease.InQuart));
+        
+        yield return escapeSequence.WaitForCompletion();
+        
+        // After animation completes, destroy the card and update the hand
+        if (cardToRemove != null)
+        {
+            Destroy(cardToRemove);
+        }
+        
+        // Rearrange remaining cards and update points
+        if (playerHand != null)
+        {
+            playerHand.ArrangeCardsInWindow();
+            playerHand.UpdatePoints();
+        }
+        UpdateScoreDisplays();
+        
+        Debug.Log("The Escapist: Card removal animation completed");
+    }
+    
+    /// <summary>
+    /// Remove The Escapist card from the tarot panel after use
+    /// </summary>
+    private void RemoveEscapistFromTarotPanel()
+    {
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager == null || shopManager.tarotPanel == null)
+        {
+            Debug.LogWarning("Cannot find ShopManager or tarot panel to remove The Escapist");
+            return;
+        }
+        
+        // Find The Escapist card in the tarot panel
+        TarotCard[] tarotCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
+        foreach (TarotCard card in tarotCards)
+        {
+            if (card.cardData != null && card.cardData.cardType == TarotCardType.TheEscapist && !card.isInShop)
+            {
+                Debug.Log("Removing The Escapist from tarot panel: " + card.cardData.cardName);
+                
+                // Also remove from PlayerStats if it exists there
+                if (PlayerStats.instance != null && PlayerStats.instance.ownedCards != null)
+                {
+                    PlayerStats.instance.ownedCards.Remove(card.cardData);
+                }
+                
+                // Animate the card destruction
+                StartCoroutine(AnimateEscapistDestruction(card.gameObject));
+                break;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Animate The Escapist card destroying itself
+    /// </summary>
+    private IEnumerator AnimateEscapistDestruction(GameObject escapistCard)
+    {
+        if (escapistCard == null) yield break;
+        
+        // Create a self-destruction animation
+        Sequence destructionSequence = DOTween.Sequence();
+        
+        // Flash red to indicate self-destruction
+        Image cardImage = escapistCard.GetComponent<Image>();
+        if (cardImage != null)
+        {
+            Color originalColor = cardImage.color;
+            destructionSequence.Append(cardImage.DOColor(Color.red, 0.15f));
+            destructionSequence.Append(cardImage.DOColor(originalColor, 0.15f));
+            destructionSequence.Append(cardImage.DOColor(Color.red, 0.15f));
+        }
+        
+        // Shake and scale up before destruction
+        destructionSequence.Append(escapistCard.transform.DOShakePosition(0.3f, 20f, 20, 90, false, true));
+        destructionSequence.Join(escapistCard.transform.DOScale(escapistCard.transform.localScale * 1.2f, 0.3f));
+        
+                         // Final destruction - fade out and shrink
+                 if (cardImage != null)
+                 {
+                     destructionSequence.Append(cardImage.DOFade(0f, 0.4f));
+                 }
+                 destructionSequence.Join(escapistCard.transform.DOScale(Vector3.zero, 0.4f)
+                     .SetEase(Ease.InQuart));
+                 
+                 yield return destructionSequence.WaitForCompletion();
+                 
+                 // Destroy the card object after animation completes
+                 if (escapistCard != null)
+                 {
+                     Destroy(escapistCard);
+                 }
+        
+        Debug.Log("The Escapist has been destroyed after saving the player");
+    }
 
     
     // Method to handle streak rewards and multiplier calculation
@@ -2796,6 +2996,9 @@ private void EndHand(WinCode code)
         _hasUsedHitmanThisRound = false;
         _hasUsedFortuneTellerThisRound = false;
         _hasUsedMadWriterThisRound = false;
+        
+        // Don't reset _lastHitCard here - it should persist until The Escapist is used
+        // or until a new game starts (PlayAgain)
         
         Debug.Log("Initialized betting state - waiting for bet placement");
     }
