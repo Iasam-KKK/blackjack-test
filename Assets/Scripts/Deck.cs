@@ -1438,12 +1438,8 @@ private void EndHand(WinCode code)
         
         if (nextCards.Count > 0 && cardPreviewManager != null)
         {
-            cardPreviewManager.ShowPreview(
+            cardPreviewManager.ShowCorruptJudgePreview(
                 nextCards,
-                "The Corrupt Judge - Rearrange First Two Cards",
-                true, // Allow rearranging
-                false, // No removing
-                0,
                 (rearrangedCards) => OnCorruptJudgeConfirm(rearrangedCards),
                 null
             );
