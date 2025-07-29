@@ -3278,6 +3278,18 @@ private void EndHand(WinCode code)
             EndHand(WinCode.DealerWins);
         }
     }
+    private void ShowResult(string message)
+    {
+        if (finalMessage != null)
+        {
+            // Make sure previous message is hidden first
+            finalMessage.gameObject.SetActive(false);
+
+            // Then show the new one
+            finalMessage.text = message;
+            finalMessage.gameObject.SetActive(true);
+        }
+    }
 
 
     private IEnumerator PushAnimated(GameObject handOwner, bool isPlayer)
