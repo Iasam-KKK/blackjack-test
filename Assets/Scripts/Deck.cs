@@ -144,7 +144,7 @@ public class Deck : MonoBehaviour
     public GameHistoryManager gameHistoryManager;
 
     // Card Preview System for new tarot cards
-    public CardPreviewManager cardPreviewManager;
+   public CardPreviewManager cardPreviewManager;
 
     private uint _balance = Constants.InitialBalance;
     public uint _bet;

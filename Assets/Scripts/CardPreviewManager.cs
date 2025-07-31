@@ -44,11 +44,22 @@ public class CardPreviewManager : MonoBehaviour
     [Header("Single Card Preview")]
     public Image singlePreviewImage;
     public TextMeshProUGUI singlePreviewName;
-    [Header("Multi Card Preview")]
-    public GameObject multiPreviewPanel;
-    public Image[] previewImages; // Size 3
-    public TextMeshProUGUI[] previewNames; // Size 3
+    /*[Header("Multi Card Preview")]
+    private GameObject multiPreviewPanel;
+    private Image[] previewImages; // Size 3
+    private TextMeshProUGUI[] previewNames; // Size 3*/
+    
+    [Header("Blind Seer Preview")]
+    [SerializeField] private GameObject blindSeerPanel;
+    [SerializeField] private Image[] blindSeerImages; // Size 3
+    [SerializeField] private TextMeshProUGUI[] blindSeerNames; // Size 3
 
+    [Header("Corrupt Judge Preview")]
+    [SerializeField] private GameObject corruptJudgePanel;
+    [SerializeField] private Image[] corruptJudgeImages; // Size 3
+    [SerializeField] private TextMeshProUGUI[] corruptJudgeNames; // Size 3
+    
+    [Header("HitMan Preview")]
     [SerializeField] private GameObject playerPreviewPanel;
     [SerializeField] private Image[] playerPreviewImages;
     [SerializeField] private TextMeshProUGUI[] playerPreviewNames;
@@ -90,96 +101,82 @@ public class CardPreviewManager : MonoBehaviour
         }
     }
     
-    /// <summary>
-    /// Show preview cards with optional interaction capabilities
-    /// </summary>
-    /*
-    public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrange = false, bool canRemove = false, int maxRemove = 1, System.Action<List<CardInfo>> onConfirm = null, System.Action onCancel = null)
+
+public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrange = false, bool canRemove = false, int maxRemove = 1, System.Action<List<CardInfo>> onConfirm = null, System.Action onCancel = null)
+{
+    if (cardInfos == null || cardInfos.Count == 0) return;
+
+    if (cardInfos.Count == 1)
     {
-        originalCardInfos = new List<CardInfo>(cardInfos);
-        onConfirmCallback = onConfirm;
-        onCancelCallback = onCancel;
-        allowRearranging = canRearrange;
-        allowRemoving = canRemove;
-        maxRemovable = maxRemove;
-        removedCount = 0;
-        
-        // Set title
-        // if (previewTitleText != null)
-        // {
-        //     previewTitleText.text = title;
-        // }
-        
-        // Show/hide buttons based on functionality
-        if (confirmButton != null)
-        {
-            confirmButton.gameObject.SetActive(canRearrange || canRemove);
-        }
-        
-        if (shuffleButton != null)
-        {
-            shuffleButton.gameObject.SetActive(false); // Only show for Mad Writer
-        }
-        
-        // Create preview cards
-        CreatePreviewCards(cardInfos);
-        
-        // Show panel with animation
+        // Single Card Preview (Spy or similar)
+        singlePreviewImage.sprite = cardInfos[0].cardSprite;
+        singlePreviewName.text = cardInfos[0].cardName;
         previewPanel.SetActive(true);
         previewPanel.transform.localScale = Vector3.zero;
         previewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+        StartCoroutine(AutoClosePanel(previewPanel, 1.5f));
     }
-    */
-    public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrange = false, bool canRemove = false, int maxRemove = 1, System.Action<List<CardInfo>> onConfirm = null, System.Action onCancel = null)
+    else if (title.Contains("Blind Seer"))
     {
-        if (cardInfos == null || cardInfos.Count == 0) return;
+        blindSeerPanel.SetActive(true);
 
-        if (cardInfos.Count == 1)
+        for (int i = 0; i < blindSeerImages.Length; i++)
         {
-            // SINGLE PREVIEW
-            CardInfo card = cardInfos[0];
-
-            if (singlePreviewImage != null && card.cardSprite != null)
-                singlePreviewImage.sprite = card.cardSprite;
-
-            if (singlePreviewName != null)
-                singlePreviewName.text = card.cardName;
-
-            previewPanel.SetActive(true);
-            previewPanel.transform.localScale = Vector3.zero;
-            previewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
-            StartCoroutine(AutoClosePanel(previewPanel, 1.5f));
-        }
-        else
-        {
-            // MULTI PREVIEW
-            multiPreviewPanel.SetActive(true);
-
-            for (int i = 0; i < previewImages.Length; i++)
+            if (i < cardInfos.Count)
             {
-                if (i < cardInfos.Count)
-                {
-                    previewImages[i].sprite = cardInfos[i].cardSprite;
-                    previewImages[i].gameObject.SetActive(true);
-                    previewNames[i].text = cardInfos[i].cardName;
-                    previewNames[i].gameObject.SetActive(true);
-                }
-                else
-                {
-                    previewImages[i].gameObject.SetActive(false);
-                    previewNames[i].gameObject.SetActive(false);
-                }
+                blindSeerImages[i].sprite = cardInfos[i].cardSprite;
+                blindSeerImages[i].gameObject.SetActive(true);
+                blindSeerNames[i].text = cardInfos[i].cardName;
+                blindSeerNames[i].gameObject.SetActive(true);
             }
-
-            multiPreviewPanel.transform.localScale = Vector3.zero;
-            multiPreviewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
-            StartCoroutine(AutoClosePanel(multiPreviewPanel, 10f));
+            else
+            {
+                blindSeerImages[i].gameObject.SetActive(false);
+                blindSeerNames[i].gameObject.SetActive(false);
+            }
         }
+
+        blindSeerPanel.transform.localScale = Vector3.zero;
+        blindSeerPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+        StartCoroutine(AutoClosePanel(blindSeerPanel, 2f));
     }
+    else if (title.Contains("Hitman"))
+    {
+        playerPreviewPanel.SetActive(true);
+
+        for (int i = 0; i < playerPreviewImages.Length; i++)
+        {
+            if (i < cardInfos.Count)
+            {
+                playerPreviewImages[i].sprite = cardInfos[i].cardSprite;
+                playerPreviewImages[i].gameObject.SetActive(true);
+                playerPreviewNames[i].text = cardInfos[i].cardName;
+                playerPreviewNames[i].gameObject.SetActive(true);
+                // Add drag functionality to all player preview cards
+            AddDragInteractionToImage(playerPreviewImages[i].gameObject, i);
+            }
+            else
+            {
+                playerPreviewImages[i].gameObject.SetActive(false);
+                playerPreviewNames[i].gameObject.SetActive(false);
+            }
+        }
+
+        playerPreviewPanel.transform.localScale = Vector3.zero;
+        playerPreviewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+        StartCoroutine(AutoClosePanel(playerPreviewPanel, 10f));
+    }
+    else
+    {
+        Debug.LogWarning("Unhandled card preview case in ShowPreview");
+    }
+}
 
     /// <summary>
     /// Show preview for Corrupt Judge with drag and drop functionality
     /// </summary>
+    
+    
     public void ShowCorruptJudgePreview(List<CardInfo> cardInfos, System.Action<List<CardInfo>> onConfirm, System.Action onCancel)
     {
         if (cardInfos == null || cardInfos.Count == 0) return;
@@ -187,11 +184,12 @@ public class CardPreviewManager : MonoBehaviour
         originalCardInfos = new List<CardInfo>(cardInfos);
         onConfirmCallback = onConfirm;
         onCancelCallback = onCancel;
-        allowRearranging = true;
+
+        allowRearranging = false; // No rearranging for Corrupt Judge now
         allowRemoving = false;
         maxRemovable = 0;
         removedCount = 0;
-        
+
         // Show confirm and cancel buttons
         if (confirmButton != null)
         {
@@ -199,55 +197,81 @@ public class CardPreviewManager : MonoBehaviour
             Text buttonText = confirmButton.GetComponentInChildren<Text>();
             if (buttonText != null)
             {
-                buttonText.text = "Confirm Arrangement";
+                buttonText.text = "Confirm";
             }
         }
-        
+
         if (cancelButton != null)
         {
             cancelButton.gameObject.SetActive(true);
         }
-        
+
         if (shuffleButton != null)
         {
             shuffleButton.gameObject.SetActive(false);
         }
-        
-        // Use the multi-preview panel for Corrupt Judge
-        multiPreviewPanel.SetActive(true);
 
-        // Clear any existing drag interactions
-        ClearPreviewCards();
+        // Show Corrupt Judge panel (not multiPreview)
+        corruptJudgePanel.SetActive(true);
 
-        for (int i = 0; i < previewImages.Length; i++)
+        // Fill the card previews
+        for (int i = 0; i < corruptJudgeImages.Length; i++)
         {
             if (i < cardInfos.Count)
             {
-                previewImages[i].sprite = cardInfos[i].cardSprite;
-                previewImages[i].gameObject.SetActive(true);
-                previewNames[i].text = cardInfos[i].cardName;
-                previewNames[i].gameObject.SetActive(true);
-                
+                corruptJudgeImages[i].sprite = cardInfos[i].cardSprite;
+                corruptJudgeImages[i].gameObject.SetActive(true);
+                corruptJudgeNames[i].text = cardInfos[i].cardName;
+                corruptJudgeNames[i].gameObject.SetActive(true);
                 // Add drag functionality to the first two cards only
                 if (i < 2)
                 {
-                    AddDragInteractionToImage(previewImages[i].gameObject, i);
+                    AddDragInteractionToImage(corruptJudgeImages[i].gameObject, i);
                 }
+
             }
             else
             {
-                previewImages[i].gameObject.SetActive(false);
-                previewNames[i].gameObject.SetActive(false);
+                corruptJudgeImages[i].gameObject.SetActive(false);
+                corruptJudgeNames[i].gameObject.SetActive(false);
             }
         }
-        
-        // Set initial positions for all cards
-        SetInitialCardPositions();
 
-        multiPreviewPanel.transform.localScale = Vector3.zero;
-        multiPreviewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+        // Optional animation
+        corruptJudgePanel.transform.localScale = Vector3.zero;
+        corruptJudgePanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+        StartCoroutine(AutoClosePanel(corruptJudgePanel, 10f));
+
     }
-    
+    public void ShowBlindSeerPreview(List<CardInfo> cardInfos)
+    {
+        if (cardInfos == null || cardInfos.Count == 0) return;
+
+        // Show the Blind Seer preview panel
+        blindSeerPanel.SetActive(true);
+
+        for (int i = 0; i < blindSeerImages.Length; i++)
+        {
+            if (i < cardInfos.Count)
+            {
+                blindSeerImages[i].sprite = cardInfos[i].cardSprite;
+                blindSeerImages[i].gameObject.SetActive(true);
+                blindSeerNames[i].text = cardInfos[i].cardName;
+                blindSeerNames[i].gameObject.SetActive(true);
+            }
+            else
+            {
+                blindSeerImages[i].gameObject.SetActive(false);
+                blindSeerNames[i].gameObject.SetActive(false);
+            }
+        }
+
+        blindSeerPanel.transform.localScale = Vector3.zero;
+        blindSeerPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+        StartCoroutine(AutoClosePanel(playerPreviewPanel, 10f));
+
+    }
+
     private void AddDragInteractionToImage(GameObject imageObj, int index)
     {
         // Add EventTrigger for drag and drop
@@ -285,17 +309,23 @@ public class CardPreviewManager : MonoBehaviour
     
     private void OnCardClick(GameObject imageObj, int index, PointerEventData eventData)
     {
-        // Only handle clicks if we're not currently dragging
         if (isDragging) return;
-        
-        // Simple swap: if card 0 is clicked, swap with card 1, and vice versa
-        if (index == 0 && previewImages[1].gameObject.activeInHierarchy)
+
+        // Safety checks
+        if (corruptJudgeImages == null || corruptJudgeImages.Length < 3)
         {
-            StartCoroutine(AnimateImageSwap(0, 1));
+            Debug.LogWarning("Preview images not properly assigned.");
+            return;
         }
-        else if (index == 1 && previewImages[0].gameObject.activeInHierarchy)
+
+        // Only allow valid indices
+        if (index < 0 || index > 2) return;
+
+        // Try swapping with the next index if it's valid
+        int nextIndex = (index + 1) % 2;
+        if (corruptJudgeImages[nextIndex].gameObject.activeInHierarchy)
         {
-            StartCoroutine(AnimateImageSwap(1, 0));
+            StartCoroutine(AnimateImageSwap(index, nextIndex));
         }
     }
     
@@ -321,7 +351,7 @@ public class CardPreviewManager : MonoBehaviour
         
         Vector2 localPoint;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            multiPreviewPanel.transform as RectTransform, 
+            playerPreviewPanel.transform as RectTransform, 
             eventData.position, 
             eventData.pressEventCamera, 
             out localPoint);
@@ -348,7 +378,7 @@ public class CardPreviewManager : MonoBehaviour
         
         Vector2 localPoint;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            multiPreviewPanel.transform as RectTransform, 
+            playerPreviewPanel.transform as RectTransform, 
             eventData.position, 
             eventData.pressEventCamera, 
             out localPoint);
@@ -399,13 +429,13 @@ public class CardPreviewManager : MonoBehaviour
     {
         for (int i = 0; i < 2; i++) // Only first two cards
         {
-            if (previewImages[i].gameObject == draggedCard) continue;
+            if (corruptJudgeImages[i].gameObject == draggedCard) continue;
             
-            Image cardImage = previewImages[i].GetComponent<Image>();
+            Image cardImage = corruptJudgeImages[i].GetComponent<Image>();
             if (cardImage != null)
             {
                 // Check if this card is close enough to be a swap target
-                float distance = Vector3.Distance(draggedCard.transform.localPosition, previewImages[i].transform.localPosition);
+                float distance = Vector3.Distance(draggedCard.transform.localPosition, corruptJudgeImages[i].transform.localPosition);
                 if (distance < cardSpacing * 0.5f)
                 {
                     cardImage.color = new Color(1f, 1f, 0.8f, 1f); // Light yellow highlight
@@ -420,9 +450,9 @@ public class CardPreviewManager : MonoBehaviour
     
     private void ClearImageHighlights()
     {
-        for (int i = 0; i < previewImages.Length; i++)
+        for (int i = 0; i < corruptJudgeImages.Length; i++)
         {
-            Image cardImage = previewImages[i].GetComponent<Image>();
+            Image cardImage = corruptJudgeImages[i].GetComponent<Image>();
             if (cardImage != null)
             {
                 cardImage.color = Color.white;
@@ -437,9 +467,9 @@ public class CardPreviewManager : MonoBehaviour
         
         for (int i = 0; i < 2; i++) // Only first two cards
         {
-            if (previewImages[i].gameObject == draggedCard) continue;
+            if (corruptJudgeImages[i].gameObject == draggedCard) continue;
             
-            float distance = Vector3.Distance(position, previewImages[i].transform.localPosition);
+            float distance = Vector3.Distance(position, corruptJudgeImages[i].transform.localPosition);
             if (distance < closestDistance && distance < cardSpacing * 0.5f) // Only consider close cards
             {
                 closestDistance = distance;
@@ -452,48 +482,51 @@ public class CardPreviewManager : MonoBehaviour
     
     private IEnumerator AnimateImageSwap(int index1, int index2)
     {
-        if (index1 < 0 || index1 >= 2 || index2 < 0 || index2 >= 2)
+        if (index1 < 0 || index1 >= corruptJudgeImages.Length || index2 < 0 || index2 >= corruptJudgeImages.Length)
             yield break;
-        
-        GameObject card1 = previewImages[index1].gameObject;
-        GameObject card2 = previewImages[index2].gameObject;
-        
+
+        GameObject card1 = corruptJudgeImages[index1].gameObject;
+        GameObject card2 = corruptJudgeImages[index2].gameObject;
+
+
         Vector3 pos1 = card1.transform.localPosition;
         Vector3 pos2 = card2.transform.localPosition;
-        
-        // Animate both cards to their new positions
+
+        // Animate both cards to new positions
         card1.transform.DOLocalMove(pos2, swapAnimationDuration).SetEase(Ease.OutQuad);
         card2.transform.DOLocalMove(pos1, swapAnimationDuration).SetEase(Ease.OutQuad);
         
+
         yield return new WaitForSeconds(swapAnimationDuration);
-        
-        // Swap in original card infos list
+
+        // Swap data
         CardInfo tempInfo = originalCardInfos[index1];
         originalCardInfos[index1] = originalCardInfos[index2];
         originalCardInfos[index2] = tempInfo;
-        
-        // Update the display
-        previewImages[index1].sprite = originalCardInfos[index1].cardSprite;
-        previewImages[index2].sprite = originalCardInfos[index2].cardSprite;
-        previewNames[index1].text = originalCardInfos[index1].cardName;
-        previewNames[index2].text = originalCardInfos[index2].cardName;
-        
-        // Reposition cards to their proper positions with proper spacing
+
+        // Update all 3 sprites and names after any swap
+        for (int i = 0; i < 3; i++)
+        {
+            corruptJudgeImages[i].sprite = originalCardInfos[i].cardSprite;
+            corruptJudgeNames[i].text = originalCardInfos[i].cardName;
+        }
+
+        // Reposition the cards properly
         RepositionCardsAfterSwap();
     }
     
     private void RepositionCardsAfterSwap()
     {
         // Calculate proper positions for all cards
-        float totalWidth = (previewImages.Length - 1) * cardSpacing;
+        float totalWidth = (corruptJudgeImages.Length - 1) * cardSpacing;
         float startX = -totalWidth / 2f;
         
-        for (int i = 0; i < previewImages.Length; i++)
+        for (int i = 0; i < corruptJudgeImages.Length; i++)
         {
-            if (previewImages[i].gameObject.activeInHierarchy)
+            if (corruptJudgeImages[i].gameObject.activeInHierarchy)
             {
                 Vector3 targetPosition = new Vector3(startX + (i * cardSpacing), 0, 0);
-                previewImages[i].transform.DOLocalMove(targetPosition, 0.3f).SetEase(Ease.OutQuad);
+                corruptJudgeImages[i].transform.DOLocalMove(targetPosition, 0.3f).SetEase(Ease.OutQuad);
             }
         }
     }
@@ -501,15 +534,15 @@ public class CardPreviewManager : MonoBehaviour
     private void SetInitialCardPositions()
     {
         // Calculate proper positions for all cards
-        float totalWidth = (previewImages.Length - 1) * cardSpacing;
+        float totalWidth = (corruptJudgeImages.Length - 1) * cardSpacing;
         float startX = -totalWidth / 2f;
         
-        for (int i = 0; i < previewImages.Length; i++)
+        for (int i = 0; i < corruptJudgeImages.Length; i++)
         {
-            if (previewImages[i].gameObject.activeInHierarchy)
+            if (corruptJudgeImages[i].gameObject.activeInHierarchy)
             {
                 Vector3 targetPosition = new Vector3(startX + (i * cardSpacing), 0, 0);
-                previewImages[i].transform.localPosition = targetPosition;
+                corruptJudgeImages[i].transform.localPosition = targetPosition;
             }
         }
     }
@@ -520,7 +553,7 @@ public class CardPreviewManager : MonoBehaviour
 
         playerPreviewPanel.SetActive(true);
 
-        for (int i = 0; i < playerPreviewImages.Length; i++)
+        for (int i = 0; i < corruptJudgeImages.Length; i++)
         {
             if (i < cardInfos.Count)
             {
@@ -603,35 +636,6 @@ public class CardPreviewManager : MonoBehaviour
         // Arrange cards
         ArrangePreviewCards();
     }
-    
-    /*
-    private GameObject CreatePreviewCard(CardInfo cardInfo, int index)
-    {
-        GameObject cardObj = Instantiate(previewCardPrefab, previewContainer);
-        
-        // Set up card display
-        Image cardImage = cardObj.GetComponent<Image>();
-        if (cardImage != null && cardInfo.cardSprite != null)
-        {
-            cardImage.sprite = cardInfo.cardSprite;
-        }
-        
-        // Add card name text
-        Text cardNameText = cardObj.GetComponentInChildren<Text>();
-        if (cardNameText != null)
-        {
-            cardNameText.text = cardInfo.cardName;
-        }
-        
-        // Add interaction if allowed
-        if (allowRearranging || allowRemoving)
-        {
-            AddCardInteraction(cardObj, index);
-        }
-        
-        return cardObj;
-    }
-    */
     
     private void AddCardInteraction(GameObject cardObj, int index)
     {
@@ -814,11 +818,10 @@ public class CardPreviewManager : MonoBehaviour
             
             if (previewCards[i] != draggedCard)
             {
-                previewCards[i].transform.DOLocalMove(targetPos, swapAnimationDuration).SetEase(Ease.OutQuad);
+                previewCards[i].transform.DOLocalMove(targetPos, 0.2f).SetEase(Ease.OutQuad);
             }
         }
-    }
-    
+    }    
     private void ClearPreviewCards()
     {
         foreach (GameObject card in previewCards)
@@ -855,7 +858,7 @@ public class CardPreviewManager : MonoBehaviour
         onConfirmCallback?.Invoke(resultCards);
         
         // Hide the appropriate panel based on what's currently active
-        if (multiPreviewPanel != null && multiPreviewPanel.activeInHierarchy)
+        if (playerPreviewPanel != null && playerPreviewPanel.activeInHierarchy)
         {
             HideMultiPreviewPanel();
         }
@@ -867,11 +870,11 @@ public class CardPreviewManager : MonoBehaviour
     
     private void HideMultiPreviewPanel()
     {
-        if (multiPreviewPanel != null)
+        if (playerPreviewPanel != null)
         {
-            multiPreviewPanel.transform.DOScale(Vector3.zero, animationDuration).SetEase(Ease.InBack)
+            playerPreviewPanel.transform.DOScale(Vector3.zero, animationDuration).SetEase(Ease.InBack)
                 .OnComplete(() => {
-                    multiPreviewPanel.SetActive(false);
+                    playerPreviewPanel.SetActive(false);
                 });
         }
     }
@@ -881,7 +884,7 @@ public class CardPreviewManager : MonoBehaviour
         onCancelCallback?.Invoke();
         
         // Hide the appropriate panel based on what's currently active
-        if (multiPreviewPanel != null && multiPreviewPanel.activeInHierarchy)
+        if (playerPreviewPanel != null && playerPreviewPanel.activeInHierarchy)
         {
             HideMultiPreviewPanel();
         }
