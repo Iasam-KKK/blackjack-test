@@ -120,7 +120,7 @@ public class CardHand : MonoBehaviour
         return cardCopy;
     }
     
-    public void Push(Sprite front, int value, int originalDeckIndex = -1)
+    public GameObject Push(Sprite front, int value, int originalDeckIndex = -1)
     {
         if (cards.Count >= Constants.MaxCardsInHand)
         {
@@ -132,7 +132,7 @@ public class CardHand : MonoBehaviour
                 deck.UpdateScoreDisplays();
                 deck.UpdateDiscardButtonState();
             }
-            return;
+            return null;
         }
         
         GameObject cardCopy = (GameObject) Instantiate(card);
@@ -152,7 +152,7 @@ public class CardHand : MonoBehaviour
         if (cardModel == null)
         {
             Debug.LogError("CardModel component missing on card prefab!");
-            return;
+            return null;
         }
         
         cardModel.cardFront = front;
@@ -183,6 +183,7 @@ public class CardHand : MonoBehaviour
         }
         
         UpdatePoints();
+        return cardCopy;
     }
     
     private void ApplyCardScale(GameObject cardObj)

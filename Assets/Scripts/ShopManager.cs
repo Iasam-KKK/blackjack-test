@@ -53,6 +53,18 @@ public class ShopManager : MonoBehaviour
         int randomIndex = Random.Range(0, availableTarotCards.Count);
         TarotCardData cardData = availableTarotCards[randomIndex];
         
+        GiveSpecificTarotCard(cardData);
+    }
+    
+    // Method to give a specific tarot card as reward
+    public void GiveSpecificTarotCard(TarotCardData cardData)
+    {
+        if (cardData == null)
+        {
+            Debug.LogWarning("Cannot give null tarot card!");
+            return;
+        }
+        
         // Check if there's an empty slot in the tarot panel
         Transform emptySlot = GetEmptyTarotSlot();
         if (emptySlot == null)
@@ -82,8 +94,15 @@ public class ShopManager : MonoBehaviour
                 cardRect.sizeDelta = new Vector2(100, 150); // Smaller size
             }
             
+            // Add to PlayerStats
+            if (PlayerStats.instance != null)
+            {
+                PlayerStats.instance.ownedCards.Add(cardData);
+                Debug.Log("Added " + cardData.cardName + " to player's owned cards via reward");
+            }
+            
             // Notify the player
-            ShowRewardNotification("Free Tarot Card: " + cardData.cardName);
+            ShowRewardNotification("Boss Reward: " + cardData.cardName);
         }
     }
     

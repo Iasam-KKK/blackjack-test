@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
+  m_Name: The Drunkard
+  m_EditorClassIdentifier: 
+  bossName: The Drunkard
+  bossType: 0
+  bossPortrait: {fileID: 21300000, guid: e294bbd4ff55aed4a8aae809d8b98afc, type: 3}
+  bossDescription: An absolute average playing experience. Random use of regular
+    cards. No tarot.
+  maxHealth: 3
+  handsPerRound: 5
+  difficultyMultiplier: 1
+  unlockOrder: 0
+  mechanics: []
+  rewards: []
+  bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
+  bossMusic: {fileID: 0}
+  bossDefeatSound: {fileID: 0}
+  bossVictorySound: {fileID: 0}
+  animationDuration: 0.5
+  animationCurve:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  disablesTarotCards: 0
+  usesSpecialDeck: 0
+  hasWinStreakEffect: 0
+  isFinalBoss: 0

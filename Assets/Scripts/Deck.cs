@@ -64,15 +64,9 @@ internal static class Constants
     public const float PeekDuration = 2.0f; // Duration in seconds to peek at dealer's card
     public const int MaxSelectedCards = 2; // Maximum number of cards that can be selected at once for transformation
     
-    // Blind progression constants
-    public const int SmallBlindRounds = 5;
-    public const uint SmallBlindGoal = 300;
-    public const int BigBlindRounds = 8;
-    public const uint BigBlindGoal = 600;
-    public const int MegaBlindRounds = 12;
-    public const uint MegaBlindGoal = 1200;
-    public const int SuperBlindRounds = 15;
-    public const uint SuperBlindGoal = 2000;
+    // Boss system constants
+    public const int DefaultBossHealth = 3;
+    public const int DefaultHandsPerRound = 3;
     
     // Streak system constants
     public const int StreakMultiplierIncrement = 1;
@@ -91,14 +85,12 @@ internal static class Constants
     public const int HouseKeeperBonusAmount = 10; // Bonus amount per Jack/Queen/King card
 }
 
-// Enum to track current blind level
-internal enum BlindLevel
+// Boss system enums
+internal enum BossState
 {
-    SmallBlind,
-    BigBlind,
-    MegaBlind,
-    SuperBlind,
-    Completed
+    Waiting,
+    Fighting,
+    Defeated
 }
 
 internal enum WinCode 
@@ -131,9 +123,8 @@ public class Deck : MonoBehaviour
     public Button placeBetButton; // New button to confirm bet placement
     public Text balance;
     public Text bet;
-    public Text roundText; // Text to display current round
-    public Text blindText; // Text to display current blind
-    public Text goalText; // Text to display progress towards goal
+    // Boss UI elements (replacing old blind/round/goal system)
+    public BossUI bossUI;
     
     // UI elements for streak
     public Text streakText;
@@ -145,6 +136,9 @@ public class Deck : MonoBehaviour
 
     // Card Preview System for new tarot cards
     public CardPreviewManager cardPreviewManager;
+    
+    // Boss System Integration
+    public BossManager bossManager;
 
     private uint _balance = Constants.InitialBalance;
     public uint _bet;
@@ -161,16 +155,8 @@ public class Deck : MonoBehaviour
     public bool _hasUsedFortuneTellerThisRound = false;
     public bool _hasUsedMadWriterThisRound = false;
     
-    // Blind progression variables
-    private BlindLevel _currentBlind = BlindLevel.SmallBlind;
-    private int _currentRound = 1;
-    private uint _startingBalanceForBlind;
-    private uint _goalForCurrentBlind = Constants.SmallBlindGoal;
-    private int _totalRoundsForBlind = Constants.SmallBlindRounds;
-    
-
-    // Add a new field to track blackjack earnings
-    private long _earningsForCurrentBlind = 0;
+    // Boss system variables
+    private BossState _currentBossState = BossState.Waiting;
 
     // Streak variables
     private int _currentStreak = 0;
@@ -212,7 +198,6 @@ public class Deck : MonoBehaviour
             PlayerPrefs.Save();
 
             UpdateBalanceDisplay();
-            UpdateGoalProgress();
         }
     }
 
@@ -231,20 +216,33 @@ public class Deck : MonoBehaviour
 
         ShuffleCards();
         
-        _startingBalanceForBlind = _balance;
-        _earningsForCurrentBlind = 0; // Reset earnings at game start
+        // Find BossManager if not assigned
+        if (bossManager == null)
+            bossManager = FindObjectOfType<BossManager>();
+        
+        // Initialize boss system if available
+        if (bossManager != null)
+        {
+            Debug.Log("Boss system initialized");
+        }
+        else
+        {
+            Debug.LogWarning("BossManager not found - boss system disabled");
+        }
+        
         bet.text = _bet.ToString() + " $";
         UpdateBalanceDisplay();
-        UpdateRoundDisplay();
-        UpdateBlindDisplay();
-        UpdateGoalProgress();
         UpdateStreakUI(); // Initialize streak display with 1x flame
         
-        // Set the button text to "Next Round" at the start
-        SetButtonTextToNextRound();
+        // Initialize boss system
+        if (bossManager != null)
+        {
+            bossManager.InitializeBoss(BossType.TheDrunkard); // Start with first boss
+            _currentBossState = BossState.Fighting;
+        }
         
-        // Debug logging of initial state
-        DebugPrintBlindState("Initial setup");
+        // Set the button text to "Next Hand" at the start
+        SetButtonTextToNextHand();
         
         // Disable the next round button until the round is over
         playAgainButton.interactable = false;
@@ -551,8 +549,14 @@ public class Deck : MonoBehaviour
             cardIndex = 0;
         }
 
-        dealer.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex], originalIndices[cardIndex]);
+        GameObject newCard = dealer.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex], originalIndices[cardIndex]);
         cardIndex++;
+        
+        // Notify boss system about card dealt
+        if (bossManager != null && newCard != null)
+        {
+            bossManager.OnCardDealt(newCard, false);
+        }
     }
 
     private void PushPlayer()
@@ -565,11 +569,17 @@ public class Deck : MonoBehaviour
             cardIndex = 0;
         }
 
-        player.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex], originalIndices[cardIndex]);
+        GameObject newCard = player.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex], originalIndices[cardIndex]);
         cardIndex++;
         UpdateScoreDisplays();  
 
         CalculateProbabilities();
+        
+        // Notify boss system about card dealt
+        if (bossManager != null && newCard != null)
+        {
+            bossManager.OnCardDealt(newCard, true);
+        }
     }
 
     public void Hit()
@@ -585,6 +595,12 @@ public class Deck : MonoBehaviour
         {
             finalMessage.text = "Maximum cards reached!";
             return;
+        }
+
+        // Notify boss system about player action
+        if (bossManager != null)
+        {
+            bossManager.OnPlayerAction();
         }
 
         // Start animated hit
@@ -624,6 +640,12 @@ public class Deck : MonoBehaviour
         {
             Debug.LogWarning("Cannot stand: No bet placed");
             return;
+        }
+        
+        // Notify boss system about player action
+        if (bossManager != null)
+        {
+            bossManager.OnPlayerAction();
         }
         
         // Start animated stand sequence
@@ -704,7 +726,6 @@ private void EndHand(WinCode code)
 {
     FlipDealerCard();
     uint oldBalance = _balance;
-    long oldEarnings = _earningsForCurrentBlind;
 
     int playerScore = GetPlayerPoints();
     int dealerScore = GetDealerPoints();
@@ -720,7 +741,6 @@ private void EndHand(WinCode code)
             outcomeText = "Lose";
             if (_bet <= _balance)
             {
-                _earningsForCurrentBlind -= _bet;
                 Balance -= _bet;
                 if (PlayerStats.instance.PlayerHasCard(TarotCardType.WitchDoctor))
                 {
@@ -732,7 +752,6 @@ private void EndHand(WinCode code)
             else
             {
                 Debug.LogWarning("Bet amount greater than balance! Setting balance to 0.");
-                _earningsForCurrentBlind -= _balance;
                 Balance = 0;
             }
 
@@ -740,6 +759,12 @@ private void EndHand(WinCode code)
             _streakMultiplier = 0;
 
             Debug.Log("Loss calculation: Lost Bet=$" + _bet + ", Earnings Impact=-$" + _bet);
+            
+            // Notify boss system about player loss
+            if (bossManager != null)
+            {
+                bossManager.OnPlayerLose();
+            }
             break;
 
         case WinCode.PlayerWins:
@@ -765,13 +790,18 @@ private void EndHand(WinCode code)
             finalMessage.gameObject.SetActive(true); // ✅ Show result
             outcomeText = "Win";
 
-            _earningsForCurrentBlind += netEarnings;
             Balance += totalWinnings;
 
             Debug.Log("Win calculation: Bet=$" + _bet + ", Base Profit=$" + baseProfit +
                      ", Streak Bonus=$" + streakBonus + ", Suit Bonuses=$" + suitBonuses +
                      ", Total Winnings=$" + totalWinnings + ", Net Earnings=$" + netEarnings +
                      ", Multiplier=" + multiplier.ToString("F2") + "x");
+            
+            // Notify boss system about player win
+            if (bossManager != null)
+            {
+                bossManager.OnPlayerWin();
+            }
             break;
 
         case WinCode.Draw:
@@ -794,10 +824,10 @@ private void EndHand(WinCode code)
 
     if (gameHistoryManager != null)
     {
-        string currentBlindName = GetCurrentBlindName();
+        string currentBossName = bossManager != null && bossManager.currentBoss != null ? bossManager.currentBoss.bossName : "Unknown Boss";
         GameHistoryEntry historyEntry = new GameHistoryEntry(
-            _currentRound,
-            currentBlindName,
+            1, // Hand number (boss system doesn't use rounds)
+            currentBossName,
             playerScore,
             dealerScore,
             _bet,
@@ -805,7 +835,7 @@ private void EndHand(WinCode code)
             _balance,
             outcomeText
         );
-        Debug.Log("Recording history entry: Round " + _currentRound + ", Outcome: " + outcomeText + ", Bet: " + _bet);
+        Debug.Log("Recording history entry: Boss=" + currentBossName + ", Outcome: " + outcomeText + ", Bet: " + _bet);
         gameHistoryManager.AddHistoryEntry(historyEntry);
     }
     else
@@ -820,8 +850,6 @@ private void EndHand(WinCode code)
               ", New balance: " + _balance +
               ", Bet: " + _bet +
               ", Balance change: " + (_balance - oldBalance) +
-              ", Old earnings: " + oldEarnings +
-              ", New earnings: " + _earningsForCurrentBlind +
               ", Current streak: " + _currentStreak +
               ", Multiplier: " + CalculateWinMultiplier().ToString("F2") + "x");
 
@@ -840,9 +868,6 @@ private void EndHand(WinCode code)
     bet.text = _bet.ToString() + " $";
     UpdateBalanceDisplay();
     UpdateScoreDisplays();
-    UpdateGoalProgress();
-
-    DebugPrintBlindState("After EndHand");
 
     if (Balance == 0)
     {
@@ -868,50 +893,8 @@ private void EndHand(WinCode code)
             return;
         }
         
-        // Increment round
-        _currentRound++;
-        
-        // Check if we've completed rounds for current blind
-        if (_currentRound > _totalRoundsForBlind)
-        {
-            Debug.Log("Completed all rounds for blind level " + _currentBlind + 
-                     " - Total earnings: " + _earningsForCurrentBlind + 
-                     ", Goal: " + _goalForCurrentBlind);
-                     
-            // Make sure earnings aren't negative
-            if (_earningsForCurrentBlind < 0)
-            {
-                Debug.LogWarning("Negative earnings detected at end of blind: " + _earningsForCurrentBlind + ". Resetting to 0.");
-                _earningsForCurrentBlind = 0;
-            }
-                     
-            // Check if goal was met using direct earnings tracking
-            if (_earningsForCurrentBlind >= _goalForCurrentBlind)
-            {
-                // Advance to next blind
-                AdvanceToNextBlind();
-            }
-            else
-            {
-                // Goal not met, game over
-                long displayEarnings = _earningsForCurrentBlind < 0 ? 0 : _earningsForCurrentBlind;
-                finalMessage.text = "Goal not met! Game Over!\nYou earned $" + displayEarnings + 
-                                    " but needed $" + _goalForCurrentBlind;
-                // Change button text to "Play Again" since it's game over
-                Text playAgainText = playAgainButton.GetComponentInChildren<Text>();
-                if (playAgainText != null)
-                {
-                    playAgainText.text = "Play Again";
-                }
-                // Don't automatically start NewGame coroutine - let user click Play Again
-                return;
-            }
-        }
-        
-        // Update displays
-        UpdateRoundDisplay();
-        UpdateBlindDisplay();
-        UpdateGoalProgress();
+        // Show boss transition animation
+        ShowBossTransition();
         
         // Reset bet for new round
         _bet = 0;
@@ -1740,134 +1723,30 @@ private void EndHand(WinCode code)
         }
     }
 
-    // Method to debug print the current state of the blind system
-    private void DebugPrintBlindState(string context)
-    {
-        Debug.Log(context + " - BLIND SYSTEM STATE: " +
-                 "Blind Level: " + _currentBlind + 
-                 ", Round: " + _currentRound + "/" + _totalRoundsForBlind +
-                 ", Current Balance: " + _balance + 
-                 ", Starting Balance: " + _startingBalanceForBlind +
-                 ", Earnings: " + _earningsForCurrentBlind +
-                 ", Goal: " + _goalForCurrentBlind);
-    }
+
     
-    // Method to advance to the next blind level
-    private void AdvanceToNextBlind()
+    // Boss system methods
+    public void ShowBossTransition()
     {
-        _currentRound = 1;
-        _startingBalanceForBlind = _balance; // Reset starting balance to current balance for the new blind
-        _earningsForCurrentBlind = 0; // Reset earnings for the new blind
-        
-        // Make sure button says "Next Round" when advancing to a new blind level
-        SetButtonTextToNextRound();
-        
-        DebugPrintBlindState("Before advancing blind");
-        
-        // Give player feedback about advancing to next blind
-        string successMessage = "Congratulations! You've completed the ";
-        
-        switch (_currentBlind)
+        if (bossUI != null && bossManager != null && bossManager.currentBoss != null)
         {
-            case BlindLevel.SmallBlind:
-                successMessage += "Small Blind!";
-                _currentBlind = BlindLevel.BigBlind;
-                _goalForCurrentBlind = Constants.BigBlindGoal;
-                _totalRoundsForBlind = Constants.BigBlindRounds;
-                break;
-            case BlindLevel.BigBlind:
-                successMessage += "Big Blind!";
-                _currentBlind = BlindLevel.MegaBlind;
-                _goalForCurrentBlind = Constants.MegaBlindGoal;
-                _totalRoundsForBlind = Constants.MegaBlindRounds;
-                break;
-            case BlindLevel.MegaBlind:
-                successMessage += "Mega Blind!";
-                _currentBlind = BlindLevel.SuperBlind;
-                _goalForCurrentBlind = Constants.SuperBlindGoal;
-                _totalRoundsForBlind = Constants.SuperBlindRounds;
-                break;
-            case BlindLevel.SuperBlind:
-                successMessage += "Super Blind!";
-                _currentBlind = BlindLevel.Completed;
-                finalMessage.text = "Congratulations! You have completed all Blinds!";
-                break;
-            default:
-                break;
-        }
-        
-        // Display success message
-        finalMessage.text = successMessage;
-        
-        DebugPrintBlindState("After advancing blind");
-    }
-    
-    // Update round display
-    public void UpdateRoundDisplay()
-    {
-        if (roundText != null)
-        {
-            roundText.text = "Round " + _currentRound + "/" + _totalRoundsForBlind;
-            Debug.Log("Updated round display: " + roundText.text);
-        }
-        else
-        {
-            Debug.LogWarning("roundText is not assigned in the inspector!");
+            // Show boss in center first, then animate to panel
+            StartCoroutine(AnimateBossTransition());
         }
     }
     
-    // Update blind display
-    public void UpdateBlindDisplay()
+    private IEnumerator AnimateBossTransition()
     {
-        if (blindText != null)
+        if (bossUI != null && bossManager != null && bossManager.currentBoss != null)
         {
-            string blindName = "";
-            switch (_currentBlind)
-            {
-                case BlindLevel.SmallBlind:
-                    blindName = "Small Blind";
-                    break;
-                case BlindLevel.BigBlind:
-                    blindName = "Big Blind";
-                    break;
-                case BlindLevel.MegaBlind:
-                    blindName = "Mega Blind";
-                    break;
-                case BlindLevel.SuperBlind:
-                    blindName = "Super Blind";
-                    break;
-                case BlindLevel.Completed:
-                    blindName = "All Completed!";
-                    break;
-            }
-            blindText.text = blindName;
-            Debug.Log("Updated blind display: " + blindText.text);
-        }
-        else
-        {
-            Debug.LogWarning("blindText is not assigned in the inspector!");
-        }
-    }
-    
-    // Update goal progress
-    public void UpdateGoalProgress()
-    {
-        if (goalText != null)
-        {
-            // Ensure we never show negative earnings
-            long displayEarnings = _earningsForCurrentBlind;
-            if (displayEarnings < 0)
-            {
-                Debug.LogWarning("Earnings calculation resulted in negative value: " + _earningsForCurrentBlind);
-                displayEarnings = 0;
-            }
+            // Show boss in center
+            bossUI.ShowBossInCenter(bossManager.currentBoss);
             
-            goalText.text = "Goal $" + displayEarnings + "/" + _goalForCurrentBlind;
-            Debug.Log("Updated goal progress: " + goalText.text);
-        }
-        else
-        {
-            Debug.LogWarning("goalText is not assigned in the inspector!");
+            // Wait for a moment
+            yield return new WaitForSeconds(1.5f);
+            
+            // Animate to panel
+            bossUI.AnimateToPanel();
         }
     }
 
@@ -1884,19 +1763,17 @@ private void EndHand(WinCode code)
     // Method for the ShopManager to call when a card is purchased
     public void OnCardPurchased(uint cost)
     {
-        // Card purchases do NOT affect earnings at all
-        // We just log the purchase
-        Debug.Log("Card purchased for $" + cost + " - NOT affecting goal progress");
-        DebugPrintBlindState("After card purchase");
+        // Card purchases do NOT affect boss progression
+        Debug.Log("Card purchased for $" + cost + " - Boss system unaffected");
     }
 
-    // Method to set the button text to "Next Round"
-    private void SetButtonTextToNextRound()
+    // Method to set the button text to "Next Hand"
+    private void SetButtonTextToNextHand()
     {
         Text buttonText = playAgainButton.GetComponentInChildren<Text>();
         if (buttonText != null)
         {
-            buttonText.text = "Next Round";
+            buttonText.text = "Next Hand";
         }
     }
 
@@ -2927,25 +2804,7 @@ private void EndHand(WinCode code)
         }
     }
     
-    // Get current blind name for history tracking
-    private string GetCurrentBlindName()
-    {
-        switch (_currentBlind)
-        {
-            case BlindLevel.SmallBlind:
-                return "Small Blind";
-            case BlindLevel.BigBlind:
-                return "Big Blind";
-            case BlindLevel.MegaBlind:
-                return "Mega Blind";
-            case BlindLevel.SuperBlind:
-                return "Super Blind";
-            case BlindLevel.Completed:
-                return "Completed";
-            default:
-                return "Unknown";
-        }
-    }
+
 
     private void InitializeBettingState()
     {

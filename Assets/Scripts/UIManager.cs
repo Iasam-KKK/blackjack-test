@@ -5,11 +5,9 @@ public class UIManager : MonoBehaviour
 {
     public Deck deckController;
     
-    [Header("Blind System UI")]
-    public Text blindText;
-    public Text roundText;
-    public Text goalText;
-    public Button nextRoundButton; // This should reference the Play Again button in the inspector
+    [Header("Boss System UI")]
+    public BossUI bossUI;
+    public Button nextHandButton; // This should reference the Play Again button in the inspector
     
     private void Start()
     {
@@ -23,41 +21,26 @@ public class UIManager : MonoBehaviour
             }
         }
         
-        // Set up text references in Deck script
-        if (blindText != null)
-            deckController.blindText = blindText;
+        // Set up boss UI reference in Deck script
+        if (bossUI != null)
+            deckController.bossUI = bossUI;
         else
-            Debug.LogWarning("Blind Text not assigned in UI Manager!");
-            
-        if (roundText != null)
-            deckController.roundText = roundText;
-        else
-            Debug.LogWarning("Round Text not assigned in UI Manager!");
-            
-        if (goalText != null)
-            deckController.goalText = goalText;
-        else
-            Debug.LogWarning("Goal Text not assigned in UI Manager!");
+            Debug.LogWarning("Boss UI not assigned in UI Manager!");
             
         // Make sure the Play Again button is properly named
-        if (nextRoundButton != null)
+        if (nextHandButton != null)
         {
-            Text buttonText = nextRoundButton.GetComponentInChildren<Text>();
+            Text buttonText = nextHandButton.GetComponentInChildren<Text>();
             if (buttonText != null)
             {
-                buttonText.text = "Next Round";
+                buttonText.text = "Next Hand";
             }
             
             // Connect Play Again button if not already connected
             if (deckController.playAgainButton == null)
             {
-                deckController.playAgainButton = nextRoundButton;
+                deckController.playAgainButton = nextHandButton;
             }
         }
-        
-        // Force an update of UI elements
-        deckController.UpdateRoundDisplay();
-        deckController.UpdateBlindDisplay();
-        deckController.UpdateGoalProgress();
     }
 } 

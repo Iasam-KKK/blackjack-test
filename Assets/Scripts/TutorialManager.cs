@@ -280,42 +280,42 @@ public class TutorialManager : MonoBehaviour
             triggerType = TutorialTrigger.Manual
         });
         
-        // Step 12: Rounds System
+        // Step 12: Boss System Introduction
         tutorialSteps.Add(new TutorialStep
         {
-            title = "Rounds System",
-            description = "The game is organized into rounds. Each round consists of one complete hand of blackjack. After each round ends, you can place a new bet and play another hand. Your progress is tracked across multiple rounds!",
-            highlightTarget = deckController?.roundText?.gameObject,
+            title = "Boss System - Overview",
+            description = "This game features a boss-based progression system! Each boss has unique abilities and mechanics that affect gameplay. Defeat bosses to advance to the next level and unlock new challenges!",
+            highlightTarget = null,
             waitForUserInput = true,
             triggerType = TutorialTrigger.Manual
         });
         
-        // Step 13: Blind System Introduction
+        // Step 13: Boss Health and Hands
         tutorialSteps.Add(new TutorialStep
         {
-            title = "Blind System - Overview",
-            description = "This game uses a 'blind' system similar to poker tournaments. You must earn a certain amount of money within a limited number of rounds to advance to the next blind level. This adds strategy and time pressure!",
-            highlightTarget = deckController?.blindText?.gameObject,
+            title = "Boss Health and Hands",
+            description = "Each boss has health points and a limited number of hands. Win hands to reduce the boss's health. When the boss's health reaches zero, you defeat them and advance to the next boss!",
+            highlightTarget = null,
             waitForUserInput = true,
             triggerType = TutorialTrigger.Manual
         });
         
-        // Step 14: Blind Levels
+        // Step 14: Boss Mechanics
         tutorialSteps.Add(new TutorialStep
         {
-            title = "Blind Levels Explained",
-            description = "There are 4 blind levels:\n• Small Blind: Earn $300 in 5 rounds\n• Big Blind: Earn $600 in 8 rounds\n• Mega Blind: Earn $1200 in 12 rounds\n• Super Blind: Earn $2000 in 15 rounds\n\nEach level gets harder but more rewarding!",
-            highlightTarget = deckController?.blindText?.gameObject,
+            title = "Boss Mechanics",
+            description = "Each boss has unique abilities that change how the game works. Some bosses might steal your cards, others might have special rules, and some might give you bonuses. Learn their patterns to succeed!",
+            highlightTarget = null,
             waitForUserInput = true,
             triggerType = TutorialTrigger.Manual
         });
         
-        // Step 15: Goals and Progress
+        // Step 15: Boss Progression
         tutorialSteps.Add(new TutorialStep
         {
-            title = "Goals and Progress",
-            description = "This shows your progress toward the current blind goal. You need to earn the target amount within the round limit to advance. If you fail to meet the goal, the game ends. Plan your bets carefully!",
-            highlightTarget = deckController?.goalText?.gameObject,
+            title = "Boss Progression",
+            description = "Defeat bosses to unlock new ones! Each boss is more challenging than the last, with stronger abilities and higher stakes. Can you defeat them all and become the ultimate blackjack master?",
+            highlightTarget = null,
             waitForUserInput = true,
             triggerType = TutorialTrigger.Manual
         });
