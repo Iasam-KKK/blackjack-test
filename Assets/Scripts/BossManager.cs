@@ -4,6 +4,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DG.Tweening;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class BossManager : MonoBehaviour
 {
@@ -18,7 +21,7 @@ public class BossManager : MonoBehaviour
     public BossType currentBossType = BossType.TheDrunkard;
     
     [Header("UI References")]
-    public BossUI bossUI;
+    public NewBossPanel newBossPanel;
     
     [Header("Boss Effects")]
     public AudioSource bossAudioSource;
@@ -60,6 +63,12 @@ public class BossManager : MonoBehaviour
         if (deck == null) deck = FindObjectOfType<Deck>();
         if (shopManager == null) shopManager = FindObjectOfType<ShopManager>();
         
+        // Load boss data if not assigned
+        if (allBosses.Count == 0)
+        {
+            LoadAllBossData();
+        }
+        
         // Load saved progress
         LoadBossProgress();
         
@@ -68,27 +77,87 @@ public class BossManager : MonoBehaviour
         {
             InitializeBoss(BossType.TheDrunkard);
         }
+    }
+    
+    /// <summary>
+    /// Load all boss ScriptableObjects from the ScriptableObjectsBosses and ScriptableObject folders
+    /// </summary>
+    private void LoadAllBossData()
+    {
+        Debug.Log("Loading all boss data from ScriptableObjects folders...");
         
-        // Update UI
-        if (bossUI != null)
+        // Load all BossData ScriptableObjects from ScriptableObjectsBosses folder
+        BossData[] bossDataArray1 = Resources.LoadAll<BossData>("ScriptableObjectsBosses");
+        
+        // Load all BossData ScriptableObjects from ScriptableObject folder
+        BossData[] bossDataArray2 = Resources.LoadAll<BossData>("ScriptableObject");
+        
+        // Combine both arrays
+        List<BossData> allBossData = new List<BossData>();
+        if (bossDataArray1 != null) allBossData.AddRange(bossDataArray1);
+        if (bossDataArray2 != null) allBossData.AddRange(bossDataArray2);
+        
+        if (allBossData.Count > 0)
         {
-            bossUI.ShakeBossUI();
+            allBosses.AddRange(allBossData);
+            Debug.Log($"Loaded {allBosses.Count} boss data files: {string.Join(", ", allBosses.Select(b => b.bossName))}");
+        }
+        else
+        {
+            Debug.LogWarning("No boss data found in ScriptableObjects folders. Please ensure boss ScriptableObjects are properly placed.");
+            
+            // Try alternative loading method using AssetDatabase (Editor only)
+            #if UNITY_EDITOR
+            LoadBossDataFromAssetDatabase();
+            #endif
         }
     }
+    
+    #if UNITY_EDITOR
+    /// <summary>
+    /// Alternative loading method using AssetDatabase (Editor only)
+    /// </summary>
+    private void LoadBossDataFromAssetDatabase()
+    {
+        Debug.Log("Trying to load boss data using AssetDatabase...");
+        
+        string[] guids = UnityEditor.AssetDatabase.FindAssets("t:BossData");
+        
+        foreach (string guid in guids)
+        {
+            string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+            BossData bossData = UnityEditor.AssetDatabase.LoadAssetAtPath<BossData>(path);
+            
+            if (bossData != null && !allBosses.Contains(bossData))
+            {
+                allBosses.Add(bossData);
+                Debug.Log($"Loaded boss data: {bossData.bossName} from {path}");
+            }
+        }
+        
+        Debug.Log($"Total boss data loaded via AssetDatabase: {allBosses.Count}");
+    }
+    #endif
     
     /// <summary>
     /// Initialize a specific boss
     /// </summary>
     public void InitializeBoss(BossType bossType)
     {
+        Debug.Log($"Initializing boss: {bossType}");
+        Debug.Log($"Available bosses count: {allBosses.Count}");
+        
         // Find boss data
         currentBoss = allBosses.Find(b => b.bossType == bossType);
         
         if (currentBoss == null)
         {
             Debug.LogError($"Boss data not found for type: {bossType}");
+            Debug.LogError($"Available boss types: {string.Join(", ", allBosses.Select(b => b.bossType))}");
             return;
         }
+        
+        Debug.Log($"Found boss: {currentBoss.bossName} with description: {currentBoss.bossDescription}");
         
         // Set up boss state
         currentBossType = bossType;
@@ -103,9 +172,14 @@ public class BossManager : MonoBehaviour
         ApplyBossRules();
         
         // Update UI
-        if (bossUI != null)
+        if (newBossPanel != null)
         {
-            bossUI.ShowBossUI(currentBoss);
+            Debug.Log("Calling newBossPanel.ShowBossPanel() from InitializeBoss");
+            newBossPanel.ShowBossPanel();
+        }
+        else
+        {
+            Debug.LogWarning("newBossPanel is null in InitializeBoss");
         }
         
         Debug.Log($"Fighting {currentBoss.bossName} - Health: {currentBossHealth}/{currentBoss.maxHealth}");
@@ -165,6 +239,13 @@ public class BossManager : MonoBehaviour
         
         Debug.Log($"Boss takes damage! Health: {currentBossHealth}/{currentBoss.maxHealth}");
         
+        // Update the health bar display
+        if (newBossPanel != null)
+        {
+            newBossPanel.UpdateHealthBar();
+            newBossPanel.ShakePanel();
+        }
+        
         // Trigger mechanics that activate on round end
         TriggerMechanicsOnRoundEnd(true);
         
@@ -172,14 +253,9 @@ public class BossManager : MonoBehaviour
         {
             DefeatBoss();
         }
-        else         if (currentHand >= currentBoss.handsPerRound)
+        else if (currentHand >= currentBoss.handsPerRound)
         {
             BossHeals();
-        }
-        
-        if (bossUI != null)
-        {
-            bossUI.ShakeBossUI();
         }
     }
     
@@ -203,6 +279,13 @@ public class BossManager : MonoBehaviour
             if (mechanic != null && mechanic.mechanicValue > 0)
             {
                 currentBossHealth = Mathf.Min(currentBossHealth + 1, currentBoss.maxHealth);
+                Debug.Log($"Boss heals on player loss! Health: {currentBossHealth}/{currentBoss.maxHealth}");
+                
+                // Update the health bar display
+                if (newBossPanel != null)
+                {
+                    newBossPanel.UpdateHealthBar();
+                }
             }
         }
         
@@ -211,9 +294,9 @@ public class BossManager : MonoBehaviour
             BossHeals();
         }
         
-        if (bossUI != null)
+        if (newBossPanel != null)
         {
-            bossUI.ShakeBossUI();
+            newBossPanel.ShakePanel();
         }
     }
     
@@ -265,10 +348,11 @@ public class BossManager : MonoBehaviour
         
         Debug.Log($"{currentBoss.bossName} heals for {healAmount}! Health: {currentBossHealth}/{currentBoss.maxHealth}");
         
-        // Show heal effect
-        if (bossUI != null)
+        // Show heal effect and update health bar
+        if (newBossPanel != null)
         {
-            bossUI.ShowBossHealEffect();
+            newBossPanel.UpdateHealthBar();
+            newBossPanel.ShowHealEffect();
         }
         StartCoroutine(ShowBossHealEffect());
     }
@@ -293,9 +377,9 @@ public class BossManager : MonoBehaviour
         OnBossDefeated?.Invoke(currentBoss);
         
         // Show defeat effect
-        if (bossUI != null)
+        if (newBossPanel != null)
         {
-            bossUI.ShowBossDefeatEffect();
+            newBossPanel.ShowDefeatEffect();
         }
         StartCoroutine(ShowBossDefeatEffect());
         

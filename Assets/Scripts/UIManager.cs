@@ -6,7 +6,7 @@ public class UIManager : MonoBehaviour
     public Deck deckController;
     
     [Header("Boss System UI")]
-    public BossUI bossUI;
+    public NewBossPanel newBossPanel;
     public Button nextHandButton; // This should reference the Play Again button in the inspector
     
     private void Start()
@@ -22,10 +22,10 @@ public class UIManager : MonoBehaviour
         }
         
         // Set up boss UI reference in Deck script
-        if (bossUI != null)
-            deckController.bossUI = bossUI;
+        if (newBossPanel != null)
+            deckController.newBossPanel = newBossPanel;
         else
-            Debug.LogWarning("Boss UI not assigned in UI Manager!");
+            Debug.LogWarning("New Boss Panel not assigned in UI Manager!");
             
         // Make sure the Play Again button is properly named
         if (nextHandButton != null)

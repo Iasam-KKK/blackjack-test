@@ -123,8 +123,8 @@ public class Deck : MonoBehaviour
     public Button placeBetButton; // New button to confirm bet placement
     public Text balance;
     public Text bet;
-    // Boss UI elements (replacing old blind/round/goal system)
-    public BossUI bossUI;
+    // New Boss Panel (replaces old blind panel system)
+    public NewBossPanel newBossPanel;
     
     // UI elements for streak
     public Text streakText;
@@ -224,6 +224,11 @@ public class Deck : MonoBehaviour
         if (bossManager != null)
         {
             Debug.Log("Boss system initialized");
+            // Initialize new boss panel if available
+            if (newBossPanel != null)
+            {
+                newBossPanel.ShowBossPanel();
+            }
         }
         else
         {
@@ -246,9 +251,6 @@ public class Deck : MonoBehaviour
         
         // Disable the next round button until the round is over
         playAgainButton.interactable = false;
-        
-        // IMPORTANT: Ensure we're referencing the correct PlayerPanel
-        EnsureCorrectPlayerReference();
         
         // Set up dealer and player hands
         if (dealer != null)
@@ -764,6 +766,7 @@ private void EndHand(WinCode code)
             if (bossManager != null)
             {
                 bossManager.OnPlayerLose();
+                // New boss panel updates automatically via BossManager events
             }
             break;
 
@@ -801,6 +804,7 @@ private void EndHand(WinCode code)
             if (bossManager != null)
             {
                 bossManager.OnPlayerWin();
+                // New boss panel updates automatically via BossManager events
             }
             break;
 
@@ -1728,25 +1732,19 @@ private void EndHand(WinCode code)
     // Boss system methods
     public void ShowBossTransition()
     {
-        if (bossUI != null && bossManager != null && bossManager.currentBoss != null)
+        Debug.Log("ShowBossTransition called");
+        Debug.Log($"newBossPanel: {(newBossPanel != null ? "not null" : "null")}");
+        Debug.Log($"bossManager: {(bossManager != null ? "not null" : "null")}");
+        Debug.Log($"bossManager.currentBoss: {(bossManager?.currentBoss != null ? bossManager.currentBoss.bossName : "null")}");
+        
+        if (newBossPanel != null && bossManager != null && bossManager.currentBoss != null)
         {
-            // Show boss in center first, then animate to panel
-            StartCoroutine(AnimateBossTransition());
+            // Show the new boss panel directly
+            newBossPanel.ShowBossPanel();
         }
-    }
-    
-    private IEnumerator AnimateBossTransition()
-    {
-        if (bossUI != null && bossManager != null && bossManager.currentBoss != null)
+        else
         {
-            // Show boss in center
-            bossUI.ShowBossInCenter(bossManager.currentBoss);
-            
-            // Wait for a moment
-            yield return new WaitForSeconds(1.5f);
-            
-            // Animate to panel
-            bossUI.AnimateToPanel();
+            Debug.LogWarning("Cannot show boss transition - missing required components");
         }
     }
 
@@ -1788,12 +1786,10 @@ private void EndHand(WinCode code)
 
         // Apply Artificer bonus only if streak is active AND player has Artificer card
         bool hasArtificer = PlayerActuallyHasCard(TarotCardType.Artificer);
-        Debug.Log("Artificer check: streak=" + _streakMultiplier + ", hasArtificer=" + hasArtificer);
         
         if (_streakMultiplier > 0 && hasArtificer)
         {
-            baseMultiplier *= 1.1f; // FIXED: Add 10% to the multiplier (was 0.1f which was reducing it)
-            Debug.Log("Artificer card active: Multiplier increased by 10%");
+            baseMultiplier *= 1.1f; // Add 10% to the multiplier
         }
 
         return baseMultiplier;
@@ -1984,171 +1980,31 @@ private void EndHand(WinCode code)
         return GetHandSuitCount(handOwner, targetSuit);
     }
 
-    // HELPER FUNCTION - Check if player actually has a tarot card in the panel (more reliable than PlayerStats)
+    // HELPER FUNCTION - Check if player actually has a tarot card in the panel
     public bool PlayerActuallyHasCard(TarotCardType cardType)
     {
         ShopManager shopManager = FindObjectOfType<ShopManager>();
         if (shopManager == null || shopManager.tarotPanel == null)
         {
-            Debug.LogWarning("Cannot find ShopManager or tarot panel");
             return false;
         }
         
         TarotCard[] actualCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
-        Debug.Log($"Checking for {cardType} - Found {actualCards.Length} cards in tarot panel");
         
         foreach (var card in actualCards)
         {
-            if (card.cardData != null)
+            if (card.cardData != null && card.cardData.cardType == cardType && !card.isInShop)
             {
-                Debug.Log($"Card: {card.cardData.cardName} (Type: {card.cardData.cardType}, InShop: {card.isInShop})");
-                if (card.cardData.cardType == cardType && !card.isInShop)
-                {
-                    Debug.Log("Found " + cardType + " in tarot panel: " + card.cardData.cardName);
-                    return true;
-                }
+                return true;
             }
         }
         
-        Debug.Log("Did NOT find " + cardType + " in tarot panel");
         return false;
     }
 
-    /// <summary>
-    /// Verify and potentially fix the player panel reference
-    /// </summary>
-    private void EnsureCorrectPlayerReference()
-    {
-        // Try to find PlayerPanel specifically by name
-        GameObject playerPanel = GameObject.Find("PlayerPanel");
-        
-        if (playerPanel != null)
-        {
-            CardHand playerHand = playerPanel.GetComponent<CardHand>();
-            if (playerHand != null)
-            {
-                if (player != playerPanel)
-                {
-                    Debug.LogWarning("Player reference was pointing to '" + (player != null ? player.name : "null") + 
-                                   "' but should point to 'PlayerPanel'. Fixing reference.");
-                    player = playerPanel;
-                }
-                Debug.Log("✓ Player reference correctly points to PlayerPanel with CardHand component");
-            }
-            else
-            {
-                Debug.LogError("PlayerPanel found but has no CardHand component!");
-            }
-        }
-        else
-        {
-            Debug.LogError("Could not find PlayerPanel GameObject in scene!");
-            
-            // Try alternative search
-            CardHand[] allHands = FindObjectsOfType<CardHand>();
-            foreach (CardHand hand in allHands)
-            {
-                if (!hand.isDealer && hand.gameObject.name.ToLower().Contains("player"))
-                {
-                    Debug.Log("Found potential player hand: " + hand.gameObject.name);
-                    player = hand.gameObject;
-                    break;
-                }
-            }
-        }
-    }
 
-    /// <summary>
-    /// Debug method to show exactly what cards are detected in player panel
-    /// </summary>
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    public void DebugPlayerPanelCards()
-    {
-        Debug.Log("=== PLAYER PANEL CARD DETECTION DEBUG ===");
-        
-        // Ensure we have the correct reference
-        EnsureCorrectPlayerReference();
-        
-        if (player == null)
-        {
-            Debug.LogError("Player reference is NULL!");
-            return;
-        }
-        
-        Debug.Log("Player GameObject name: " + player.name);
-        Debug.Log("Player GameObject full path: " + GetGameObjectPath(player));
-        
-        CardHand playerHand = player.GetComponent<CardHand>();
-        if (playerHand == null)
-        {
-            Debug.LogError("Player GameObject has no CardHand component!");
-            return;
-        }
-        
-        Debug.Log("Player hand isDealer flag: " + playerHand.isDealer);
-        Debug.Log("Player hand has " + playerHand.cards.Count + " cards:");
-        
-        for (int i = 0; i < playerHand.cards.Count; i++)
-        {
-            GameObject cardObj = playerHand.cards[i];
-            CardModel cardModel = cardObj.GetComponent<CardModel>();
-            
-            if (cardModel != null && cardModel.cardFront != null)
-            {
-                // Get card info using our NEW system with original deck index
-                CardInfo cardInfo = GetCardInfoFromModel(cardModel);
-                
-                // Show the original deck index vs shuffled position
-                int shuffledIndex = -1;
-                for (int deckIndex = 0; deckIndex < faces.Length; deckIndex++)
-                {
-                    if (faces[deckIndex] == cardModel.cardFront)
-                    {
-                        shuffledIndex = deckIndex;
-                        break;
-                    }
-                }
-                
-                Debug.Log("  Card " + (i+1) + ": " + cardInfo.cardName + 
-                         " | Original Index: " + cardModel.originalDeckIndex + 
-                         " | Shuffled Index: " + shuffledIndex +
-                         " | Correct Suit: " + cardInfo.suit + 
-                         " | Card Object: " + cardObj.name);
-            }
-            else
-            {
-                Debug.LogWarning("  Card " + (i+1) + ": CardModel or cardFront is null! Object: " + cardObj.name);
-            }
-        }
-        
-        // Show suit counts
-        Dictionary<CardSuit, int> suitCounts = GetAllHandSuitCounts(player);
-        Debug.Log("Suit Counts - Hearts: " + suitCounts[CardSuit.Hearts] + 
-                 ", Diamonds: " + suitCounts[CardSuit.Diamonds] + 
-                 ", Clubs: " + suitCounts[CardSuit.Clubs] + 
-                 ", Spades: " + suitCounts[CardSuit.Spades]);
-        
-        Debug.Log("=== END PLAYER PANEL DEBUG ===");
-    }
 
-    /// <summary>
-    /// Helper method to get full GameObject path
-    /// </summary>
-    private string GetGameObjectPath(GameObject obj)
-    {
-        if (obj == null) return "null";
-        
-        string path = obj.name;
-        Transform current = obj.transform.parent;
-        
-        while (current != null)
-        {
-            path = current.name + "/" + path;
-            current = current.parent;
-        }
-        
-        return path;
-    }
+
 
     // TAROT CARD BONUS FUNCTIONS - Individual calculations for each suit-based tarot card
     
@@ -2164,34 +2020,13 @@ private void EndHand(WinCode code)
         
         // Ensure we're only checking the player's hand for bonuses
         if (targetHand != player)
-        {
-            Debug.Log("Botanist bonus: Skipping - not checking player hand");
             return 0;
-        }
         
         // Get actual cards in player's hand and count clubs
         List<CardInfo> handCards = GetHandCardInfo(targetHand);
         List<CardInfo> clubCards = handCards.Where(card => card.suit == CardSuit.Clubs).ToList();
         
-        if (clubCards.Count > 0)
-        {
-            Debug.Log("Botanist bonus calculation:");
-            Debug.Log("  Player hand contains " + handCards.Count + " total cards");
-            Debug.Log("  Club cards found in player hand:");
-            foreach (CardInfo card in clubCards)
-            {
-                Debug.Log("    - " + card.cardName);
-            }
-        }
-        
-        uint bonus = (uint)(clubCards.Count * Constants.SuitBonusAmount);
-        
-        if (bonus > 0)
-        {
-            Debug.Log("Botanist bonus: " + clubCards.Count + " clubs = +" + bonus + " (only counting player hand)");
-        }
-        
-        return bonus;
+        return (uint)(clubCards.Count * Constants.SuitBonusAmount);
     }
     
     /// <summary>
@@ -2206,34 +2041,13 @@ private void EndHand(WinCode code)
         
         // Ensure we're only checking the player's hand for bonuses
         if (targetHand != player)
-        {
-            Debug.Log("Assassin bonus: Skipping - not checking player hand");
             return 0;
-        }
         
         // Get actual cards in player's hand and count spades
         List<CardInfo> handCards = GetHandCardInfo(targetHand);
         List<CardInfo> spadeCards = handCards.Where(card => card.suit == CardSuit.Spades).ToList();
         
-        if (spadeCards.Count > 0)
-        {
-            Debug.Log("Assassin bonus calculation:");
-            Debug.Log("  Player hand contains " + handCards.Count + " total cards");
-            Debug.Log("  Spade cards found in player hand:");
-            foreach (CardInfo card in spadeCards)
-            {
-                Debug.Log("    - " + card.cardName);
-            }
-        }
-        
-        uint bonus = (uint)(spadeCards.Count * Constants.SuitBonusAmount);
-        
-        if (bonus > 0)
-        {
-            Debug.Log("Assassin bonus: " + spadeCards.Count + " spades = +" + bonus + " (only counting player hand)");
-        }
-        
-        return bonus;
+        return (uint)(spadeCards.Count * Constants.SuitBonusAmount);
     }
     
     /// <summary>
@@ -2248,35 +2062,13 @@ private void EndHand(WinCode code)
         
         // Ensure we're only checking the player's hand for bonuses
         if (targetHand != player)
-        {
-            Debug.Log("Secret Lover bonus: Skipping - not checking player hand");
             return 0;
-        }
         
         // Get actual cards in player's hand and count hearts
         List<CardInfo> handCards = GetHandCardInfo(targetHand);
         List<CardInfo> heartCards = handCards.Where(card => card.suit == CardSuit.Hearts).ToList();
         
-        Debug.Log("Secret Lover bonus calculation:");
-        Debug.Log("  Player hand contains " + handCards.Count + " total cards");
-        if (heartCards.Count > 0)
-        {
-            Debug.Log("  Heart cards found in player hand:");
-            foreach (CardInfo card in heartCards)
-            {
-                Debug.Log("    - " + card.cardName);
-            }
-        }
-        else
-        {
-            Debug.Log("  No heart cards found in player hand");
-        }
-        
-        uint bonus = (uint)(heartCards.Count * Constants.SuitBonusAmount);
-        
-        Debug.Log("Secret Lover bonus: " + heartCards.Count + " hearts = +" + bonus + " (only counting player hand)");
-        
-        return bonus;
+        return (uint)(heartCards.Count * Constants.SuitBonusAmount);
     }
     
     /// <summary>
@@ -2291,34 +2083,13 @@ private void EndHand(WinCode code)
         
         // Ensure we're only checking the player's hand for bonuses
         if (targetHand != player)
-        {
-            Debug.Log("Jeweler bonus: Skipping - not checking player hand");
             return 0;
-        }
         
         // Get actual cards in player's hand and count diamonds
         List<CardInfo> handCards = GetHandCardInfo(targetHand);
         List<CardInfo> diamondCards = handCards.Where(card => card.suit == CardSuit.Diamonds).ToList();
         
-        if (diamondCards.Count > 0)
-        {
-            Debug.Log("Jeweler bonus calculation:");
-            Debug.Log("  Player hand contains " + handCards.Count + " total cards");
-            Debug.Log("  Diamond cards found in player hand:");
-            foreach (CardInfo card in diamondCards)
-            {
-                Debug.Log("    - " + card.cardName);
-            }
-        }
-        
-        uint bonus = (uint)(diamondCards.Count * Constants.SuitBonusAmount);
-        
-        if (bonus > 0)
-        {
-            Debug.Log("Jeweler bonus: " + diamondCards.Count + " diamonds = +" + bonus + " (only counting player hand)");
-        }
-        
-        return bonus;
+        return (uint)(diamondCards.Count * Constants.SuitBonusAmount);
     }
     
     /// <summary>
@@ -2333,10 +2104,7 @@ private void EndHand(WinCode code)
         
         // Ensure we're only checking the player's hand for bonuses
         if (targetHand != player)
-        {
-            Debug.Log("House Keeper bonus: Skipping - not checking player hand");
             return 0;
-        }
         
         // Get actual cards in player's hand and count Jack/Queen/King cards
         List<CardInfo> handCards = GetHandCardInfo(targetHand);
@@ -2346,25 +2114,7 @@ private void EndHand(WinCode code)
             card.suitIndex == 12    // King
         ).ToList();
         
-        if (faceCards.Count > 0)
-        {
-            Debug.Log("House Keeper bonus calculation:");
-            Debug.Log("  Player hand contains " + handCards.Count + " total cards");
-            Debug.Log("  Face cards (J/Q/K) found in player hand:");
-            foreach (CardInfo card in faceCards)
-            {
-                Debug.Log("    - " + card.cardName);
-            }
-        }
-        
-        uint bonus = (uint)(faceCards.Count * Constants.HouseKeeperBonusAmount);
-        
-        if (bonus > 0)
-        {
-            Debug.Log("House Keeper bonus: " + faceCards.Count + " face cards = +" + bonus + " (only counting player hand)");
-        }
-        
-        return bonus;
+        return (uint)(faceCards.Count * Constants.HouseKeeperBonusAmount);
     }
     
     /// <summary>
@@ -2375,52 +2125,12 @@ private void EndHand(WinCode code)
         if (PlayerStats.instance == null)
             return 0;
             
-        // Ensure we have the correct PlayerPanel reference
-        EnsureCorrectPlayerReference();
-        
         // Tarot card bonuses should ONLY apply to the player's hand, never dealer's hand
         GameObject targetHand = player;
         
-        Debug.Log("=== CALCULATING SUIT BONUSES FOR PLAYER HAND ONLY ===");
-        
         // Verify we have the player object
         if (targetHand == null)
-        {
-            Debug.LogError("Player object is null, cannot calculate suit bonuses");
             return 0;
-        }
-        
-        Debug.Log("Using player reference: " + targetHand.name + " (Path: " + GetGameObjectPath(targetHand) + ")");
-        
-        // Debug player panel cards if in editor
-        #if UNITY_EDITOR
-        DebugPlayerPanelCards();
-        #endif
-        
-        // Debug: Print owned tarot cards vs actual tarot panel
-        if (PlayerStats.instance != null && PlayerStats.instance.ownedCards != null)
-        {
-            Debug.Log("PlayerStats thinks player owns " + PlayerStats.instance.ownedCards.Count + " tarot cards:");
-            foreach (var card in PlayerStats.instance.ownedCards)
-            {
-                Debug.Log("  - " + card.cardName + " (Type: " + card.cardType + ")");
-            }
-        }
-        
-        // Check what's actually in the tarot panel
-        ShopManager shopManager = FindObjectOfType<ShopManager>();
-        if (shopManager != null && shopManager.tarotPanel != null)
-        {
-            TarotCard[] actualCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
-            Debug.Log("Tarot panel actually contains " + actualCards.Length + " cards:");
-            foreach (var card in actualCards)
-            {
-                if (card.cardData != null)
-                {
-                    Debug.Log("  - " + card.cardData.cardName + " (Type: " + card.cardData.cardType + ")");
-                }
-            }
-        }
         
         // Calculate bonuses - these methods now ensure they only count player hand cards
         uint botanistBonus = CalculateBotanistBonus(targetHand);
@@ -2429,13 +2139,7 @@ private void EndHand(WinCode code)
         uint jewelerBonus = CalculateJewelerBonus(targetHand);
         uint houseKeeperBonus = CalculateHouseKeeperBonus(targetHand);
         
-        uint totalBonus = botanistBonus + assassinBonus + secretLoverBonus + jewelerBonus + houseKeeperBonus;
-        
-        Debug.Log("Bonus breakdown: Botanist=" + botanistBonus + ", Assassin=" + assassinBonus + 
-                 ", SecretLover=" + secretLoverBonus + ", Jeweler=" + jewelerBonus + 
-                 ", HouseKeeper=" + houseKeeperBonus + ", Total=" + totalBonus);
-
-        return totalBonus;
+        return botanistBonus + assassinBonus + secretLoverBonus + jewelerBonus + houseKeeperBonus;
     }
     
     /// <summary>
@@ -2453,10 +2157,7 @@ private void EndHand(WinCode code)
         
         // Verify we have the player object
         if (targetHand == null)
-        {
-            Debug.LogError("Player object is null, cannot calculate suit bonus breakdown");
             return breakdown;
-        }
         
         breakdown[TarotCardType.Botanist] = CalculateBotanistBonus(targetHand);
         breakdown[TarotCardType.Assassin] = CalculateAssassinBonus(targetHand);
@@ -2467,117 +2168,7 @@ private void EndHand(WinCode code)
         return breakdown;
     }
 
-    // Debug method to test suit detection (can be called from Unity Inspector or console)
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    public void DebugTestSuitDetection()
-    {
-        Debug.Log("=== SUIT DETECTION TEST ===");
-        
-        // Test a few example cards from each suit
-        int[] testIndices = { 0, 5, 12, 13, 18, 25, 26, 31, 38, 39, 44, 51 };
-        string[] expectedSuits = { "Hearts", "Hearts", "Hearts", "Diamonds", "Diamonds", "Diamonds", 
-                                 "Clubs", "Clubs", "Clubs", "Spades", "Spades", "Spades" };
-        
-        for (int i = 0; i < testIndices.Length; i++)
-        {
-            int cardIndex = testIndices[i];
-            CardSuit detectedSuit = GetCardSuit(cardIndex);
-            string suitName = detectedSuit.ToString();
-            bool isCorrect = suitName == expectedSuits[i];
-            
-            Debug.Log("Card Index " + cardIndex + ": Expected " + expectedSuits[i] + 
-                     ", Got " + suitName + " - " + (isCorrect ? "✓" : "✗"));
-        }
-        
-        Debug.Log("=== END SUIT DETECTION TEST ===");
-    }
 
-    // Debug method to test current hand suit counts
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    public void DebugCurrentHandSuits()
-    {
-        Debug.Log("=== CURRENT HAND ANALYSIS ===");
-        
-        // Get detailed hand information
-        List<CardInfo> playerCards = GetHandCardInfo(player);
-        Dictionary<CardSuit, int> suitCounts = GetAllHandSuitCounts(player);
-        
-        Debug.Log("Player Hand Cards (" + playerCards.Count + " total):");
-        foreach (CardInfo card in playerCards)
-        {
-            Debug.Log("  - " + card.cardName + " (Index: " + card.index + ", Value: " + card.value + ")");
-        }
-        
-        Debug.Log("Suit Counts - Hearts: " + suitCounts[CardSuit.Hearts] + 
-                 ", Diamonds: " + suitCounts[CardSuit.Diamonds] + 
-                 ", Clubs: " + suitCounts[CardSuit.Clubs] + 
-                 ", Spades: " + suitCounts[CardSuit.Spades]);
-        
-        // Test individual tarot bonuses
-        Debug.Log("--- TAROT BONUS BREAKDOWN ---");
-        uint botanistBonus = CalculateBotanistBonus();
-        uint assassinBonus = CalculateAssassinBonus();
-        uint secretLoverBonus = CalculateSecretLoverBonus();
-        uint jewelerBonus = CalculateJewelerBonus();
-        uint houseKeeperBonus = CalculateHouseKeeperBonus();
-        uint totalBonuses = CalculateSuitBonuses();
-        
-        Debug.Log("Botanist (Clubs): +" + botanistBonus);
-        Debug.Log("Assassin (Spades): +" + assassinBonus);
-        Debug.Log("Secret Lover (Hearts): +" + secretLoverBonus);
-        Debug.Log("Jeweler (Diamonds): +" + jewelerBonus);
-        Debug.Log("House Keeper (J/Q/K): +" + houseKeeperBonus);
-        Debug.Log("Total Suit Bonuses: +" + totalBonuses);
-        
-        Debug.Log("=== END HAND ANALYSIS ===");
-    }
-    
-    // Debug method to show complete deck organization
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    public void DebugDeckStructure()
-    {
-        Debug.Log("=== DECK STRUCTURE ANALYSIS ===");
-        
-        foreach (CardSuit suit in System.Enum.GetValues(typeof(CardSuit)))
-        {
-            Debug.Log("--- " + suit.ToString().ToUpper() + " ---");
-            List<CardInfo> suitCards = GetCardsOfSuit(suit);
-            
-            for (int i = 0; i < suitCards.Count; i++)
-            {
-                CardInfo card = suitCards[i];
-                Debug.Log("Index " + card.index + ": " + card.cardName + " (Value: " + card.value + ")");
-            }
-        }
-        
-        Debug.Log("=== END DECK STRUCTURE ===");
-    }
-    
-    // Debug method to test specific card lookups
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    public void DebugCardLookupTest()
-    {
-        Debug.Log("=== CARD LOOKUP TEST ===");
-        
-        // Test specific card lookups
-        int aceOfHeartsIndex = GetCardIndex(0, CardSuit.Hearts);
-        int kingOfSpadesIndex = GetCardIndex(12, CardSuit.Spades);
-        
-        CardInfo aceOfHearts = GetCardInfo(aceOfHeartsIndex);
-        CardInfo kingOfSpades = GetCardInfo(kingOfSpadesIndex);
-        
-        Debug.Log("Ace of Hearts - Index: " + aceOfHearts.index + ", Name: " + aceOfHearts.cardName);
-        Debug.Log("King of Spades - Index: " + kingOfSpades.index + ", Name: " + kingOfSpades.cardName);
-        
-        // Test hand contains specific cards
-        bool hasAceOfHearts = HandContainsCard(player, 1, CardSuit.Hearts);
-        bool hasKingOfSpades = HandContainsCard(player, 10, CardSuit.Spades);
-        
-        Debug.Log("Player has Ace of Hearts: " + hasAceOfHearts);
-        Debug.Log("Player has King of Spades: " + hasKingOfSpades);
-        
-        Debug.Log("=== END CARD LOOKUP TEST ===");
-    }
     
 
     
@@ -3112,7 +2703,7 @@ private void EndHand(WinCode code)
         }
         else
         {
-            Debug.Log("[Scammer] Dealer wasn’t winning, no need to reverse.");
+            Debug.Log("[Scammer] Dealer wasn't winning, no need to reverse.");
         }
     }
     private void ResolveEndOfRound()
@@ -3455,56 +3046,7 @@ private void EndHand(WinCode code)
         }
     }
 
-    /// <summary>
-    /// Debug method to verify suit detection matches the visual deck layout
-    /// Based on user's description: Row 1=Hearts, Row 2=Diamonds, Row 3=Clubs, Row 4=Spades
-    /// </summary>
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    public void DebugSuitDetectionVsLayout()
-    {
-        Debug.Log("=== SUIT DETECTION VS DECK LAYOUT TEST ===");
-        Debug.Log("Expected layout: Row 1=Hearts(0-12), Row 2=Diamonds(13-25), Row 3=Clubs(26-38), Row 4=Spades(39-51)");
-        
-        // Test key cards from each suit to verify detection
-        int[] testIndices = { 
-            0, 6, 12,      // Hearts: Ace, 7, King
-            13, 19, 25,    // Diamonds: Ace, 7, King  
-            26, 32, 38,    // Clubs: Ace, 7, King
-            39, 45, 51     // Spades: Ace, 7, King
-        };
-        
-        string[] expectedSuits = { 
-            "Hearts", "Hearts", "Hearts",
-            "Diamonds", "Diamonds", "Diamonds", 
-            "Clubs", "Clubs", "Clubs",
-            "Spades", "Spades", "Spades"
-        };
-        
-        bool allCorrect = true;
-        
-        for (int i = 0; i < testIndices.Length; i++)
-        {
-            int cardIndex = testIndices[i];
-            CardSuit detectedSuit = GetCardSuit(cardIndex);
-            string suitName = detectedSuit.ToString();
-            bool isCorrect = suitName == expectedSuits[i];
-            
-            if (!isCorrect) allCorrect = false;
-            
-            string status = isCorrect ? "✓" : "✗ ERROR";
-            Debug.Log("Index " + cardIndex + ": Expected " + expectedSuits[i] + 
-                     ", Got " + suitName + " - " + status);
-        }
-        
-        if (allCorrect)
-        {
-            Debug.Log("✓ ALL SUIT DETECTIONS CORRECT!");
-        }
-        else
-        {
-            Debug.LogError("✗ SUIT DETECTION ERRORS FOUND! Check card sprite order in faces array.");
-        }
-        
-        Debug.Log("=== END SUIT DETECTION TEST ===");
-    }
+
+
+
 }

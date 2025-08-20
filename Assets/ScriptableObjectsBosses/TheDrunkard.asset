@@ -49,3 +49,4 @@ MonoBehaviour:
   usesSpecialDeck: 0
   hasWinStreakEffect: 0
   isFinalBoss: 0
+  allowTarotCards: 0

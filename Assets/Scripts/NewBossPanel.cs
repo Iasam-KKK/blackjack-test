@@ -4,13 +4,13 @@ using DG.Tweening;
 using TMPro;
 using System.Collections;
 
-public class BossUI : MonoBehaviour
+public class NewBossPanel : MonoBehaviour
 {
     [Header("Boss Display")]
     public Image bossPortrait;
     public TextMeshProUGUI bossNameText;
     public TextMeshProUGUI bossDescriptionText;
-    public Slider bossHealthBar;
+    public Image bossHealthBar; // Changed from Slider to Image
     public TextMeshProUGUI healthText;
     public TextMeshProUGUI handsRemainingText;
     public TextMeshProUGUI currentHandText;
@@ -20,16 +20,11 @@ public class BossUI : MonoBehaviour
     public ParticleSystem bossParticles;
     public AudioSource bossAudioSource;
     
-    [Header("Transition UI")]
-    public Transform centerPosition; // Position for boss to appear in center
-    public Transform panelPosition; // Position for boss in the panel
-    
     [Header("Animation Settings")]
     public float fadeInDuration = 0.5f;
     public float healthBarAnimationDuration = 0.3f;
     public float shakeIntensity = 10f;
     public float shakeDuration = 0.5f;
-    public float transitionDuration = 1.0f;
     
     private BossManager bossManager;
     private bool isVisible = false;
@@ -47,15 +42,9 @@ public class BossUI : MonoBehaviour
             bossBackground.color = color;
         }
         
-        // Hide initially with delay
-        StartCoroutine(DelayedHide());
+        // Don't hide initially - let the ShowBossPanel method control visibility
+        // gameObject.SetActive(false); // Removed this line
     }
-    private IEnumerator DelayedHide()
-    {
-        yield return new WaitForSeconds(2.5f);
-        gameObject.SetActive(false);
-    }
-
     
     private void Update()
     {
@@ -66,29 +55,79 @@ public class BossUI : MonoBehaviour
     }
     
     /// <summary>
-    /// Show the boss UI with animation
+    /// Manually trigger boss panel display (for testing)
     /// </summary>
-    public void ShowBossUI(BossData bossData)
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void TestShowBossPanel()
     {
-        if (isVisible) return;
+        Debug.Log("TestShowBossPanel called - manually triggering boss panel display");
+        ShowBossPanel();
+    }
+    
+    /// <summary>
+    /// Manually update the health bar display
+    /// </summary>
+    public void UpdateHealthBar()
+    {
+        Debug.Log("UpdateHealthBar called");
+        UpdateBossDisplay();
+    }
+    
+    /// <summary>
+    /// Show the boss panel with animation
+    /// </summary>
+    public void ShowBossPanel()
+    {
+        Debug.Log("ShowBossPanel called");
+        
+        if (isVisible) 
+        {
+            Debug.Log("Boss panel already visible, returning");
+            return;
+        }
         
         gameObject.SetActive(true);
         isVisible = true;
         
-        // Set boss data
-        if (bossPortrait != null && bossData.bossPortrait != null)
-        {
-            bossPortrait.sprite = bossData.bossPortrait;
-        }
+        BossData currentBoss = bossManager?.GetCurrentBoss();
+        Debug.Log($"Current boss: {(currentBoss != null ? currentBoss.bossName : "null")}");
         
-        if (bossNameText != null)
+        if (currentBoss != null)
         {
-            bossNameText.text = bossData.bossName;
+            // Set boss data
+            if (bossPortrait != null && currentBoss.bossPortrait != null)
+            {
+                bossPortrait.sprite = currentBoss.bossPortrait;
+                Debug.Log("Set boss portrait");
+            }
+            else
+            {
+                Debug.LogWarning("Boss portrait or portrait sprite is null");
+            }
+            
+            if (bossNameText != null)
+            {
+                bossNameText.text = currentBoss.bossName;
+                Debug.Log($"Set boss name: {currentBoss.bossName}");
+            }
+            else
+            {
+                Debug.LogWarning("Boss name text component is null");
+            }
+            
+            if (bossDescriptionText != null)
+            {
+                bossDescriptionText.text = currentBoss.bossDescription;
+                Debug.Log($"Set boss description: {currentBoss.bossDescription}");
+            }
+            else
+            {
+                Debug.LogWarning("Boss description text component is null");
+            }
         }
-        
-        if (bossDescriptionText != null)
+        else
         {
-            bossDescriptionText.text = bossData.bossDescription;
+            Debug.LogError("Current boss is null! BossManager might not be initialized properly.");
         }
         
         // Animate background fade in
@@ -100,10 +139,13 @@ public class BossUI : MonoBehaviour
         // Animate UI elements
         AnimateUIElementsIn();
         
+        // Update the display immediately to show current health
+        UpdateBossDisplay();
+        
         // Play boss music if available
-        if (bossAudioSource != null && bossData.bossMusic != null)
+        if (bossAudioSource != null && currentBoss?.bossMusic != null)
         {
-            bossAudioSource.clip = bossData.bossMusic;
+            bossAudioSource.clip = currentBoss.bossMusic;
             bossAudioSource.Play();
         }
         
@@ -115,9 +157,9 @@ public class BossUI : MonoBehaviour
     }
     
     /// <summary>
-    /// Hide the boss UI with animation
+    /// Hide the boss panel with animation
     /// </summary>
-    public void HideBossUI()
+    public void HideBossPanel()
     {
         if (!isVisible) return;
         
@@ -153,7 +195,7 @@ public class BossUI : MonoBehaviour
     /// </summary>
     private void UpdateBossDisplay()
     {
-        BossData currentBoss = bossManager.GetCurrentBoss();
+        BossData currentBoss = bossManager?.GetCurrentBoss();
         if (currentBoss == null) return;
         
         int currentHealth = bossManager.GetCurrentBossHealth();
@@ -164,8 +206,10 @@ public class BossUI : MonoBehaviour
         // Update health bar with smooth animation
         if (bossHealthBar != null)
         {
-            float targetValue = 1f - ((float)currentHealth / maxHealth);
-            bossHealthBar.DOValue(targetValue, healthBarAnimationDuration).SetEase(Ease.OutQuad);
+            // Calculate health percentage (full bar = full health, empty bar = no health)
+            float targetValue = (float)currentHealth / maxHealth;
+            Debug.Log($"Updating health bar: {currentHealth}/{maxHealth} = {targetValue}");
+            bossHealthBar.DOFillAmount(targetValue, healthBarAnimationDuration).SetEase(Ease.OutQuad);
         }
         
         // Update health text
@@ -223,36 +267,43 @@ public class BossUI : MonoBehaviour
         // Animate health bar
         if (bossHealthBar != null)
         {
-            bossHealthBar.value = 0f;
-            bossHealthBar.DOValue(0f, healthBarAnimationDuration).SetDelay(fadeInDuration * 0.5f);
+            // Get current boss health and set initial value
+            BossData currentBoss = bossManager?.GetCurrentBoss();
+            if (currentBoss != null)
+            {
+                int currentHealth = bossManager.GetCurrentBossHealth();
+                int maxHealth = currentBoss.maxHealth;
+                float initialValue = (float)currentHealth / maxHealth;
+                
+                // Start from 0 and animate to current health
+                bossHealthBar.fillAmount = 0f;
+                bossHealthBar.DOFillAmount(initialValue, healthBarAnimationDuration).SetDelay(fadeInDuration * 0.5f);
+                Debug.Log($"Initializing health bar: {currentHealth}/{maxHealth} = {initialValue}");
+            }
         }
     }
     
     /// <summary>
-    /// Shake the boss UI when boss takes damage
+    /// Shake the boss panel when boss takes damage
     /// </summary>
-    public void ShakeBossUI()
+    public void ShakePanel()
     {
         transform.DOShakePosition(shakeDuration, shakeIntensity, 10, 90, false, true);
         
         // Flash the health bar red
         if (bossHealthBar != null)
         {
-            var fillImage = bossHealthBar.fillRect?.GetComponent<Image>();
-            if (fillImage != null)
-            {
-                Color originalColor = fillImage.color;
-                fillImage.DOColor(Color.red, 0.1f).OnComplete(() => {
-                    fillImage.DOColor(originalColor, 0.1f);
-                });
-            }
+            Color originalColor = bossHealthBar.color;
+            bossHealthBar.DOColor(Color.red, 0.1f).OnComplete(() => {
+                bossHealthBar.DOColor(originalColor, 0.1f);
+            });
         }
     }
     
     /// <summary>
     /// Show boss defeat effect
     /// </summary>
-    public void ShowBossDefeatEffect()
+    public void ShowDefeatEffect()
     {
         // Flash the entire UI
         if (bossBackground != null)
@@ -275,7 +326,7 @@ public class BossUI : MonoBehaviour
     /// <summary>
     /// Show boss heal effect
     /// </summary>
-    public void ShowBossHealEffect()
+    public void ShowHealEffect()
     {
         // Flash green
         if (bossBackground != null)
@@ -289,57 +340,5 @@ public class BossUI : MonoBehaviour
         transform.DOShakePosition(0.5f, shakeIntensity * 0.5f, 5, 90, false, true);
     }
     
-    /// <summary>
-    /// Show boss in center of screen for transition
-    /// </summary>
-    public void ShowBossInCenter(BossData bossData)
-    {
-        if (bossPortrait != null && bossData.bossPortrait != null)
-        {
-            bossPortrait.sprite = bossData.bossPortrait;
-        }
-        
-        if (bossNameText != null)
-        {
-            bossNameText.text = bossData.bossName;
-        }
-        
-        // Move to center position
-        if (centerPosition != null)
-        {
-            transform.position = centerPosition.position;
-        }
-        
-        // Scale up for dramatic effect
-        transform.localScale = Vector3.zero;
-        transform.DOScale(Vector3.one * 1.5f, fadeInDuration).SetEase(Ease.OutBack);
-        
-        // Show with fade in
-        gameObject.SetActive(true);
-        CanvasGroup canvasGroup = GetComponent<CanvasGroup>();
-        if (canvasGroup == null)
-        {
-            canvasGroup = gameObject.AddComponent<CanvasGroup>();
-        }
-        canvasGroup.alpha = 0f;
-        canvasGroup.DOFade(1f, fadeInDuration);
-    }
-    
-    /// <summary>
-    /// Animate boss from center to panel position
-    /// </summary>
-    public void AnimateToPanel()
-    {
-        if (panelPosition != null)
-        {
-            // Animate to panel position
-            transform.DOMove(panelPosition.position, transitionDuration).SetEase(Ease.InOutQuad);
-            
-            // Scale down to normal size
-            transform.DOScale(Vector3.one, transitionDuration).SetEase(Ease.InOutQuad);
-            
-            // Show full UI elements
-            AnimateUIElementsIn();
-        }
-    }
+    // End of NewBossPanel class
 }
