@@ -61,10 +61,13 @@ public class BossMechanic
     public bool triggersOnCardDealt = false; // If true, triggers when cards are dealt
     public bool triggersOnRoundEnd = false; // If true, triggers when round ends
     
+    
     [Header("Effect Parameters")]
     public int mechanicValue = 0; // Generic value for mechanic effects
     public float mechanicMultiplier = 1f; // Generic multiplier for mechanic effects
     public string[] mechanicTags; // Tags for specific mechanic targeting
+
+   
 }
 
 [System.Serializable]
@@ -123,7 +126,8 @@ public class BossData : ScriptableObject
     public bool usesSpecialDeck = false; // For The Captain
     public bool hasWinStreakEffect = false; // For The Pyro
     public bool isFinalBoss = false; // For The Gypsy
-    
+    public bool allowTarotCards = true;
+
     // Helper methods
     public bool HasMechanic(BossMechanicType mechanicType)
     {

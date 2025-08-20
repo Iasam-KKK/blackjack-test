@@ -9,7 +9,7 @@ public class BossUI : MonoBehaviour
     public Image bossPortrait;
     public TextMeshProUGUI bossNameText;
     public TextMeshProUGUI bossDescriptionText;
-    public Image  bossHealthBar;
+    public Slider bossHealthBar;
     public TextMeshProUGUI healthText;
     public TextMeshProUGUI handsRemainingText;
     public TextMeshProUGUI currentHandText;
@@ -47,7 +47,7 @@ public class BossUI : MonoBehaviour
         }
         
         // Hide initially
-        gameObject.SetActive(false);
+       // gameObject.SetActive(false);
     }
     
     private void Update()
@@ -158,7 +158,7 @@ public class BossUI : MonoBehaviour
         if (bossHealthBar != null)
         {
             float targetValue = 1f - ((float)currentHealth / maxHealth);
-            bossHealthBar.DOFillAmount(targetValue, healthBarAnimationDuration);
+            bossHealthBar.DOValue(targetValue, healthBarAnimationDuration);
         }
         
         // Update health text
@@ -205,8 +205,8 @@ public class BossUI : MonoBehaviour
         // Animate health bar
         if (bossHealthBar != null)
         {
-            bossHealthBar.fillAmount = 0f;
-            bossHealthBar.DOFillAmount(0f, healthBarAnimationDuration).SetDelay(fadeInDuration * 0.5f);
+            bossHealthBar.value = 0f;
+            bossHealthBar.DOValue(0f, healthBarAnimationDuration).SetDelay(fadeInDuration * 0.5f);
         }
     }
     
@@ -220,7 +220,7 @@ public class BossUI : MonoBehaviour
         // Flash the health bar red
         if (bossHealthBar != null)
         {
-            var fillImage = bossHealthBar.GetComponent<Image>();
+            var fillImage = bossHealthBar.fillRect?.GetComponent<Image>();
             if (fillImage != null)
             {
                 Color originalColor = fillImage.color;

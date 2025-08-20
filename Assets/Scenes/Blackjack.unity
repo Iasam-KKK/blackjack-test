@@ -962,7 +962,7 @@ MonoBehaviour:
   streakFlameEffect: {fileID: 1370061237}
   gameHistoryManager: {fileID: 1844360424}
   cardPreviewManager: {fileID: 1928804806}
-  bossManager: {fileID: 0}
+  bossManager: {fileID: 266288093}
   _bet: 0
   _hasUsedPeekThisRound: 0
   _hasUsedTransformThisRound: 0
@@ -1266,7 +1266,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.23600002, y: 0.5582366}
   m_AnchorMax: {x: 0.7783876, y: 0.61476344}
-  m_AnchoredPosition: {x: -2.0000916, y: -1}
+  m_AnchoredPosition: {x: -2.0000763, y: -1}
   m_SizeDelta: {x: 0, y: -2}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &134276450
@@ -1582,7 +1582,7 @@ MonoBehaviour:
   bossPortrait: {fileID: 1729701447}
   bossNameText: {fileID: 742507464}
   bossDescriptionText: {fileID: 509030047}
-  bossHealthBar: {fileID: 1984272536}
+  bossHealthBar: {fileID: 0}
   healthText: {fileID: 2142582851}
   handsRemainingText: {fileID: 1852103175}
   currentHandText: {fileID: 1955102423}
@@ -2187,8 +2187,8 @@ MonoBehaviour:
   currentBoss: {fileID: 11400000, guid: 15fe2c3a399185c4f86ed822c4d056a2, type: 2}
   allBosses:
   - {fileID: 11400000, guid: 15fe2c3a399185c4f86ed822c4d056a2, type: 2}
-  - {fileID: 11400000, guid: 967ab479678fbeb4bbc4ed3297e38b95, type: 2}
   - {fileID: 11400000, guid: f021d01f1ab394c4eb6e27185f9df345, type: 2}
+  - {fileID: 11400000, guid: 967ab479678fbeb4bbc4ed3297e38b95, type: 2}
   currentBossHealth: 20
   currentHand: 1
   totalBossesDefeated: 0
@@ -2196,8 +2196,8 @@ MonoBehaviour:
   bossUI: {fileID: 159768597}
   bossAudioSource: {fileID: 0}
   bossEffectParticles: {fileID: 0}
-  deck: {fileID: 0}
-  shopManager: {fileID: 0}
+  deck: {fileID: 113795718}
+  shopManager: {fileID: 862427424}
 --- !u!4 &266288094
 Transform:
   m_ObjectHideFlags: 0
@@ -9388,7 +9388,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.14937115, y: 0.11119621}
   m_AnchorMax: {x: 0.41637117, y: 0.3986994}
-  m_AnchoredPosition: {x: 0.9834595, y: -1.8720093}
+  m_AnchoredPosition: {x: 0.9834595, y: -1.8720169}
   m_SizeDelta: {x: 8.4556, y: 4.4987}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1064538559

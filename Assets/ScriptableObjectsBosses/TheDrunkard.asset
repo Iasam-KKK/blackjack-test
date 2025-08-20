@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
-  m_Name: The Drunkard
+  m_Name: TheDrunkard
   m_EditorClassIdentifier: 
-  bossName: The Drunkard
+  bossName: TheDrunkard
   bossType: 0
   bossPortrait: {fileID: 21300000, guid: e294bbd4ff55aed4a8aae809d8b98afc, type: 3}
   bossDescription: An absolute average playing experience. Random use of regular
@@ -21,7 +21,18 @@ MonoBehaviour:
   handsPerRound: 5
   difficultyMultiplier: 1
   unlockOrder: 0
-  mechanics: []
+  mechanics:
+  - mechanicType: 7
+    mechanicName: 
+    mechanicDescription: 
+    activationChance: 0
+    isPassive: 0
+    triggersOnPlayerAction: 0
+    triggersOnCardDealt: 0
+    triggersOnRoundEnd: 0
+    mechanicValue: 0
+    mechanicMultiplier: 0
+    mechanicTags: []
   rewards: []
   bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
   bossMusic: {fileID: 0}
