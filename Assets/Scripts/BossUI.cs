@@ -1,17 +1,18 @@
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
+using TMPro;
 
 public class BossUI : MonoBehaviour
 {
     [Header("Boss Display")]
     public Image bossPortrait;
-    public Text bossNameText;
-    public Text bossDescriptionText;
-    public Slider bossHealthBar;
-    public Text healthText;
-    public Text handsRemainingText;
-    public Text currentHandText;
+    public TextMeshProUGUI bossNameText;
+    public TextMeshProUGUI bossDescriptionText;
+    public Image  bossHealthBar;
+    public TextMeshProUGUI healthText;
+    public TextMeshProUGUI handsRemainingText;
+    public TextMeshProUGUI currentHandText;
     
     [Header("Boss Effects")]
     public Image bossBackground;
@@ -157,7 +158,7 @@ public class BossUI : MonoBehaviour
         if (bossHealthBar != null)
         {
             float targetValue = 1f - ((float)currentHealth / maxHealth);
-            bossHealthBar.DOValue(targetValue, healthBarAnimationDuration);
+            bossHealthBar.DOFillAmount(targetValue, healthBarAnimationDuration);
         }
         
         // Update health text
@@ -204,8 +205,8 @@ public class BossUI : MonoBehaviour
         // Animate health bar
         if (bossHealthBar != null)
         {
-            bossHealthBar.value = 0f;
-            bossHealthBar.DOValue(0f, healthBarAnimationDuration).SetDelay(fadeInDuration * 0.5f);
+            bossHealthBar.fillAmount = 0f;
+            bossHealthBar.DOFillAmount(0f, healthBarAnimationDuration).SetDelay(fadeInDuration * 0.5f);
         }
     }
     
@@ -219,7 +220,7 @@ public class BossUI : MonoBehaviour
         // Flash the health bar red
         if (bossHealthBar != null)
         {
-            var fillImage = bossHealthBar.fillRect?.GetComponent<Image>();
+            var fillImage = bossHealthBar.GetComponent<Image>();
             if (fillImage != null)
             {
                 Color originalColor = fillImage.color;
