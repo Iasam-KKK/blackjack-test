@@ -21,19 +21,18 @@ MonoBehaviour:
   handsPerRound: 5
   difficultyMultiplier: 1
   unlockOrder: 0
-  mechanics:
-  - mechanicType: 7
-    mechanicName: 
-    mechanicDescription: 
-    activationChance: 0
-    isPassive: 0
-    triggersOnPlayerAction: 0
-    triggersOnCardDealt: 0
-    triggersOnRoundEnd: 0
-    mechanicValue: 0
-    mechanicMultiplier: 0
-    mechanicTags: []
-  rewards: []
+  mechanics: []
+  rewards:
+  - rewardName: Basic Tarot Card
+    rewardDescription: Unlocks your first tarot card - The Peek
+    rewardIcon: {fileID: 0}
+    grantsTarotCard: 1
+    tarotCardType: 0
+    grantsPermanentUpgrade: 0
+    upgradeName: 
+    upgradeValue: 0
+    grantsBonusBalance: 1
+    bonusAmount: 500
   bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
   bossMusic: {fileID: 0}
   bossDefeatSound: {fileID: 0}

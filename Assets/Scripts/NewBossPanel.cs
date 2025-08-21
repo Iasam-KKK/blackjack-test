@@ -340,5 +340,123 @@ public class NewBossPanel : MonoBehaviour
         transform.DOShakePosition(0.5f, shakeIntensity * 0.5f, 5, 90, false, true);
     }
     
+    /// <summary>
+    /// Show next boss introduction with special effects
+    /// </summary>
+    public void ShowNextBossIntroduction(BossData nextBoss)
+    {
+        Debug.Log($"ShowNextBossIntroduction called for: {nextBoss.bossName}");
+        
+        // Reset visibility state
+        isVisible = false;
+        
+        // Show the panel
+        gameObject.SetActive(true);
+        isVisible = true;
+        
+        // Set next boss data
+        if (bossPortrait != null && nextBoss.bossPortrait != null)
+        {
+            bossPortrait.sprite = nextBoss.bossPortrait;
+        }
+        
+        if (bossNameText != null)
+        {
+            bossNameText.text = $"NEXT: {nextBoss.bossName}";
+        }
+        
+        if (bossDescriptionText != null)
+        {
+            bossDescriptionText.text = nextBoss.bossDescription;
+        }
+        
+        // Reset health bar for next boss
+        if (bossHealthBar != null)
+        {
+            bossHealthBar.fillAmount = 1f; // Full health for next boss
+        }
+        
+        if (healthText != null)
+        {
+            healthText.text = $"{nextBoss.maxHealth}/{nextBoss.maxHealth}";
+        }
+        
+        if (handsRemainingText != null)
+        {
+            handsRemainingText.text = $"Hands: {nextBoss.handsPerRound}/{nextBoss.handsPerRound}";
+        }
+        
+        if (currentHandText != null)
+        {
+            currentHandText.text = "Hand 1";
+        }
+        
+        // Animate with special effects for next boss introduction
+        AnimateNextBossIntroduction();
+    }
+    
+    /// <summary>
+    /// Animate the next boss introduction with dramatic effects
+    /// </summary>
+    private void AnimateNextBossIntroduction()
+    {
+        // Start with everything invisible
+        if (bossPortrait != null)
+        {
+            bossPortrait.transform.localScale = Vector3.zero;
+        }
+        
+        if (bossNameText != null)
+        {
+            bossNameText.alpha = 0f;
+        }
+        
+        if (bossDescriptionText != null)
+        {
+            bossDescriptionText.alpha = 0f;
+        }
+        
+        // Animate background with dramatic effect
+        if (bossBackground != null)
+        {
+            bossBackground.color = Color.black;
+            bossBackground.DOColor(new Color(0.3f, 0.3f, 0.3f, 0.3f), fadeInDuration * 2f);
+        }
+        
+        // Animate boss portrait with dramatic entrance
+        if (bossPortrait != null)
+        {
+            bossPortrait.transform.DOScale(Vector3.one * 1.2f, fadeInDuration * 1.5f)
+                .SetEase(Ease.OutBack)
+                .OnComplete(() => {
+                    bossPortrait.transform.DOScale(Vector3.one, fadeInDuration * 0.5f);
+                });
+        }
+        
+        // Animate text elements with delay
+        if (bossNameText != null)
+        {
+            bossNameText.DOFade(1f, fadeInDuration).SetDelay(fadeInDuration * 0.5f);
+        }
+        
+        if (bossDescriptionText != null)
+        {
+            bossDescriptionText.DOFade(1f, fadeInDuration).SetDelay(fadeInDuration * 1f);
+        }
+        
+        // Animate health bar
+        if (bossHealthBar != null)
+        {
+            bossHealthBar.fillAmount = 0f;
+            bossHealthBar.DOFillAmount(1f, healthBarAnimationDuration).SetDelay(fadeInDuration * 1.5f);
+        }
+        
+        // Play dramatic particle effects
+        if (bossParticles != null)
+        {
+            bossParticles.Play();
+        }
+    }
+    
     // End of NewBossPanel class
 }

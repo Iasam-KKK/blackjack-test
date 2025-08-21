@@ -20,9 +20,30 @@ MonoBehaviour:
   maxHealth: 3
   handsPerRound: 3
   difficultyMultiplier: 1
-  unlockOrder: 0
-  mechanics: []
-  rewards: []
+  unlockOrder: 1
+  mechanics:
+  - mechanicType: 0
+    mechanicName: Tarot Introduction
+    mechanicDescription: Introduces tarot cards to the player. Basic tarot cards are now available.
+    activationChance: 1
+    isPassive: 1
+    triggersOnPlayerAction: 0
+    triggersOnCardDealt: 0
+    triggersOnRoundEnd: 0
+    mechanicValue: 0
+    mechanicMultiplier: 1
+    mechanicTags: []
+  rewards:
+  - rewardName: Fortune Teller's Gift
+    rewardDescription: Unlocks the Fortune Teller tarot card
+    rewardIcon: {fileID: 0}
+    grantsTarotCard: 1
+    tarotCardType: 21
+    grantsPermanentUpgrade: 0
+    upgradeName: 
+    upgradeValue: 0
+    grantsBonusBalance: 1
+    bonusAmount: 750
   bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
   bossMusic: {fileID: 0}
   bossDefeatSound: {fileID: 0}
@@ -35,6 +56,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   disablesTarotCards: 0
+  allowTarotCards: 1
   usesSpecialDeck: 0
   hasWinStreakEffect: 0
   isFinalBoss: 0

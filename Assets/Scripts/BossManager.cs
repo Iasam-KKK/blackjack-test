@@ -22,6 +22,7 @@ public class BossManager : MonoBehaviour
     
     [Header("UI References")]
     public NewBossPanel newBossPanel;
+    public BossPreviewPanel bossPreviewPanel;
     
     [Header("Boss Effects")]
     public AudioSource bossAudioSource;
@@ -180,6 +181,12 @@ public class BossManager : MonoBehaviour
         else
         {
             Debug.LogWarning("newBossPanel is null in InitializeBoss");
+        }
+        
+        // Update preview panel
+        if (bossPreviewPanel != null)
+        {
+            bossPreviewPanel.UpdateBossPreview();
         }
         
         Debug.Log($"Fighting {currentBoss.bossName} - Health: {currentBossHealth}/{currentBoss.maxHealth}");
@@ -383,8 +390,8 @@ public class BossManager : MonoBehaviour
         }
         StartCoroutine(ShowBossDefeatEffect());
         
-        // Unlock next boss
-        UnlockNextBoss();
+        // Show boss transition to next boss
+        StartCoroutine(ShowBossTransition());
     }
     
     /// <summary>
@@ -470,6 +477,58 @@ public class BossManager : MonoBehaviour
             Debug.Log("All bosses defeated! Game completed!");
             // Handle game completion
         }
+    }
+    
+    /// <summary>
+    /// Show boss transition animation and then initialize next boss
+    /// </summary>
+    private IEnumerator ShowBossTransition()
+    {
+        // Wait for defeat animation to complete
+        yield return new WaitForSeconds(2f);
+        
+        // Find next boss
+        var nextBoss = allBosses.Find(b => b.unlockOrder == totalBossesDefeated);
+        
+        if (nextBoss != null)
+        {
+            // Show next boss introduction
+            yield return StartCoroutine(ShowNextBossIntroduction(nextBoss));
+            
+            // Initialize the next boss
+            InitializeBoss(nextBoss.bossType);
+        }
+        else
+        {
+            Debug.Log("All bosses defeated! Game completed!");
+            // Handle game completion
+        }
+    }
+    
+    /// <summary>
+    /// Show next boss introduction with dramatic effect
+    /// </summary>
+    private IEnumerator ShowNextBossIntroduction(BossData nextBoss)
+    {
+        Debug.Log($"Showing next boss introduction: {nextBoss.bossName}");
+        
+        // Show the boss panel with next boss info
+        if (newBossPanel != null)
+        {
+            // Show the next boss introduction with special effects
+            newBossPanel.ShowNextBossIntroduction(nextBoss);
+            
+            // Wait for the introduction to be visible
+            yield return new WaitForSeconds(4f);
+        }
+        
+        // Update the preview panel with next boss info
+        if (bossPreviewPanel != null)
+        {
+            bossPreviewPanel.ShowNextBossPreview(nextBoss);
+        }
+        
+        yield return new WaitForSeconds(1f);
     }
     
     /// <summary>
