@@ -80,10 +80,11 @@ public class NewBossPanel : MonoBehaviour
     {
         Debug.Log("ShowBossPanel called");
         
-        if (isVisible) 
+        bool wasVisible = isVisible;
+        
+        if (wasVisible) 
         {
-            Debug.Log("Boss panel already visible, returning");
-            return;
+            Debug.Log("Boss panel already visible, updating boss info");
         }
         
         gameObject.SetActive(true);
@@ -130,14 +131,18 @@ public class NewBossPanel : MonoBehaviour
             Debug.LogError("Current boss is null! BossManager might not be initialized properly.");
         }
         
-        // Animate background fade in
-        if (bossBackground != null)
+        // Only animate if the panel wasn't already visible
+        if (!wasVisible)
         {
-            bossBackground.DOFade(0.3f, fadeInDuration);
+            // Animate background fade in
+            if (bossBackground != null)
+            {
+                bossBackground.DOFade(0.3f, fadeInDuration);
+            }
+            
+            // Animate UI elements
+            AnimateUIElementsIn();
         }
-        
-        // Animate UI elements
-        AnimateUIElementsIn();
         
         // Update the display immediately to show current health
         UpdateBossDisplay();

@@ -861,6 +861,8 @@ public class BossManager : MonoBehaviour
     public BossData GetCurrentBoss() => currentBoss;
     public int GetCurrentBossHealth() => currentBossHealth;
     public int GetTotalBossesDefeated() => totalBossesDefeated;
+
+    public List<BossData> GetAvailableBosses() => allBosses;
     
     // Debug methods
     [System.Diagnostics.Conditional("UNITY_EDITOR")]

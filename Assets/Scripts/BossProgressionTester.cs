@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Linq; // Added for OrderBy
 
 public class BossProgressionTester : MonoBehaviour
 {
@@ -60,17 +61,29 @@ public class BossProgressionTester : MonoBehaviour
     {
         if (bossManager != null)
         {
-            int currentDefeated = bossManager.GetTotalBossesDefeated();
-            BossType nextBossType = (BossType)(currentDefeated + 1);
-            
-            if (nextBossType <= BossType.TheThief)
+            var currentBoss = bossManager.GetCurrentBoss();
+            if (currentBoss != null)
             {
-                bossManager.InitializeBoss(nextBossType);
-                Debug.Log($"Test: Initialized next boss: {nextBossType}");
+                // Get the next boss based on unlock order
+                int nextUnlockOrder = currentBoss.unlockOrder + 1;
+                var availableBosses = bossManager.GetAvailableBosses();
+                var nextBoss = availableBosses.Find(b => b.unlockOrder == nextUnlockOrder);
+                
+                if (nextBoss != null)
+                {
+                    bossManager.InitializeBoss(nextBoss.bossType);
+                    Debug.Log($"Test: Progressed to next boss: {nextBoss.bossName} (Unlock Order: {nextBoss.unlockOrder})");
+                }
+                else
+                {
+                    Debug.Log($"Test: No boss found with unlock order {nextUnlockOrder}. Current boss unlock order: {currentBoss.unlockOrder}");
+                    Debug.Log($"Available bosses: {string.Join(", ", availableBosses.Select(b => $"{b.bossName}({b.unlockOrder})"))}");
+                }
             }
             else
             {
-                Debug.Log("Test: No more bosses to test");
+                Debug.Log("Test: No current boss found, starting with TheDrunkard");
+                bossManager.InitializeBoss(BossType.TheDrunkard);
             }
         }
     }
@@ -98,9 +111,17 @@ public class BossProgressionTester : MonoBehaviour
             string info = $"Current Boss: {currentBoss?.bossName ?? "None"}\n";
             info += $"Boss Health: {bossManager.GetCurrentBossHealth()}/{currentBoss?.maxHealth ?? 0}\n";
             info += $"Total Defeated: {bossManager.GetTotalBossesDefeated()}\n";
-            info += $"Unlock Order: {currentBoss?.unlockOrder ?? 0}\n";
+            info += $"Unlock Order: {currentBoss?.unlockOrder ?? -1}\n";
             info += $"Tarot Allowed: {currentBoss?.allowTarotCards ?? false}\n";
-            info += $"Active Mechanics: {currentBoss?.GetActiveMechanics().Count ?? 0}";
+            info += $"Active Mechanics: {currentBoss?.GetActiveMechanics().Count ?? 0}\n";
+            
+            // Add available bosses info
+            var availableBosses = bossManager.GetAvailableBosses();
+            info += $"Available Bosses ({availableBosses.Count}):\n";
+            foreach (var boss in availableBosses.OrderBy(b => b.unlockOrder))
+            {
+                info += $"  {boss.bossName} (Order: {boss.unlockOrder})\n";
+            }
             
             debugInfoText.text = info;
         }
