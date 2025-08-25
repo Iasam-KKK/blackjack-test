@@ -143,6 +143,7 @@ public class BossManager : MonoBehaviour
     /// <summary>
     /// Initialize a specific boss
     /// </summary>
+    /*
     public void InitializeBoss(BossType bossType)
     {
         Debug.Log($"Initializing boss: {bossType}");
@@ -191,7 +192,64 @@ public class BossManager : MonoBehaviour
         
         Debug.Log($"Fighting {currentBoss.bossName} - Health: {currentBossHealth}/{currentBoss.maxHealth}");
     }
+    */
+    public void InitializeBoss(BossType bossType)
+    {
+        Debug.Log($"Initializing boss: {bossType}");
+        Debug.Log($"Available bosses count: {allBosses.Count}");
     
+        // Find boss data
+        currentBoss = allBosses.Find(b => b.bossType == bossType);
+    
+        if (currentBoss == null)
+        {
+            Debug.LogError($"Boss data not found for type: {bossType}");
+            Debug.LogError($"Available boss types: {string.Join(", ", allBosses.Select(b => b.bossType))}");
+            return;
+        }
+    
+        Debug.Log($"Found boss: {currentBoss.bossName} with description: {currentBoss.bossDescription}");
+    
+        // Set up boss state
+        currentBossType = bossType;
+        currentBossHealth = currentBoss.maxHealth;
+        currentHand = 0;
+        isBossActive = true;
+    
+        // Load boss mechanics
+        LoadBossMechanics();
+    
+        // Apply boss-specific rules
+        ApplyBossRules();
+    
+        // Update UI
+        if (newBossPanel != null)
+        {
+            Debug.Log("Calling newBossPanel.ShowBossPanel() from InitializeBoss");
+            newBossPanel.ShowBossPanel();
+        }
+        else
+        {
+            Debug.LogWarning("newBossPanel is null in InitializeBoss");
+        }
+    
+        // Update preview panel
+        if (bossPreviewPanel != null)
+        {
+            bossPreviewPanel.UpdateBossPreview();
+        }
+    
+        // ✅ Reactivate Tarot cards for this boss if allowed
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager != null)
+        {
+            Debug.Log($"Setting up shop for boss: {currentBoss.bossName} (allowTarotCards: {currentBoss.allowTarotCards})");
+            shopManager.SetupShop(); // This will check allowTarotCards
+        }
+    
+        Debug.Log($"Fighting {currentBoss.bossName} - Health: {currentBossHealth}/{currentBoss.maxHealth}");
+    }
+
     /// <summary>
     /// Load boss mechanics and set up their states
     /// </summary>

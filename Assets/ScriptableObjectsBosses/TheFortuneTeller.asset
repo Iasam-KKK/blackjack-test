@@ -24,7 +24,8 @@ MonoBehaviour:
   mechanics:
   - mechanicType: 0
     mechanicName: Tarot Introduction
-    mechanicDescription: Introduces tarot cards to the player. Basic tarot cards are now available.
+    mechanicDescription: Introduces tarot cards to the player. Basic tarot cards
+      are now available.
     activationChance: 1
     isPassive: 1
     triggersOnPlayerAction: 0
@@ -56,7 +57,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   disablesTarotCards: 0
-  allowTarotCards: 1
   usesSpecialDeck: 0
   hasWinStreakEffect: 0
   isFinalBoss: 0
+  allowTarotCards: 1
