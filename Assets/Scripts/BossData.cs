@@ -36,6 +36,7 @@ public enum BossMechanicType
     StealCards,           // Steal cards from player's hand
     DestroyCards,         // Destroy cards on the table
     ModifyBet,            // Modify bet amounts (like Chiromancer)
+    ChiromancerBetting,   // Special betting for The Chiromancer (1.5x normal, 2x on 21)
     SpecialDeck,          // Use special deck composition
     CardValueManipulation, // Change card values
     FaceDownCards,        // Play cards face down

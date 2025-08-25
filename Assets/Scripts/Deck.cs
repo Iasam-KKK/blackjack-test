@@ -744,9 +744,32 @@ private void EndHand(WinCode code)
             finalMessage.text = "You lose!";
             finalMessage.gameObject.SetActive(true);  
             outcomeText = "Lose";
-            if (_bet <= _balance)
+            
+                        // Check if The Chiromancer is active and apply special betting
+            uint lossAmount = _bet;
+            if (bossManager != null && bossManager.currentBoss != null &&
+                bossManager.currentBoss.bossType == BossType.TheChiromancer)
             {
-                Balance -= _bet;
+                Debug.Log("The Chiromancer is active - applying special betting mechanics!");
+                if (dealerScore == Constants.Blackjack)
+                {
+                    // Chiromancer wins with 21 - takes 2x bet
+                    lossAmount = _bet * 2;
+                    finalMessage.text += "\nChiromancer wins with 21! Takes 2x your bet!";
+                    Debug.Log("Chiromancer wins with 21 - taking 2x bet: $" + lossAmount);
+                }
+                else
+                {
+                    // Chiromancer wins normally - takes 1.5x bet
+                    lossAmount = (uint)(_bet * 1.5f);
+                    finalMessage.text += "\nChiromancer takes 1.5x your bet!";
+                    Debug.Log("Chiromancer wins normally - taking 1.5x bet: $" + lossAmount);
+                }
+            }
+            
+            if (lossAmount <= _balance)
+            {
+                Balance -= lossAmount;
                 if (PlayerStats.instance.PlayerHasCard(TarotCardType.WitchDoctor))
                 {
                     int refund = Mathf.RoundToInt(_bet * 0.1f);
@@ -756,14 +779,14 @@ private void EndHand(WinCode code)
             }
             else
             {
-                Debug.LogWarning("Bet amount greater than balance! Setting balance to 0.");
+                Debug.LogWarning("Loss amount greater than balance! Setting balance to 0.");
                 Balance = 0;
             }
 
             _currentStreak = 0;
             _streakMultiplier = 0;
 
-            Debug.Log("Loss calculation: Lost Bet=$" + _bet + ", Earnings Impact=-$" + _bet);
+            Debug.Log("Loss calculation: Lost Amount=$" + lossAmount + ", Earnings Impact=-$" + lossAmount);
             
             // Notify boss system about player loss
             if (bossManager != null)

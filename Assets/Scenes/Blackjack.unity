@@ -2289,6 +2289,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 967ab479678fbeb4bbc4ed3297e38b95, type: 2}
   - {fileID: 11400000, guid: f021d01f1ab394c4eb6e27185f9df345, type: 2}
   - {fileID: 11400000, guid: 387919796449b8145bd6d18a535b5432, type: 2}
+  - {fileID: 11400000, guid: 5d1f3138e0eb5f2498e62aac72535133, type: 2}
   currentBossHealth: 10
   currentHand: 1
   totalBossesDefeated: 0
@@ -14326,6 +14327,8 @@ MonoBehaviour:
   healthText: {fileID: 0}
   handsRemainingText: {fileID: 293163462}
   currentHandText: {fileID: 1775987374}
+  bossMessageText: {fileID: 0}
+  bossMessagePanel: {fileID: 0}
   bossBackground: {fileID: 0}
   bossParticles: {fileID: 0}
   bossAudioSource: {fileID: 0}

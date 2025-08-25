@@ -619,6 +619,9 @@ public class BossManager : MonoBehaviour
             case BossMechanicType.ModifyBet:
                 ModifyBetAmount(mechanic);
                 break;
+            case BossMechanicType.ChiromancerBetting:
+                ApplyChiromancerBetting(mechanic);
+                break;
             case BossMechanicType.CardValueManipulation:
                 ManipulateCardValues(mechanic);
                 break;
@@ -721,6 +724,16 @@ public class BossManager : MonoBehaviour
             
             Debug.Log($"Bet modified from {originalBet} to {modifiedBet}");
         }
+    }
+    
+    /// <summary>
+    /// The Chiromancer's special betting mechanic - takes 1.5x bet normally, 2x bet when winning with 21
+    /// </summary>
+    private void ApplyChiromancerBetting(BossMechanic mechanic)
+    {
+        // This mechanic is handled in the Deck.cs EndHand method
+        // The actual betting logic is applied when the dealer wins
+        Debug.Log("Chiromancer betting mechanic is active - special loss calculations will be applied");
     }
     
     private void ManipulateCardValues(BossMechanic mechanic)
