@@ -167,7 +167,7 @@ public class ShopManager : MonoBehaviour
         FixCardPositioning();
     }
     */
-    /*public void SetupShop()
+    public void SetupShop()
     {
         // 🔹 Check if tarot cards are disabled for this boss
         BossManager bossManager = FindObjectOfType<BossManager>();
@@ -186,83 +186,49 @@ public class ShopManager : MonoBehaviour
             if (child.GetComponent<TarotCard>() != null)
                 Destroy(child.gameObject);
         }
-    
-        // Create cards for each available tarot card, placing them in slots
-        for (int i = 0; i < Mathf.Min(availableTarotCards.Count, shopSlots.Count); i++)
-        {
-            GameObject cardObject = Instantiate(tarotCardPrefab, shopSlots[i]);
-            cardObject.transform.localPosition = Vector3.zero; // Center in slot
-        
-            TarotCard card = cardObject.GetComponent<TarotCard>();
-            if (card != null)
-            {
-                card.cardData = availableTarotCards[i];
-                card.isInShop = true;
-                card.deck = deck;
-            }
-        }
-    
-        FixCardPositioning();
-    }*/
-    private bool isPositioningCards = false;
-    private bool isSettingUpShop = false;
 
-    public void SetupShop()
-    { 
-        if (isSettingUpShop) return; // Prevent multiple calls
-        
-        isSettingUpShop = true;
-        
-        BossManager bossManager = FindObjectOfType<BossManager>();
+        // Default: show all available cards
+        List<TarotCardData> cardsToShow = availableTarotCards;
+
         if (bossManager != null && bossManager.GetCurrentBoss() != null)
         {
-            if (!bossManager.GetCurrentBoss().allowTarotCards)
+            var currentBoss = bossManager.GetCurrentBoss();
+
+            // 🔹 Special cases by boss type
+            if (currentBoss.bossType == BossType.TheFortuneTeller)
             {
-                Debug.Log("Tarot cards disabled for this boss: " + bossManager.GetCurrentBoss().bossName);
-                isSettingUpShop = false;
-                return; 
+                cardsToShow = availableTarotCards.GetRange(0, Mathf.Min(2, availableTarotCards.Count));
+            }
+            else if (currentBoss.bossType == BossType.TheThief)
+            {
+                cardsToShow = availableTarotCards.GetRange(0, Mathf.Min(3, availableTarotCards.Count));
             }
         }
 
-        // Clear any existing cards
-        foreach (Transform child in shopPanel)
-        {
-            if (child.GetComponent<TarotCard>() != null)
-                Destroy(child.gameObject);
-        }
-
-        // ✅ Limit to only 2 cards
-        int maxCardsToShow = 2;
-
-        // Create cards for each available tarot card, placing them in slots
-        for (int i = 0; i < Mathf.Min(maxCardsToShow, availableTarotCards.Count); i++)
+        // Create cards in shop slots
+        for (int i = 0; i < Mathf.Min(cardsToShow.Count, shopSlots.Count); i++)
         {
             GameObject cardObject = Instantiate(tarotCardPrefab, shopSlots[i]);
             cardObject.transform.localPosition = Vector3.zero; // Center in slot
-    
+
             TarotCard card = cardObject.GetComponent<TarotCard>();
             if (card != null)
             {
-                card.cardData = availableTarotCards[i];
+                card.cardData = cardsToShow[i];
                 card.isInShop = true;
                 card.deck = deck;
             }
         }
 
         FixCardPositioning();
-        
-        isSettingUpShop = false;
     }
-
 
     private void FixCardPositioning()
     {
-        if (isPositioningCards) return; // Prevent infinite loop
-        
-        isPositioningCards = true;
-        
         // Directly position all cards in the shop panel
         TarotCard[] shopCards = shopPanel.GetComponentsInChildren<TarotCard>();
+        
+        Debug.Log($"Found {shopCards.Length} cards to position");
         
         for (int i = 0; i < shopCards.Length; i++)
         {
@@ -282,10 +248,10 @@ public class ShopManager : MonoBehaviour
                 
                 // Set fixed size
                 cardRect.sizeDelta = new Vector2(120, 180);
+                
+                Debug.Log($"Positioned card {i} at {cardRect.localPosition}");
             }
         }
-        
-        isPositioningCards = false;
     }
     
     // Called by TarotCard when purchased

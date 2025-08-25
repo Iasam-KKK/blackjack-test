@@ -46,6 +46,6 @@ MonoBehaviour:
     m_RotationOrder: 4
   disablesTarotCards: 0
   usesSpecialDeck: 0
-  hasWinStreakEffect: 0
+  hasWinStreakEffect: 1
   isFinalBoss: 0
   allowTarotCards: 0
