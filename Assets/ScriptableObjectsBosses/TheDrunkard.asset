@@ -18,7 +18,7 @@ MonoBehaviour:
   bossDescription: An absolute average playing experience. Random use of regular
     cards. No tarot.
   maxHealth: 3
-  handsPerRound: 5
+  handsPerRound: 9
   difficultyMultiplier: 1
   unlockOrder: 0
   mechanics: []

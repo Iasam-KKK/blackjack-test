@@ -73,10 +73,22 @@ public class BossManager : MonoBehaviour
         // Load saved progress
         LoadBossProgress();
         
-        // Initialize first boss if none is active
+        // Initialize the appropriate boss based on saved progress
         if (currentBoss == null)
         {
-            InitializeBoss(BossType.TheDrunkard);
+            // Find the boss that should be active based on totalBossesDefeated
+            var nextBoss = allBosses.Find(b => b.unlockOrder == totalBossesDefeated);
+            
+            if (nextBoss != null)
+            {
+                Debug.Log($"Initializing boss based on progress: {nextBoss.bossName} (unlockOrder: {nextBoss.unlockOrder}, totalDefeated: {totalBossesDefeated})");
+                InitializeBoss(nextBoss.bossType);
+            }
+            else
+            {
+                Debug.LogWarning($"No boss found for unlockOrder {totalBossesDefeated}, falling back to TheDrunkard");
+                InitializeBoss(BossType.TheDrunkard);
+            }
         }
     }
     
@@ -318,10 +330,7 @@ public class BossManager : MonoBehaviour
         {
             DefeatBoss();
         }
-        else if (currentHand >= currentBoss.handsPerRound)
-        {
-            BossHeals();
-        }
+        // Removed the BossHeals() call - no more rounds, just a single level
     }
     
     /// <summary>
@@ -354,10 +363,7 @@ public class BossManager : MonoBehaviour
             }
         }
         
-        if (currentHand >= currentBoss.handsPerRound)
-        {
-            BossHeals();
-        }
+        // Removed the BossHeals() call - no more rounds, just a single level
         
         if (newBossPanel != null)
         {
@@ -371,13 +377,20 @@ public class BossManager : MonoBehaviour
     public void OnCardDealt(GameObject card, bool isPlayer)
     {
         if (!isBossActive) return;
-        
-        // Trigger mechanics that activate on card dealt
+         
         foreach (var mechanic in activeMechanics.Where(m => m.triggersOnCardDealt))
         {
             if (Random.Range(0f, 1f) <= mechanic.activationChance)
             {
-                ApplyMechanicToCard(mechanic, card, isPlayer);
+                // Special handling for PeekNextCards mechanic
+                if (mechanic.mechanicType == BossMechanicType.PeekNextCards)
+                {
+                    ApplyMechanic(mechanic);
+                }
+                else
+                {
+                    ApplyMechanicToCard(mechanic, card, isPlayer);
+                }
             }
         }
     }
@@ -400,26 +413,13 @@ public class BossManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Boss heals after handsPerRound hands
+    /// Boss heals after handsPerRound hands (DEPRECATED - no more rounds)
     /// </summary>
     private void BossHeals()
     {
-        int healAmount = Mathf.Max(1, currentBoss.maxHealth / 4);
-        currentBossHealth = Mathf.Min(currentBossHealth + healAmount, currentBoss.maxHealth);
-        
-        currentHand = 0;
-        
-        OnBossHealed?.Invoke(currentBoss);
-        
-        Debug.Log($"{currentBoss.bossName} heals for {healAmount}! Health: {currentBossHealth}/{currentBoss.maxHealth}");
-        
-        // Show heal effect and update health bar
-        if (newBossPanel != null)
-        {
-            newBossPanel.UpdateHealthBar();
-            newBossPanel.ShowHealEffect();
-        }
-        StartCoroutine(ShowBossHealEffect());
+        // This method is deprecated since we removed the rounds system
+        // Bosses no longer heal - it's a single level until defeat
+        Debug.Log("BossHeals called but rounds system is disabled");
     }
     
     /// <summary>
@@ -545,11 +545,15 @@ public class BossManager : MonoBehaviour
         // Wait for defeat animation to complete
         yield return new WaitForSeconds(2f);
         
+        Debug.Log($"ShowBossTransition: totalBossesDefeated = {totalBossesDefeated}");
+        Debug.Log($"Available bosses: {string.Join(", ", allBosses.Select(b => $"{b.bossName}({b.unlockOrder})"))}");
+        
         // Find next boss
         var nextBoss = allBosses.Find(b => b.unlockOrder == totalBossesDefeated);
         
         if (nextBoss != null)
         {
+            Debug.Log($"Found next boss: {nextBoss.bossName} (unlockOrder: {nextBoss.unlockOrder})");
             // Show next boss introduction
             yield return StartCoroutine(ShowNextBossIntroduction(nextBoss));
             
@@ -558,6 +562,7 @@ public class BossManager : MonoBehaviour
         }
         else
         {
+            Debug.LogWarning($"No boss found for unlockOrder {totalBossesDefeated}. All bosses defeated: {string.Join(", ", allBosses.Select(b => b.bossName))}");
             Debug.Log("All bosses defeated! Game completed!");
             // Handle game completion
         }
@@ -631,6 +636,9 @@ public class BossManager : MonoBehaviour
                 break;
             case BossMechanicType.WinStreakEffect:
                 ApplyWinStreakEffect(mechanic);
+                break;
+            case BossMechanicType.PeekNextCards:
+                PeekNextCards(mechanic);
                 break;
         }
         
@@ -785,6 +793,146 @@ public class BossManager : MonoBehaviour
         Debug.Log("Applying win streak effect...");
     }
     
+    /// <summary>
+    /// The Forgetful Seer mechanic - Peek at next 2 cards and randomly act upon them
+    /// </summary>
+    private void PeekNextCards(BossMechanic mechanic)
+    {
+        if (deck == null) return;
+        
+        Debug.Log("The Forgetful Seer is peeking at the next 2 cards...");
+        
+        // Get the next 2 cards from the deck
+        List<CardInfo> nextCards = new List<CardInfo>();
+        for (int i = 0; i < 2 && (deck.CardIndex + i) < deck.values.Length; i++)
+        {
+            int cardIndex = deck.CardIndex + i;
+            CardInfo cardInfo = deck.GetCardInfo(cardIndex);
+            nextCards.Add(cardInfo);
+        }
+        
+        if (nextCards.Count == 0)
+        {
+            Debug.Log("No cards left to peek at!");
+            return;
+        }
+        
+        // Log what the Forgetful Seer sees
+        string cardsSeen = string.Join(", ", nextCards.Select(c => c.cardName));
+        Debug.Log($"The Forgetful Seer sees: {cardsSeen}");
+        
+        // Show visual feedback to the player
+        StartCoroutine(ShowForgetfulSeerEffect(cardsSeen));
+        
+        // Randomly decide what action to take based on the cards seen
+        float randomAction = Random.Range(0f, 1f);
+        
+        if (randomAction < 0.4f) // 40% chance to steal a card
+        {
+            StealNextCard(mechanic, nextCards);
+        }
+        else if (randomAction < 0.7f) // 30% chance to modify card values
+        {
+            ModifyNextCardValues(mechanic, nextCards);
+        }
+        else if (randomAction < 0.9f) // 20% chance to swap card positions
+        {
+            SwapNextCardPositions(mechanic, nextCards);
+        }
+        else // 10% chance to do nothing (forgetful behavior)
+        {
+            Debug.Log("The Forgetful Seer forgot what they saw and does nothing!");
+        }
+    }
+    
+    /// <summary>
+    /// Steal one of the next cards (remove it from deck)
+    /// </summary>
+    private void StealNextCard(BossMechanic mechanic, List<CardInfo> nextCards)
+    {
+        if (nextCards.Count == 0) return;
+        
+        // Choose a random card to steal
+        int cardToSteal = Random.Range(0, nextCards.Count);
+        CardInfo stolenCard = nextCards[cardToSteal];
+        
+        Debug.Log($"The Forgetful Seer steals: {stolenCard.cardName}");
+        
+        // Remove the card from the deck
+        int deckPosition = deck.CardIndex + cardToSteal;
+        if (deckPosition < deck.values.Length)
+        {
+            // Shift all cards after the stolen position forward
+            for (int i = deckPosition; i < deck.values.Length - 1; i++)
+            {
+                deck.values[i] = deck.values[i + 1];
+                deck.faces[i] = deck.faces[i + 1];
+                deck.originalIndices[i] = deck.originalIndices[i + 1];
+            }
+            
+            // Resize arrays
+            System.Array.Resize(ref deck.values, deck.values.Length - 1);
+            System.Array.Resize(ref deck.faces, deck.faces.Length - 1);
+            System.Array.Resize(ref deck.originalIndices, deck.originalIndices.Length - 1);
+            
+            Debug.Log($"Card {stolenCard.cardName} removed from deck");
+        }
+    }
+    
+    /// <summary>
+    /// Modify the values of the next cards
+    /// </summary>
+    private void ModifyNextCardValues(BossMechanic mechanic, List<CardInfo> nextCards)
+    {
+        Debug.Log("The Forgetful Seer modifies the next card values...");
+        
+        for (int i = 0; i < nextCards.Count; i++)
+        {
+            int deckPosition = deck.CardIndex + i;
+            if (deckPosition < deck.values.Length)
+            {
+                int originalValue = deck.values[deckPosition];
+                int newValue = Mathf.Clamp(originalValue + mechanic.mechanicValue, 1, 10);
+                deck.values[deckPosition] = newValue;
+                
+                Debug.Log($"Modified card {nextCards[i].cardName} value from {originalValue} to {newValue}");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Swap the positions of the next two cards
+    /// </summary>
+    private void SwapNextCardPositions(BossMechanic mechanic, List<CardInfo> nextCards)
+    {
+        if (nextCards.Count < 2) return;
+        
+        Debug.Log("The Forgetful Seer swaps the next two card positions...");
+        
+        int firstPos = deck.CardIndex;
+        int secondPos = deck.CardIndex + 1;
+        
+        if (secondPos < deck.values.Length)
+        {
+            // Swap values
+            int tempValue = deck.values[firstPos];
+            deck.values[firstPos] = deck.values[secondPos];
+            deck.values[secondPos] = tempValue;
+            
+            // Swap faces
+            Sprite tempFace = deck.faces[firstPos];
+            deck.faces[firstPos] = deck.faces[secondPos];
+            deck.faces[secondPos] = tempFace;
+            
+            // Swap original indices
+            int tempIndex = deck.originalIndices[firstPos];
+            deck.originalIndices[firstPos] = deck.originalIndices[secondPos];
+            deck.originalIndices[secondPos] = tempIndex;
+            
+            Debug.Log($"Swapped {nextCards[0].cardName} and {nextCards[1].cardName} positions");
+        }
+    }
+    
     private void ModifyDeckForBoss()
     {
         // Implementation for special deck composition (like The Captain)
@@ -836,6 +984,27 @@ public class BossManager : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// Show visual feedback when the Forgetful Seer peeks at cards
+    /// </summary>
+    private IEnumerator ShowForgetfulSeerEffect(string cardsSeen)
+    {
+        // Show a UI message to the player
+        if (newBossPanel != null)
+        {
+            newBossPanel.ShowBossMessage($"The Forgetful Seer peers into the future...\nSees: {cardsSeen}");
+        }
+        
+        // Wait for the message to be visible
+        yield return new WaitForSeconds(2f);
+        
+        // Clear the message
+        if (newBossPanel != null)
+        {
+            newBossPanel.HideBossMessage();
+        }
+    }
+    
 
     
     // Save/Load Progress
@@ -875,6 +1044,77 @@ public class BossManager : MonoBehaviour
         Debug.Log($"Total Defeated: {totalBossesDefeated}");
         Debug.Log($"Active Mechanics: {activeMechanics.Count}");
         Debug.Log($"Is Boss Active: {isBossActive}");
-        Debug.Log("=== END BOSS DEBUG ===");
+        
+        Debug.Log($"=== BOSS PROGRESSION DEBUG ===");
+        Debug.Log($"All Bosses Loaded: {allBosses.Count}");
+        foreach (var boss in allBosses.OrderBy(b => b.unlockOrder))
+        {
+            Debug.Log($"  {boss.bossName}: unlockOrder={boss.unlockOrder}, bossType={boss.bossType}");
+        }
+        
+        var expectedBoss = allBosses.Find(b => b.unlockOrder == totalBossesDefeated);
+        Debug.Log($"Expected Boss for {totalBossesDefeated} defeated: {expectedBoss?.bossName ?? "None"}");
+        
+        Debug.Log($"=== END BOSS DEBUG ===");
+    }
+    
+    /// <summary>
+    /// Test method to manually trigger Forgetful Seer mechanic
+    /// </summary>
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void TestForgetfulSeerMechanic()
+    {
+        if (currentBoss != null && currentBoss.bossType == BossType.TheForgetfulSeer)
+        {
+            var mechanic = currentBoss.GetMechanic(BossMechanicType.PeekNextCards);
+            if (mechanic != null)
+            {
+                Debug.Log("Manually triggering Forgetful Seer mechanic...");
+                PeekNextCards(mechanic);
+            }
+            else
+            {
+                Debug.LogError("Forgetful Seer mechanic not found!");
+            }
+        }
+        else
+        {
+            Debug.LogError("Current boss is not The Forgetful Seer!");
+        }
+    }
+    
+    /// <summary>
+    /// Reset boss progress for testing
+    /// </summary>
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void ResetBossProgress()
+    {
+        totalBossesDefeated = 0;
+        currentBossType = BossType.TheDrunkard;
+        currentBossHealth = 3;
+        currentHand = 0;
+        isBossActive = false;
+        currentBoss = null;
+        
+        SaveBossProgress();
+        Debug.Log("Boss progress reset to TheDrunkard");
+    }
+    
+    /// <summary>
+    /// Set boss progress to a specific boss for testing
+    /// </summary>
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void SetBossProgress(int bossesDefeated)
+    {
+        totalBossesDefeated = bossesDefeated;
+        SaveBossProgress();
+        Debug.Log($"Boss progress set to {bossesDefeated} bosses defeated");
+        
+        // Reinitialize the appropriate boss
+        var nextBoss = allBosses.Find(b => b.unlockOrder == totalBossesDefeated);
+        if (nextBoss != null)
+        {
+            InitializeBoss(nextBoss.bossType);
+        }
     }
 }

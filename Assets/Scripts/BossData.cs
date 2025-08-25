@@ -42,7 +42,8 @@ public enum BossMechanicType
     DisableTarot,         // Disable tarot card usage
     TemporaryTheft,       // Temporarily steal cards/items
     MultiplierEffect,     // Apply special multiplier effects
-    WinStreakEffect       // Effects based on win streaks
+    WinStreakEffect,      // Effects based on win streaks
+    PeekNextCards         // Peek at next cards and act upon them (Forgetful Seer)
 }
 
 [System.Serializable]
@@ -101,7 +102,7 @@ public class BossData : ScriptableObject
     
     [Header("Boss Stats")]
     public int maxHealth = 3; // Number of wins needed to defeat this boss
-    public int handsPerRound = 3; // Hands player can play before boss "heals"
+    public int handsPerRound = 9; // Total hands available in this level (no more rounds)
     public float difficultyMultiplier = 1f; // Affects rewards/penalties
     public int unlockOrder = 0; // Order in which this boss unlocks (0 = first)
     

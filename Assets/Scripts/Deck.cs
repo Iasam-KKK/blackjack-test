@@ -203,7 +203,10 @@ public class Deck : MonoBehaviour
 
 
     public int[] values = new int[Constants.DeckCards];
-    int cardIndex = 0;  
+    int cardIndex = 0;
+    
+    // Public property to access cardIndex for boss mechanics
+    public int CardIndex => cardIndex;  
        
     private void Awake() => 
         InitCardValues();

@@ -15,6 +15,10 @@ public class NewBossPanel : MonoBehaviour
     public TextMeshProUGUI handsRemainingText;
     public TextMeshProUGUI currentHandText;
     
+    [Header("Boss Messages")]
+    public TextMeshProUGUI bossMessageText; // For showing boss mechanic messages
+    public GameObject bossMessagePanel; // Panel to contain the message
+    
     [Header("Boss Effects")]
     public Image bossBackground;
     public ParticleSystem bossParticles;
@@ -227,7 +231,7 @@ public class NewBossPanel : MonoBehaviour
         if (handsRemainingText != null)
         {
             int handsRemaining = handsPerRound - currentHand;
-            handsRemainingText.text = $"Hands: {handsRemaining}/{handsPerRound}";
+            handsRemainingText.text = $"Level Hands: {handsRemaining}/{handsPerRound}";
         }
         
         // Update current hand
@@ -388,7 +392,7 @@ public class NewBossPanel : MonoBehaviour
         
         if (handsRemainingText != null)
         {
-            handsRemainingText.text = $"Hands: {nextBoss.handsPerRound}/{nextBoss.handsPerRound}";
+            handsRemainingText.text = $"Level Hands: {nextBoss.handsPerRound}/{nextBoss.handsPerRound}";
         }
         
         if (currentHandText != null)
@@ -460,6 +464,41 @@ public class NewBossPanel : MonoBehaviour
         if (bossParticles != null)
         {
             bossParticles.Play();
+        }
+    }
+    
+    /// <summary>
+    /// Show a boss message (for mechanic feedback)
+    /// </summary>
+    public void ShowBossMessage(string message)
+    {
+        if (bossMessageText != null)
+        {
+            bossMessageText.text = message;
+        }
+        
+        if (bossMessagePanel != null)
+        {
+            bossMessagePanel.SetActive(true);
+            
+            // Animate the message in
+            bossMessagePanel.transform.localScale = Vector3.zero;
+            bossMessagePanel.transform.DOScale(Vector3.one, 0.3f).SetEase(Ease.OutBack);
+        }
+    }
+    
+    /// <summary>
+    /// Hide the boss message
+    /// </summary>
+    public void HideBossMessage()
+    {
+        if (bossMessagePanel != null)
+        {
+            // Animate the message out
+            bossMessagePanel.transform.DOScale(Vector3.zero, 0.2f).SetEase(Ease.InBack)
+                .OnComplete(() => {
+                    bossMessagePanel.SetActive(false);
+                });
         }
     }
     

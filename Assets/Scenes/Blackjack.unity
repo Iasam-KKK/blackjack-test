@@ -2288,6 +2288,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 15fe2c3a399185c4f86ed822c4d056a2, type: 2}
   - {fileID: 11400000, guid: 967ab479678fbeb4bbc4ed3297e38b95, type: 2}
   - {fileID: 11400000, guid: f021d01f1ab394c4eb6e27185f9df345, type: 2}
+  - {fileID: 11400000, guid: 387919796449b8145bd6d18a535b5432, type: 2}
   currentBossHealth: 10
   currentHand: 1
   totalBossesDefeated: 0
@@ -8708,7 +8709,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.126, y: 0.75100005}
   m_AnchorMax: {x: 0.24700001, y: 0.78624046}
-  m_AnchoredPosition: {x: 6.0976562, y: -4}
+  m_AnchoredPosition: {x: 6.097534, y: -4}
   m_SizeDelta: {x: 8.0967, y: 4}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &909818999
@@ -12542,7 +12543,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.60655683, y: 0.08960127}
   m_AnchorMax: {x: 0.883, y: 0.38260126}
-  m_AnchoredPosition: {x: -0.3843994, y: 1.7147217}
+  m_AnchoredPosition: {x: -0.3843994, y: 1.7146912}
   m_SizeDelta: {x: 7.2312, y: -4.3269997}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1477876792
