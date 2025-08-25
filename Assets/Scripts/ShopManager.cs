@@ -167,7 +167,7 @@ public class ShopManager : MonoBehaviour
         FixCardPositioning();
     }
     */
-    public void SetupShop()
+    /*public void SetupShop()
     {
         // 🔹 Check if tarot cards are disabled for this boss
         BossManager bossManager = FindObjectOfType<BossManager>();
@@ -203,7 +203,48 @@ public class ShopManager : MonoBehaviour
         }
     
         FixCardPositioning();
+    }*/
+    public void SetupShop()
+    {
+        // 🔹 Check if tarot cards are disabled for this boss
+        BossManager bossManager = FindObjectOfType<BossManager>();
+        if (bossManager != null && bossManager.GetCurrentBoss() != null)
+        {
+            if (!bossManager.GetCurrentBoss().allowTarotCards)
+            {
+                Debug.Log("Tarot cards disabled for this boss: " + bossManager.GetCurrentBoss().bossName);
+                return; // 🚫 Stop before spawning any tarot cards
+            }
+        }
+
+        // Clear any existing cards
+        foreach (Transform child in shopPanel)
+        {
+            if (child.GetComponent<TarotCard>() != null)
+                Destroy(child.gameObject);
+        }
+
+        // ✅ Limit to only 2 cards
+        int maxCardsToShow = 2;
+
+        // Create cards for each available tarot card, placing them in slots
+        for (int i = 0; i < Mathf.Min(maxCardsToShow, availableTarotCards.Count); i++)
+        {
+            GameObject cardObject = Instantiate(tarotCardPrefab, shopSlots[i]);
+            cardObject.transform.localPosition = Vector3.zero; // Center in slot
+    
+            TarotCard card = cardObject.GetComponent<TarotCard>();
+            if (card != null)
+            {
+                card.cardData = availableTarotCards[i];
+                card.isInShop = true;
+                card.deck = deck;
+            }
+        }
+
+        FixCardPositioning();
     }
+
 
     private void FixCardPositioning()
     {

@@ -843,7 +843,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/Scripts
+    - Assets/ScriptableObjectsBosses
     m_Globs: []
     m_OriginalText: 
     m_ImportLogFlags: 0
@@ -851,15 +851,15 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 16
   m_LastFolders:
-  - Assets/Scripts
+  - Assets/ScriptableObjectsBosses
   m_LastFoldersGridSize: 16
   m_LastProjectPath: C:\Users\majid\OneDrive\Desktop\Balantaro\blackjack-test
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
-    m_SelectedIDs: fc710000
-    m_LastClickedID: 29180
+    m_SelectedIDs: fa710000
+    m_LastClickedID: 29178
     m_ExpandedIDs: 00000000de71000000ca9a3b
     m_RenameOverlay:
       m_UserAcceptedRename: 0
@@ -888,7 +888,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 00000000de710000
+    m_ExpandedIDs: 00000000de71000000ca9a3b
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -915,7 +915,7 @@ MonoBehaviour:
   m_ListAreaState:
     m_SelectedInstanceIDs: 36680000
     m_LastClickedInstanceID: 26678
-    m_HadKeyboardFocusLastEvent: 1
+    m_HadKeyboardFocusLastEvent: 0
     m_ExpandedInstanceIDs: 
     m_RenameOverlay:
       m_UserAcceptedRename: 0
