@@ -355,6 +355,39 @@ public class Deck : MonoBehaviour
  
     private void FisherYatesShuffle()
     {
+        // First, check if any cards have been permanently destroyed by The Traitor
+        if (bossManager != null)
+        {
+            List<Sprite> tempFaces = new List<Sprite>();
+            List<int> tempValues = new List<int>();
+            List<int> tempOriginalIndices = new List<int>();
+            
+            // Only include cards that haven't been destroyed
+            for (int i = 0; i < faces.Length; i++)
+            {
+                if (!bossManager.IsCardDestroyed(originalIndices[i]))
+                {
+                    tempFaces.Add(faces[i]);
+                    tempValues.Add(values[i]);
+                    tempOriginalIndices.Add(originalIndices[i]);
+                }
+                else
+                {
+                    Debug.Log($"Skipping destroyed card at original index {originalIndices[i]}");
+                }
+            }
+            
+            // If cards were destroyed, update the arrays
+            if (tempFaces.Count < faces.Length)
+            {
+                faces = tempFaces.ToArray();
+                values = tempValues.ToArray();
+                originalIndices = tempOriginalIndices.ToArray();
+                Debug.Log($"Deck reduced from 52 to {faces.Length} cards due to The Traitor's destruction");
+            }
+        }
+        
+        // Now perform the regular shuffle
         for (int i = 0; i < values.Length; ++i)
         {
             int rndIndex = Random.Range(i, values.Length);

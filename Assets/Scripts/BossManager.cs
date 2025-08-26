@@ -42,6 +42,10 @@ public class BossManager : MonoBehaviour
     private List<BossMechanic> activeMechanics = new List<BossMechanic>();
     private Dictionary<BossMechanicType, bool> mechanicStates = new Dictionary<BossMechanicType, bool>();
     
+    // The Traitor specific tracking
+    private List<GameObject> traitorStolenCards = new List<GameObject>();
+    private List<int> traitorStolenCardIndices = new List<int>(); // Track original deck indices for permanent destruction
+    
     // Singleton pattern
     public static BossManager Instance { get; private set; }
     
@@ -228,6 +232,9 @@ public class BossManager : MonoBehaviour
         currentHand = 0;
         isBossActive = true;
     
+        // Clear any previous boss-specific tracking
+        ClearTraitorTracking();
+        
         // Load boss mechanics
         LoadBossMechanics();
     
@@ -349,6 +356,14 @@ public class BossManager : MonoBehaviour
             newBossPanel.ShakePanel();
         }
         
+        // Clear The Traitor's stolen cards since player won
+        if (currentBoss != null && currentBoss.bossType == BossType.TheTraitor && traitorStolenCards.Count > 0)
+        {
+            Debug.Log("Player wins against The Traitor - stolen cards are safe!");
+            traitorStolenCards.Clear();
+            traitorStolenCardIndices.Clear();
+        }
+        
         // Trigger mechanics that activate on round end
         TriggerMechanicsOnRoundEnd(true);
         
@@ -370,6 +385,25 @@ public class BossManager : MonoBehaviour
         
         // Trigger mechanics that activate on round end
         TriggerMechanicsOnRoundEnd(false);
+        
+        // Handle The Traitor's permanent card destruction
+        if (currentBoss != null && currentBoss.bossType == BossType.TheTraitor && traitorStolenCards.Count > 0)
+        {
+            Debug.Log($"The Traitor wins! Permanently destroying {traitorStolenCards.Count} stolen cards!");
+            
+            // Mark cards for permanent destruction
+            foreach (int cardIndex in traitorStolenCardIndices)
+            {
+                MarkCardAsDestroyed(cardIndex);
+            }
+            
+            // Show destruction effect
+            StartCoroutine(AnimateTraitorCardDestruction());
+            
+            // Clear the tracking lists for next hand
+            traitorStolenCards.Clear();
+            traitorStolenCardIndices.Clear();
+        }
         
         // Some bosses might heal on player loss
         if (currentBoss.HasMechanic(BossMechanicType.ModifyBet))
@@ -681,6 +715,12 @@ public class BossManager : MonoBehaviour
             case BossMechanicType.JackNullification:
                 ApplyJackNullification(mechanic);
                 break;
+            case BossMechanicType.StealLaidOutCards:
+                StealLaidOutCards(mechanic);
+                break;
+            case BossMechanicType.PermanentDestruction:
+                // This is handled in EndHand when boss wins
+                break;
         }
         
         OnBossMechanicTriggered?.Invoke(currentBoss);
@@ -737,10 +777,103 @@ public class BossManager : MonoBehaviour
                     if (dealerHand != null)
                     {
                         dealerHand.cards.Add(stolenCard);
+                        
+                        // Move card to dealer's transform
+                        stolenCard.transform.SetParent(dealerHand.transform);
                     }
                     
                     // Animate the theft
-                    StartCoroutine(AnimateCardTheft(stolenCard));
+                    StartCoroutine(AnimateCardTheft(stolenCard, false));
+                }
+                
+                // Update hand arrangements and points
+                playerHand.ArrangeCardsInWindow();
+                playerHand.UpdatePoints();
+                
+                var dealerHand2 = deck.dealer.GetComponent<CardHand>();
+                if (dealerHand2 != null)
+                {
+                    dealerHand2.ArrangeCardsInWindow();
+                    dealerHand2.UpdatePoints();
+                }
+                
+                deck.UpdateScoreDisplays();
+            }
+        }
+    }
+    
+    /// <summary>
+    /// The Traitor's mechanic - steal laid out cards from player
+    /// </summary>
+    private void StealLaidOutCards(BossMechanic mechanic)
+    {
+        if (deck != null && deck.player != null)
+        {
+            var playerHand = deck.player.GetComponent<CardHand>();
+            if (playerHand != null && playerHand.cards.Count > 0)
+            {
+                // Only steal if player has more than 2 cards (to avoid making it impossible to play)
+                if (playerHand.cards.Count <= 2)
+                {
+                    Debug.Log("The Traitor: Not stealing - player has too few cards");
+                    return;
+                }
+                
+                int cardsToSteal = Mathf.Min(mechanic.mechanicValue, playerHand.cards.Count - 2);
+                cardsToSteal = Mathf.Max(1, cardsToSteal); // At least steal 1 card
+                
+                for (int i = 0; i < cardsToSteal; i++)
+                {
+                    // Steal a random card
+                    int randomIndex = Random.Range(0, playerHand.cards.Count);
+                    GameObject stolenCard = playerHand.cards[randomIndex];
+                    
+                    // Track the stolen card for potential permanent destruction
+                    traitorStolenCards.Add(stolenCard);
+                    
+                    // Get the original deck index before stealing
+                    CardModel cardModel = stolenCard.GetComponent<CardModel>();
+                    if (cardModel != null)
+                    {
+                        traitorStolenCardIndices.Add(cardModel.originalDeckIndex);
+                        Debug.Log($"The Traitor steals: {deck.GetCardInfoFromModel(cardModel).cardName} (Original index: {cardModel.originalDeckIndex})");
+                    }
+                    
+                    // Remove from player's hand
+                    playerHand.cards.RemoveAt(randomIndex);
+                    
+                    // Add to dealer's hand
+                    var dealerHand = deck.dealer.GetComponent<CardHand>();
+                    if (dealerHand != null)
+                    {
+                        dealerHand.cards.Add(stolenCard);
+                        
+                        // Move card to dealer's transform
+                        stolenCard.transform.SetParent(dealerHand.transform);
+                    }
+                    
+                    // Animate the theft with special Traitor effect
+                    StartCoroutine(AnimateCardTheft(stolenCard, true));
+                }
+                
+                // Update hand arrangements and points
+                playerHand.ArrangeCardsInWindow();
+                playerHand.UpdatePoints();
+                
+                var dealerHand2 = deck.dealer.GetComponent<CardHand>();
+                if (dealerHand2 != null)
+                {
+                    dealerHand2.ArrangeCardsInWindow();
+                    dealerHand2.UpdatePoints();
+                }
+                
+                deck.UpdateScoreDisplays();
+                
+                // Show message to player
+                if (newBossPanel != null)
+                {
+                    newBossPanel.ShowBossMessage($"The Traitor steals {cardsToSteal} card{(cardsToSteal > 1 ? "s" : "")} from your hand!");
+                    StartCoroutine(HideBossMessageAfterDelay(2f));
                 }
             }
         }
@@ -1003,28 +1136,61 @@ public class BossManager : MonoBehaviour
     }
     
     // Animation coroutines
-    private IEnumerator AnimateCardTheft(GameObject card)
+    private IEnumerator AnimateCardTheft(GameObject card, bool isTraitor = false)
     {
         if (card == null) yield break;
         
         // Create theft animation
-        Vector3 originalPos = card.transform.position;
         Vector3 targetPos = deck.dealer.transform.position;
         
         Sequence theftSequence = DOTween.Sequence();
         
-        // Flash the card
+        // Flash the card - different color for The Traitor
         var spriteRenderer = card.GetComponent<SpriteRenderer>();
         if (spriteRenderer != null)
         {
-            theftSequence.Append(spriteRenderer.DOColor(Color.red, 0.2f));
-            theftSequence.Append(spriteRenderer.DOColor(Color.white, 0.2f));
+            if (isTraitor)
+            {
+                // The Traitor uses purple/dark color
+                theftSequence.Append(spriteRenderer.DOColor(new Color(0.5f, 0f, 0.5f), 0.2f));
+                theftSequence.Append(spriteRenderer.DOColor(Color.white, 0.2f));
+                theftSequence.Append(spriteRenderer.DOColor(new Color(0.5f, 0f, 0.5f), 0.2f));
+                theftSequence.Append(spriteRenderer.DOColor(Color.white, 0.2f));
+            }
+            else
+            {
+                // Regular thief uses red
+                theftSequence.Append(spriteRenderer.DOColor(Color.red, 0.2f));
+                theftSequence.Append(spriteRenderer.DOColor(Color.white, 0.2f));
+            }
         }
         
-        // Move to dealer
-        theftSequence.Append(card.transform.DOMove(targetPos, 0.5f).SetEase(Ease.InQuad));
+        // Add rotation for more dramatic effect
+        if (isTraitor)
+        {
+            theftSequence.Join(card.transform.DORotate(new Vector3(0, 0, 360), 0.6f, RotateMode.FastBeyond360));
+        }
+        
+        // Move to dealer - wait for rearrangement to happen first
+        yield return new WaitForSeconds(0.1f);
+        
+        // Card should already be in dealer's hand, just ensure proper positioning
+        CardHand dealerHand = deck.dealer.GetComponent<CardHand>();
+        if (dealerHand != null)
+        {
+            dealerHand.ArrangeCardsInWindow();
+        }
         
         yield return theftSequence.WaitForCompletion();
+    }
+    
+    private IEnumerator HideBossMessageAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (newBossPanel != null)
+        {
+            newBossPanel.HideBossMessage();
+        }
     }
     
     private IEnumerator ShowBossHealEffect()
@@ -1179,5 +1345,82 @@ public class BossManager : MonoBehaviour
         {
             InitializeBoss(nextBoss.bossType);
         }
+    }
+    
+    // The Traitor specific methods
+    
+    /// <summary>
+    /// Mark a card as permanently destroyed
+    /// </summary>
+    private void MarkCardAsDestroyed(int originalDeckIndex)
+    {
+        string key = $"DestroyedCard_{originalDeckIndex}";
+        PlayerPrefs.SetInt(key, 1);
+        PlayerPrefs.Save();
+        Debug.Log($"Card at original index {originalDeckIndex} marked as permanently destroyed");
+    }
+    
+    /// <summary>
+    /// Check if a card has been permanently destroyed
+    /// </summary>
+    public bool IsCardDestroyed(int originalDeckIndex)
+    {
+        string key = $"DestroyedCard_{originalDeckIndex}";
+        return PlayerPrefs.GetInt(key, 0) == 1;
+    }
+    
+    /// <summary>
+    /// Animate The Traitor's card destruction
+    /// </summary>
+    private IEnumerator AnimateTraitorCardDestruction()
+    {
+        if (newBossPanel != null)
+        {
+            newBossPanel.ShowBossMessage("The Traitor destroys your stolen cards forever!");
+        }
+        
+        // Animate each stolen card being destroyed
+        foreach (GameObject card in traitorStolenCards)
+        {
+            if (card != null)
+            {
+                // Create destruction animation
+                Sequence destructionSequence = DOTween.Sequence();
+                
+                SpriteRenderer spriteRenderer = card.GetComponent<SpriteRenderer>();
+                if (spriteRenderer != null)
+                {
+                    // Flash dark purple
+                    destructionSequence.Append(spriteRenderer.DOColor(new Color(0.3f, 0f, 0.3f), 0.15f));
+                    destructionSequence.Append(spriteRenderer.DOColor(Color.black, 0.15f));
+                }
+                
+                // Shake and shrink
+                destructionSequence.Append(card.transform.DOShakePosition(0.3f, 0.5f, 20, 90, false, true));
+                destructionSequence.Join(card.transform.DOScale(Vector3.zero, 0.3f).SetEase(Ease.InBack));
+                
+                // Fade out
+                if (spriteRenderer != null)
+                {
+                    destructionSequence.Join(spriteRenderer.DOFade(0f, 0.3f));
+                }
+            }
+        }
+        
+        yield return new WaitForSeconds(1.5f);
+        
+        if (newBossPanel != null)
+        {
+            newBossPanel.HideBossMessage();
+        }
+    }
+    
+    /// <summary>
+    /// Clear The Traitor's tracking when initializing a new boss
+    /// </summary>
+    private void ClearTraitorTracking()
+    {
+        traitorStolenCards.Clear();
+        traitorStolenCardIndices.Clear();
     }
 }

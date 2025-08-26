@@ -45,7 +45,9 @@ public enum BossMechanicType
     MultiplierEffect,     // Apply special multiplier effects
     WinStreakEffect,      // Effects based on win streaks
     PeekNextCards,        // Peek at next cards and act upon them (Forgetful Seer)
-    JackNullification     // Nullify Jacks in player's hand (The Captain)
+    JackNullification,    // Nullify Jacks in player's hand (The Captain)
+    StealLaidOutCards,    // Steal cards already laid out and use them (The Traitor)
+    PermanentDestruction  // Permanently destroy cards if boss wins (The Traitor)
 }
 
 [System.Serializable]
