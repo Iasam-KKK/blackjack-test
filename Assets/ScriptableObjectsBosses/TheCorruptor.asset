@@ -10,42 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
-  m_Name: TheThief
+  m_Name: TheCorruptor
   m_EditorClassIdentifier: 
-  bossName: TheThief
-  bossType: 2
-  bossPortrait: {fileID: 21300000, guid: 5cd97da1025da2546a5a7277be15d20c, type: 3}
-  bossDescription: Is able to steal cards from the player's hand, randomly acts upon
-    it.
+  bossName: TheCorruptor
+  bossType: 15
+  bossPortrait: {fileID: 21300000, guid: 839ba56b8bb41354fb250c333fb45378, type: 3}
+  bossDescription: When a card is laid down, it can randomly inflate or deflate its
+    value
   maxHealth: 3
   handsPerRound: 9
   difficultyMultiplier: 1
-  unlockOrder: 2
+  unlockOrder: 9
   mechanics:
-  - mechanicType: 1
-    mechanicName: Steal Cards
-    mechanicDescription: Is able to steal cards from the player's hand, randomly
-      acts upon it.
-    activationChance: 0.5
-    isPassive: 1
+  - mechanicType: 18
+    mechanicName: Card Corruption
+    mechanicDescription: Randomly changes card values by +/-1 to +/-3 when dealt
+    activationChance: 0.6
+    isPassive: 0
     triggersOnPlayerAction: 0
     triggersOnCardDealt: 1
-    triggersOnRoundEnd: 1
-    mechanicValue: 1
+    triggersOnRoundEnd: 0
+    mechanicValue: 3
     mechanicMultiplier: 1
     mechanicTags: []
-  rewards:
-  - rewardName: Thief's Loot
-    rewardDescription: Unlocks the Hitman tarot card
-    rewardIcon: {fileID: 0}
-    grantsTarotCard: 1
-    tarotCardType: 24
-    grantsPermanentUpgrade: 0
-    upgradeName: 
-    upgradeValue: 0
-    grantsBonusBalance: 1
-    bonusAmount: 1000
-  bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
+  rewards: []
+  bossThemeColor: {r: 0.4, g: 0.2, b: 0.8, a: 1}
   bossMusic: {fileID: 0}
   bossDefeatSound: {fileID: 0}
   bossVictorySound: {fileID: 0}
