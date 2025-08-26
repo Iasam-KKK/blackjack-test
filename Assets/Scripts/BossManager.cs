@@ -442,6 +442,13 @@ public class BossManager : MonoBehaviour
         string playerType = isPlayer ? "player" : "dealer";
         Debug.Log($"OnCardDealt: {playerType} card dealt, Current boss: {currentBoss?.bossName ?? "None"}");
         
+        // Debug: Log active mechanics count
+        Debug.Log($"Active mechanics count: {activeMechanics.Count}");
+        foreach (var mechanic in activeMechanics)
+        {
+            Debug.Log($"Active mechanic: {mechanic.mechanicName} (type: {mechanic.mechanicType}, triggers on card dealt: {mechanic.triggersOnCardDealt})");
+        }
+        
         // Special handling for The Captain - nullify Jacks in player's hand
         if (currentBoss != null && currentBoss.bossType == BossType.TheCaptain && isPlayer)
         {
@@ -765,6 +772,9 @@ public class BossManager : MonoBehaviour
                 break;
             case BossMechanicType.SeductressIntercept:
                 ApplySeductressIntercept(card, mechanic, isPlayer);
+                break;
+            case BossMechanicType.CorruptCard:
+                ApplyCorruptCard(card, mechanic);
                 break;
         }
     }
@@ -1600,6 +1610,106 @@ public class BossManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Apply The Corruptor's card corruption mechanic
+    /// </summary>
+    private void ApplyCorruptCard(GameObject card, BossMechanic mechanic)
+    {
+        Debug.Log("=== CORRUPTOR: ApplyCorruptCard called ===");
+        
+        if (card == null) 
+        {
+            Debug.LogWarning("ApplyCorruptCard: card is null!");
+            return;
+        }
+        
+        CardModel cardModel = card.GetComponent<CardModel>();
+        if (cardModel == null) 
+        {
+            Debug.LogWarning("ApplyCorruptCard: CardModel component not found!");
+            return;
+        }
+        
+        Debug.Log($"ApplyCorruptCard: Processing card with value {cardModel.value}");
+        
+        // Get the corruption range from mechanic value (default 3 means +/-1 to +/-3)
+        int maxCorruption = mechanic.mechanicValue > 0 ? mechanic.mechanicValue : 3;
+        
+        // Randomly choose corruption direction and amount
+        bool inflate = Random.Range(0f, 1f) < 0.5f; // 50% chance to inflate, 50% to deflate
+        int corruptionAmount = Random.Range(1, maxCorruption + 1); // Random amount 1 to maxCorruption
+        
+        if (!inflate) corruptionAmount = -corruptionAmount; // Make it negative for deflation
+        
+        int originalValue = cardModel.value;
+        int newValue = Mathf.Clamp(originalValue + corruptionAmount, 1, 11); // Keep within valid range
+        
+        // Only apply corruption if it actually changes the value
+        if (newValue != originalValue)
+        {
+            cardModel.value = newValue;
+            
+            // Start visual corruption effect
+            StartCoroutine(AnimateCardCorruption(card, originalValue, newValue));
+            
+            // Show boss message
+            if (newBossPanel != null)
+            {
+                string effect = newValue > originalValue ? "inflated" : "deflated";
+                newBossPanel.ShowBossMessage($"The Corruptor {effect} a card from {originalValue} to {newValue}!");
+                StartCoroutine(HideBossMessageAfterDelay(2.5f));
+            }
+            
+            Debug.Log($"The Corruptor corrupted card: {originalValue} → {newValue} (change: {corruptionAmount})");
+        }
+    }
+    
+    /// <summary>
+    /// Animate card corruption effect
+    /// </summary>
+    private IEnumerator AnimateCardCorruption(GameObject card, int originalValue, int newValue)
+    {
+        if (card == null) yield break;
+        
+        SpriteRenderer spriteRenderer = card.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) yield break;
+        
+        // Store original color
+        Color originalColor = spriteRenderer.color;
+        
+        // Determine corruption color (red for inflation, purple for deflation)
+        Color corruptionColor = newValue > originalValue ? 
+            new Color(1f, 0.2f, 0.2f, 1f) : // Red for inflation
+            new Color(0.4f, 0.2f, 0.8f, 1f); // Purple for deflation
+        
+        // Create corruption animation sequence
+        Sequence corruptionSequence = DOTween.Sequence();
+        
+        // Flash with corruption color
+        corruptionSequence.Append(spriteRenderer.DOColor(corruptionColor, 0.2f));
+        corruptionSequence.Append(spriteRenderer.DOColor(originalColor, 0.2f));
+        corruptionSequence.Append(spriteRenderer.DOColor(corruptionColor, 0.2f));
+        corruptionSequence.Append(spriteRenderer.DOColor(originalColor, 0.3f));
+        
+        // Add scale effect (grow for inflation, shrink for deflation)
+        Vector3 originalScale = card.transform.localScale;
+        float scaleMultiplier = newValue > originalValue ? 1.2f : 0.8f;
+        
+        corruptionSequence.Join(card.transform.DOScale(originalScale * scaleMultiplier, 0.3f)
+            .SetEase(Ease.OutBack).SetLoops(2, LoopType.Yoyo));
+        
+        // Add subtle rotation
+        corruptionSequence.Join(card.transform.DORotate(new Vector3(0, 0, 15), 0.2f)
+            .SetEase(Ease.InOutSine).SetLoops(4, LoopType.Yoyo));
+        
+        yield return corruptionSequence.WaitForCompletion();
+        
+        // Ensure card is back to normal state
+        card.transform.localScale = originalScale;
+        card.transform.rotation = Quaternion.identity;
+        spriteRenderer.color = originalColor;
+    }
+    
+    /// <summary>
     /// Public method to handle The Seductress interception from Deck.cs
     /// </summary>
     public IEnumerator HandleSeductressInterception(GameObject card, CardInfo cardInfo, bool wasIntercepted)
@@ -2149,5 +2259,29 @@ public class BossManager : MonoBehaviour
         });
         
         return safeCards[0]; // Return the lowest value safe card
+    }
+    
+    [ContextMenu("Test Corruptor Mechanic")]
+    public void TestCorruptorMechanic()
+    {
+        Debug.Log("=== Testing Corruptor Mechanic ===");
+        
+        if (currentBoss == null)
+        {
+            Debug.LogWarning("No current boss set!");
+            return;
+        }
+        
+        var mechanic = currentBoss.GetMechanic(BossMechanicType.CorruptCard);
+        if (mechanic == null)
+        {
+            Debug.LogWarning("Corruptor mechanic not found!");
+            return;
+        }
+        
+        Debug.Log($"Corruptor mechanic found: {mechanic.mechanicName}");
+        Debug.Log($"Activation chance: {mechanic.activationChance}");
+        Debug.Log($"Max corruption: {mechanic.mechanicValue}");
+        Debug.Log($"Triggers on card dealt: {mechanic.triggersOnCardDealt}");
     }
 }

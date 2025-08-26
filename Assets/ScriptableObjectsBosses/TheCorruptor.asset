@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
+  m_Name: TheCorruptor
+  m_EditorClassIdentifier: 
+  bossName: TheCorruptor
+  bossType: 15
+  bossPortrait: {fileID: 21300000, guid: 839ba56b8bb41354fb250c333fb45378, type: 3}
+  bossDescription: When a card is laid down, it can randomly inflate or deflate its
+    value
+  maxHealth: 3
+  handsPerRound: 9
+  difficultyMultiplier: 1
+  unlockOrder: 9
+  mechanics:
+  - mechanicType: 18
+    mechanicName: Card Corruption
+    mechanicDescription: Randomly changes card values by +/-1 to +/-3 when dealt
+    activationChance: 0.6
+    isPassive: 0
+    triggersOnPlayerAction: 0
+    triggersOnCardDealt: 1
+    triggersOnRoundEnd: 0
+    mechanicValue: 3
+    mechanicMultiplier: 1
+    mechanicTags: []
+  rewards: []
+  bossThemeColor: {r: 0.4, g: 0.2, b: 0.8, a: 1}
+  bossMusic: {fileID: 0}
+  bossDefeatSound: {fileID: 0}
+  bossVictorySound: {fileID: 0}
+  animationDuration: 0.5
+  animationCurve:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  disablesTarotCards: 0
+  usesSpecialDeck: 0
+  hasWinStreakEffect: 0
+  isFinalBoss: 0
+  allowTarotCards: 1

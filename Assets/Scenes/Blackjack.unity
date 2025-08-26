@@ -2294,6 +2294,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 527e319ad82f7ab4da6cf485a76e09bb, type: 2}
   - {fileID: 11400000, guid: bf873f44d0e06e24ebec95a52aaac9d6, type: 2}
   - {fileID: 11400000, guid: 8413223a0f3d5434592ea428398e6790, type: 2}
+  - {fileID: 11400000, guid: 1c80eb7f3f7d0f447bfbc785c11fc2cf, type: 2}
   currentBossHealth: 10
   currentHand: 1
   totalBossesDefeated: 0

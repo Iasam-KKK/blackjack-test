@@ -49,7 +49,8 @@ public enum BossMechanicType
     StealLaidOutCards,    // Steal cards already laid out and use them (The Traitor)
     PermanentDestruction, // Permanently destroy cards if boss wins (The Traitor)
     DiplomaticKing,       // King adds exactly the points needed to win (The Diplomat)
-    SeductressIntercept   // Intercept Kings and Jacks, value them optimally (The Seductress)
+    SeductressIntercept,  // Intercept Kings and Jacks, value them optimally (The Seductress)
+    CorruptCard           // Randomly inflate or deflate card values when laid down (The Corruptor)
 }
 
 [System.Serializable]
