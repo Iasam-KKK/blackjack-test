@@ -2292,10 +2292,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 5d1f3138e0eb5f2498e62aac72535133, type: 2}
   - {fileID: 11400000, guid: e39bf47dc8832a145af92138e6414a48, type: 2}
   - {fileID: 11400000, guid: 527e319ad82f7ab4da6cf485a76e09bb, type: 2}
+  - {fileID: 11400000, guid: bf873f44d0e06e24ebec95a52aaac9d6, type: 2}
   currentBossHealth: 10
   currentHand: 1
   totalBossesDefeated: 0
-  currentBossType: 6
+  currentBossType: 0
   newBossPanel: {fileID: 1681221328}
   bossPreviewPanel: {fileID: 164853025}
   bossAudioSource: {fileID: 0}

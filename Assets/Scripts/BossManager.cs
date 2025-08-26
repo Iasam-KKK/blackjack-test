@@ -438,6 +438,10 @@ public class BossManager : MonoBehaviour
     {
         if (!isBossActive) return;
         
+        // Debug: Log current boss and card being dealt
+        string playerType = isPlayer ? "player" : "dealer";
+        Debug.Log($"OnCardDealt: {playerType} card dealt, Current boss: {currentBoss?.bossName ?? "None"}");
+        
         // Special handling for The Captain - nullify Jacks in player's hand
         if (currentBoss != null && currentBoss.bossType == BossType.TheCaptain && isPlayer)
         {
@@ -449,8 +453,12 @@ public class BossManager : MonoBehaviour
          
         foreach (var mechanic in activeMechanics.Where(m => m.triggersOnCardDealt))
         {
-            if (Random.Range(0f, 1f) <= mechanic.activationChance)
+            Debug.Log($"Checking mechanic: {mechanic.mechanicName} (type: {mechanic.mechanicType}) for {playerType}");
+            
+            if (Random.Range(0f, 1f) < mechanic.activationChance || mechanic.activationChance >= 1.0f)
             {
+                Debug.Log($"Applying mechanic: {mechanic.mechanicName}");
+                
                 // Special handling for PeekNextCards mechanic
                 if (mechanic.mechanicType == BossMechanicType.PeekNextCards)
                 {
@@ -460,6 +468,10 @@ public class BossManager : MonoBehaviour
                 {
                     ApplyMechanicToCard(mechanic, card, isPlayer);
                 }
+            }
+            else
+            {
+                Debug.Log($"Mechanic {mechanic.mechanicName} did not trigger (chance: {mechanic.activationChance})");
             }
         }
     }
@@ -721,6 +733,9 @@ public class BossManager : MonoBehaviour
             case BossMechanicType.PermanentDestruction:
                 // This is handled in EndHand when boss wins
                 break;
+            case BossMechanicType.DiplomaticKing:
+                // This is handled in ApplyMechanicToCard when a King is dealt
+                break;
         }
         
         OnBossMechanicTriggered?.Invoke(currentBoss);
@@ -738,6 +753,12 @@ public class BossManager : MonoBehaviour
                 break;
             case BossMechanicType.FaceDownCards:
                 PlayCardFaceDown(card, mechanic);
+                break;
+            case BossMechanicType.DiplomaticKing:
+                if (!isPlayer) // Only apply to dealer's cards
+                {
+                    ApplyDiplomaticKing(card, mechanic);
+                }
                 break;
         }
     }
@@ -762,42 +783,96 @@ public class BossManager : MonoBehaviour
         if (deck != null && deck.player != null)
         {
             var playerHand = deck.player.GetComponent<CardHand>();
-            if (playerHand != null && playerHand.cards.Count > 0)
+            var dealerHand = deck.dealer.GetComponent<CardHand>();
+            
+            if (playerHand != null && dealerHand != null && playerHand.cards.Count > 0)
             {
                 int cardsToSteal = Mathf.Min(mechanic.mechanicValue, playerHand.cards.Count);
+                int cardsStolen = 0;
+                
                 for (int i = 0; i < cardsToSteal; i++)
                 {
-                    // Steal a random card
-                    int randomIndex = Random.Range(0, playerHand.cards.Count);
-                    GameObject stolenCard = playerHand.cards[randomIndex];
-                    playerHand.cards.RemoveAt(randomIndex);
+                    // Get safe cards that won't cause dealer to bust
+                    List<GameObject> safeCards = GetSafeCardsToSteal(playerHand, dealerHand);
                     
-                    // Add to dealer's hand
-                    var dealerHand = deck.dealer.GetComponent<CardHand>();
-                    if (dealerHand != null)
+                    GameObject cardToSteal = null;
+                    
+                    if (safeCards.Count > 0)
                     {
-                        dealerHand.cards.Add(stolenCard);
+                        // Strategy: If dealer is close to 21, be conservative; otherwise be greedy
+                        int dealerPoints = dealerHand.points;
                         
-                        // Move card to dealer's transform
-                        stolenCard.transform.SetParent(dealerHand.transform);
+                        if (dealerPoints >= 17)
+                        {
+                            // Conservative - steal lowest value card
+                            cardToSteal = GetLowestValueCardToSteal(safeCards);
+                            Debug.Log("The Thief plays conservatively (dealer has 17+)");
+                        }
+                        else
+                        {
+                            // Aggressive - steal highest value card that's safe
+                            cardToSteal = GetBestCardToSteal(safeCards);
+                            Debug.Log("The Thief plays aggressively (dealer under 17)");
+                        }
                     }
                     
-                    // Animate the theft
-                    StartCoroutine(AnimateCardTheft(stolenCard, false));
+                    if (cardToSteal != null)
+                    {
+                        // Remove from player's hand
+                        int cardIndex = playerHand.cards.IndexOf(cardToSteal);
+                        playerHand.cards.RemoveAt(cardIndex);
+                        
+                        // Add to dealer's hand
+                        dealerHand.cards.Add(cardToSteal);
+                        
+                        // Move card to dealer's transform
+                        cardToSteal.transform.SetParent(dealerHand.transform);
+                        
+                        // Log the theft
+                        CardModel cardModel = cardToSteal.GetComponent<CardModel>();
+                        if (cardModel != null)
+                        {
+                            Debug.Log($"The Thief steals: {deck.GetCardInfoFromModel(cardModel).cardName} (value: {cardModel.value})");
+                        }
+                        
+                        // Animate the theft
+                        StartCoroutine(AnimateCardTheft(cardToSteal, false));
+                        cardsStolen++;
+                    }
+                    else
+                    {
+                        Debug.Log("The Thief found no safe cards to steal - skipping this theft");
+                        break; // No more safe cards available
+                    }
                 }
                 
-                // Update hand arrangements and points
-                playerHand.ArrangeCardsInWindow();
-                playerHand.UpdatePoints();
-                
-                var dealerHand2 = deck.dealer.GetComponent<CardHand>();
-                if (dealerHand2 != null)
+                if (cardsStolen > 0)
                 {
-                    dealerHand2.ArrangeCardsInWindow();
-                    dealerHand2.UpdatePoints();
+                    // Update hand arrangements and points
+                    playerHand.ArrangeCardsInWindow();
+                    playerHand.UpdatePoints();
+                    
+                    dealerHand.ArrangeCardsInWindow();
+                    dealerHand.UpdatePoints();
+                    
+                    deck.UpdateScoreDisplays();
+                    
+                    // Show message
+                    if (newBossPanel != null)
+                    {
+                        newBossPanel.ShowBossMessage($"The Thief steals {cardsStolen} card{(cardsStolen > 1 ? "s" : "")} wisely!");
+                        StartCoroutine(HideBossMessageAfterDelay(2f));
+                    }
                 }
-                
-                deck.UpdateScoreDisplays();
+                else
+                {
+                    Debug.Log("The Thief couldn't steal any cards without busting");
+                    if (newBossPanel != null)
+                    {
+                        newBossPanel.ShowBossMessage("The Thief holds back - no safe cards to steal!");
+                        StartCoroutine(HideBossMessageAfterDelay(2f));
+                    }
+                }
             }
         }
     }
@@ -810,7 +885,9 @@ public class BossManager : MonoBehaviour
         if (deck != null && deck.player != null)
         {
             var playerHand = deck.player.GetComponent<CardHand>();
-            if (playerHand != null && playerHand.cards.Count > 0)
+            var dealerHand = deck.dealer.GetComponent<CardHand>();
+            
+            if (playerHand != null && dealerHand != null && playerHand.cards.Count > 0)
             {
                 // Only steal if player has more than 2 cards (to avoid making it impossible to play)
                 if (playerHand.cards.Count <= 2)
@@ -821,59 +898,100 @@ public class BossManager : MonoBehaviour
                 
                 int cardsToSteal = Mathf.Min(mechanic.mechanicValue, playerHand.cards.Count - 2);
                 cardsToSteal = Mathf.Max(1, cardsToSteal); // At least steal 1 card
+                int cardsStolen = 0;
                 
                 for (int i = 0; i < cardsToSteal; i++)
                 {
-                    // Steal a random card
-                    int randomIndex = Random.Range(0, playerHand.cards.Count);
-                    GameObject stolenCard = playerHand.cards[randomIndex];
+                    // Get safe cards that won't cause dealer to bust
+                    List<GameObject> safeCards = GetSafeCardsToSteal(playerHand, dealerHand);
                     
-                    // Track the stolen card for potential permanent destruction
-                    traitorStolenCards.Add(stolenCard);
+                    GameObject cardToSteal = null;
                     
-                    // Get the original deck index before stealing
-                    CardModel cardModel = stolenCard.GetComponent<CardModel>();
-                    if (cardModel != null)
+                    if (safeCards.Count > 0)
                     {
-                        traitorStolenCardIndices.Add(cardModel.originalDeckIndex);
-                        Debug.Log($"The Traitor steals: {deck.GetCardInfoFromModel(cardModel).cardName} (Original index: {cardModel.originalDeckIndex})");
+                        // The Traitor is more aggressive than The Thief - always tries for higher value cards
+                        int dealerPoints = dealerHand.points;
+                        
+                        if (dealerPoints >= 19)
+                        {
+                            // Very conservative - steal lowest value card
+                            cardToSteal = GetLowestValueCardToSteal(safeCards);
+                            Debug.Log("The Traitor plays very conservatively (dealer has 19+)");
+                        }
+                        else if (dealerPoints >= 16)
+                        {
+                            // Somewhat conservative - random safe card
+                            cardToSteal = safeCards[Random.Range(0, safeCards.Count)];
+                            Debug.Log("The Traitor plays moderately (dealer has 16-18)");
+                        }
+                        else
+                        {
+                            // Aggressive - steal highest value card that's safe
+                            cardToSteal = GetBestCardToSteal(safeCards);
+                            Debug.Log("The Traitor plays aggressively (dealer under 16)");
+                        }
                     }
                     
-                    // Remove from player's hand
-                    playerHand.cards.RemoveAt(randomIndex);
-                    
-                    // Add to dealer's hand
-                    var dealerHand = deck.dealer.GetComponent<CardHand>();
-                    if (dealerHand != null)
+                    if (cardToSteal != null)
                     {
-                        dealerHand.cards.Add(stolenCard);
+                        // Track the stolen card for potential permanent destruction
+                        traitorStolenCards.Add(cardToSteal);
+                        
+                        // Get the original deck index before stealing
+                        CardModel cardModel = cardToSteal.GetComponent<CardModel>();
+                        if (cardModel != null)
+                        {
+                            traitorStolenCardIndices.Add(cardModel.originalDeckIndex);
+                            Debug.Log($"The Traitor steals: {deck.GetCardInfoFromModel(cardModel).cardName} (Original index: {cardModel.originalDeckIndex}, value: {cardModel.value})");
+                        }
+                        
+                        // Remove from player's hand
+                        int cardIndex = playerHand.cards.IndexOf(cardToSteal);
+                        playerHand.cards.RemoveAt(cardIndex);
+                        
+                        // Add to dealer's hand
+                        dealerHand.cards.Add(cardToSteal);
                         
                         // Move card to dealer's transform
-                        stolenCard.transform.SetParent(dealerHand.transform);
+                        cardToSteal.transform.SetParent(dealerHand.transform);
+                        
+                        // Animate the theft with special Traitor effect
+                        StartCoroutine(AnimateCardTheft(cardToSteal, true));
+                        cardsStolen++;
                     }
+                    else
+                    {
+                        Debug.Log("The Traitor found no safe cards to steal - skipping this theft");
+                        break; // No more safe cards available
+                    }
+                }
+                
+                if (cardsStolen > 0)
+                {
+                    // Update hand arrangements and points
+                    playerHand.ArrangeCardsInWindow();
+                    playerHand.UpdatePoints();
                     
-                    // Animate the theft with special Traitor effect
-                    StartCoroutine(AnimateCardTheft(stolenCard, true));
+                    dealerHand.ArrangeCardsInWindow();
+                    dealerHand.UpdatePoints();
+                    
+                    deck.UpdateScoreDisplays();
+                    
+                    // Show message to player
+                    if (newBossPanel != null)
+                    {
+                        newBossPanel.ShowBossMessage($"The Traitor cunningly steals {cardsStolen} card{(cardsStolen > 1 ? "s" : "")}!");
+                        StartCoroutine(HideBossMessageAfterDelay(2f));
+                    }
                 }
-                
-                // Update hand arrangements and points
-                playerHand.ArrangeCardsInWindow();
-                playerHand.UpdatePoints();
-                
-                var dealerHand2 = deck.dealer.GetComponent<CardHand>();
-                if (dealerHand2 != null)
+                else
                 {
-                    dealerHand2.ArrangeCardsInWindow();
-                    dealerHand2.UpdatePoints();
-                }
-                
-                deck.UpdateScoreDisplays();
-                
-                // Show message to player
-                if (newBossPanel != null)
-                {
-                    newBossPanel.ShowBossMessage($"The Traitor steals {cardsToSteal} card{(cardsToSteal > 1 ? "s" : "")} from your hand!");
-                    StartCoroutine(HideBossMessageAfterDelay(2f));
+                    Debug.Log("The Traitor couldn't steal any cards without busting");
+                    if (newBossPanel != null)
+                    {
+                        newBossPanel.ShowBossMessage("The Traitor hesitates - no safe cards to steal!");
+                        StartCoroutine(HideBossMessageAfterDelay(2f));
+                    }
                 }
             }
         }
@@ -1129,6 +1247,156 @@ public class BossManager : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// Apply The Diplomat's King mechanic
+    /// </summary>
+    private void ApplyDiplomaticKing(GameObject card, BossMechanic mechanic)
+    {
+        if (card == null || deck == null) return;
+        
+        CardModel cardModel = card.GetComponent<CardModel>();
+        if (cardModel == null) return;
+        
+        // Check if this is a King
+        CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+        Debug.Log($"The Diplomat card dealt: {cardInfo.cardName} (suitIndex: {cardInfo.suitIndex}, value: {cardModel.value})");
+        
+        if (cardInfo.suitIndex == 12) // King is at index 12 in each suit
+        {
+            Debug.Log($"The Diplomat plays a King: {cardInfo.cardName} - ACTIVATING DIPLOMATIC KING MECHANIC!");
+            
+            // Wait a frame to ensure all cards are properly dealt and arranged
+            StartCoroutine(ApplyDiplomaticKingDelayed(cardModel));
+        }
+        else
+        {
+            Debug.Log($"Card is not a King (suitIndex: {cardInfo.suitIndex}). Jack=10, Queen=11, King=12");
+        }
+    }
+    
+    /// <summary>
+    /// Apply The Diplomat's King effect after a short delay to ensure proper calculation
+    /// </summary>
+    private IEnumerator ApplyDiplomaticKingDelayed(CardModel kingCard)
+    {
+        // Wait for the card to be properly added to the hand
+        yield return new WaitForEndOfFrame();
+        
+        if (deck == null || deck.dealer == null) yield break;
+        
+        CardHand dealerHand = deck.dealer.GetComponent<CardHand>();
+        if (dealerHand == null) yield break;
+        
+        // Check if the King has been nullified (e.g., by The Captain or other effects)
+        if (kingCard.value == 0)
+        {
+            Debug.Log("The Diplomat's King has been nullified by another effect!");
+            if (newBossPanel != null)
+            {
+                newBossPanel.ShowBossMessage("The Diplomat's King was nullified!");
+                StartCoroutine(HideBossMessageAfterDelay(2f));
+            }
+            yield break;
+        }
+        
+        // Calculate current dealer points
+        int currentPoints = dealerHand.points;
+        int playerPoints = deck.GetPlayerPoints();
+        
+        Debug.Log($"Diplomat's current points: {currentPoints}, Player's points: {playerPoints}");
+        
+        // Calculate how many points needed to win
+        int targetPoints = playerPoints + 1; // Just one more than player to win
+        
+        // Don't exceed 21 unless player is already over 21
+        if (playerPoints <= Constants.Blackjack && targetPoints > Constants.Blackjack)
+        {
+            targetPoints = Constants.Blackjack; // Cap at 21 if possible
+        }
+        
+        // Calculate the King's value
+        int kingValue = targetPoints - (currentPoints - 10); // Subtract 10 because King normally adds 10
+        
+        // Ensure the value is reasonable (between 1 and 21)
+        kingValue = Mathf.Clamp(kingValue, 1, 21);
+        
+        // Check if applying this value would be blocked by any active effects
+        bool canApplyEffect = true;
+        
+        // For example, if there's a maximum card value restriction active
+        if (currentBoss != null && currentBoss.HasMechanic(BossMechanicType.CardValueManipulation))
+        {
+            var manipMechanic = currentBoss.GetMechanic(BossMechanicType.CardValueManipulation);
+            if (manipMechanic != null && manipMechanic.mechanicValue > 0 && kingValue > manipMechanic.mechanicValue)
+            {
+                kingValue = manipMechanic.mechanicValue;
+                Debug.Log($"King value capped by card manipulation effect to {kingValue}");
+            }
+        }
+        
+        if (canApplyEffect)
+        {
+            // Apply the new value to the King
+            kingCard.value = kingValue;
+            
+            Debug.Log($"The Diplomat's King adjusted to value: {kingValue} (Target: {targetPoints})");
+            
+            // Update the hand points
+            dealerHand.UpdatePoints();
+            deck.UpdateScoreDisplays();
+            
+            // Show visual effect
+            StartCoroutine(AnimateDiplomaticKing(kingCard.gameObject, kingValue));
+            
+            // Show message to player
+            if (newBossPanel != null)
+            {
+                newBossPanel.ShowBossMessage($"The Diplomat's King adjusts to {kingValue} points!");
+                StartCoroutine(HideBossMessageAfterDelay(3f));
+            }
+        }
+        else
+        {
+            Debug.Log("The Diplomat's King effect was blocked by another active effect");
+            if (newBossPanel != null)
+            {
+                newBossPanel.ShowBossMessage("The Diplomat's King effect was blocked!");
+                StartCoroutine(HideBossMessageAfterDelay(2f));
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Animate The Diplomat's King transformation
+    /// </summary>
+    private IEnumerator AnimateDiplomaticKing(GameObject kingCard, int newValue)
+    {
+        if (kingCard == null) yield break;
+        
+        Sequence kingSequence = DOTween.Sequence();
+        
+        SpriteRenderer spriteRenderer = kingCard.GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+        {
+            // Golden glow effect
+            kingSequence.Append(spriteRenderer.DOColor(new Color(1f, 0.8f, 0.2f), 0.3f));
+            kingSequence.Append(spriteRenderer.DOColor(Color.white, 0.3f));
+            kingSequence.Append(spriteRenderer.DOColor(new Color(1f, 0.8f, 0.2f), 0.3f));
+            kingSequence.Append(spriteRenderer.DOColor(Color.white, 0.3f));
+        }
+        
+        // Scale pulse effect
+        kingSequence.Join(kingCard.transform.DOScale(kingCard.transform.localScale * 1.3f, 0.3f)
+            .SetEase(Ease.OutQuad));
+        kingSequence.Append(kingCard.transform.DOScale(kingCard.transform.localScale, 0.3f)
+            .SetEase(Ease.InQuad));
+        
+        // Add rotation for dramatic effect
+        kingSequence.Join(kingCard.transform.DORotate(new Vector3(0, 0, 360), 0.6f, RotateMode.FastBeyond360));
+        
+        yield return kingSequence.WaitForCompletion();
+    }
+    
     private void ModifyDeckForBoss()
     {
         // Implementation for special deck composition (like The Captain)
@@ -1313,6 +1581,56 @@ public class BossManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Test method to manually trigger Diplomat's King mechanic
+    /// </summary>
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void TestDiplomatKingMechanic()
+    {
+        if (currentBoss != null && currentBoss.bossType == BossType.TheDiplomat)
+        {
+            var mechanic = currentBoss.GetMechanic(BossMechanicType.DiplomaticKing);
+            if (mechanic != null)
+            {
+                Debug.Log("Testing Diplomat King mechanic...");
+                
+                // Check if dealer has any Kings
+                if (deck != null && deck.dealer != null)
+                {
+                    CardHand dealerHand = deck.dealer.GetComponent<CardHand>();
+                    if (dealerHand != null)
+                    {
+                        foreach (GameObject card in dealerHand.cards)
+                        {
+                            CardModel cardModel = card.GetComponent<CardModel>();
+                            if (cardModel != null)
+                            {
+                                CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+                                Debug.Log($"Dealer has: {cardInfo.cardName} (suitIndex: {cardInfo.suitIndex})");
+                                
+                                if (cardInfo.suitIndex == 12) // King
+                                {
+                                    Debug.Log("Found King in dealer's hand - manually triggering mechanic");
+                                    ApplyDiplomaticKing(card, mechanic);
+                                    return;
+                                }
+                            }
+                        }
+                        Debug.Log("No Kings found in dealer's hand");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogError("Diplomat King mechanic not found!");
+            }
+        }
+        else
+        {
+            Debug.LogError("Current boss is not The Diplomat!");
+        }
+    }
+    
+    /// <summary>
     /// Reset boss progress for testing
     /// </summary>
     [System.Diagnostics.Conditional("UNITY_EDITOR")]
@@ -1422,5 +1740,99 @@ public class BossManager : MonoBehaviour
     {
         traitorStolenCards.Clear();
         traitorStolenCardIndices.Clear();
+    }
+    
+    // Smart stealing helper methods
+    
+    /// <summary>
+    /// Get a list of cards from player's hand that are safe for the dealer to steal
+    /// (won't cause dealer to bust)
+    /// </summary>
+    private List<GameObject> GetSafeCardsToSteal(CardHand playerHand, CardHand dealerHand)
+    {
+        List<GameObject> safeCards = new List<GameObject>();
+        
+        if (playerHand == null || dealerHand == null || playerHand.cards.Count == 0)
+            return safeCards;
+        
+        int currentDealerPoints = dealerHand.points;
+        
+        foreach (GameObject card in playerHand.cards)
+        {
+            CardModel cardModel = card.GetComponent<CardModel>();
+            if (cardModel != null)
+            {
+                // Calculate what dealer's score would be if this card was added
+                int potentialPoints = currentDealerPoints + cardModel.value;
+                
+                // Consider ace flexibility (if it's an ace and would cause bust, try as 1)
+                if (cardModel.value == 1) // Ace
+                {
+                    int potentialWithSoftAce = currentDealerPoints + Constants.SoftAce;
+                    // If soft ace doesn't bust, prefer it; otherwise use as 1
+                    if (potentialWithSoftAce <= Constants.Blackjack)
+                    {
+                        potentialPoints = potentialWithSoftAce;
+                    }
+                }
+                
+                // Card is safe if it doesn't cause dealer to bust
+                if (potentialPoints <= Constants.Blackjack)
+                {
+                    safeCards.Add(card);
+                }
+                else
+                {
+                    Debug.Log($"Skipping card {deck.GetCardInfoFromModel(cardModel).cardName} - would cause dealer bust ({currentDealerPoints} + {cardModel.value} = {potentialPoints})");
+                }
+            }
+        }
+        
+        return safeCards;
+    }
+    
+    /// <summary>
+    /// Get the best card to steal - prioritizes higher value cards that won't cause bust
+    /// </summary>
+    private GameObject GetBestCardToSteal(List<GameObject> safeCards)
+    {
+        if (safeCards.Count == 0) return null;
+        
+        // Sort by value descending (prefer higher value cards)
+        safeCards.Sort((a, b) => {
+            CardModel cardA = a.GetComponent<CardModel>();
+            CardModel cardB = b.GetComponent<CardModel>();
+            if (cardA == null || cardB == null) return 0;
+            
+            int valueA = cardA.value;
+            int valueB = cardB.value;
+            
+            // Special handling for Aces - prefer them as they're flexible
+            if (valueA == 1) valueA = 11; // Treat ace as 11 for sorting
+            if (valueB == 1) valueB = 11;
+            
+            return valueB.CompareTo(valueA); // Descending order
+        });
+        
+        return safeCards[0]; // Return the highest value safe card
+    }
+    
+    /// <summary>
+    /// Get the lowest value card to steal when dealer needs to be conservative
+    /// </summary>
+    private GameObject GetLowestValueCardToSteal(List<GameObject> safeCards)
+    {
+        if (safeCards.Count == 0) return null;
+        
+        // Sort by value ascending (prefer lower value cards)
+        safeCards.Sort((a, b) => {
+            CardModel cardA = a.GetComponent<CardModel>();
+            CardModel cardB = b.GetComponent<CardModel>();
+            if (cardA == null || cardB == null) return 0;
+            
+            return cardA.value.CompareTo(cardB.value); // Ascending order
+        });
+        
+        return safeCards[0]; // Return the lowest value safe card
     }
 }

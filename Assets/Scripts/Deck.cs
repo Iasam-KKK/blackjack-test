@@ -469,10 +469,10 @@ public class Deck : MonoBehaviour
         return false;
     }
 
-    private int GetPlayerPoints() => 
+    public int GetPlayerPoints() => 
         player.GetComponent<CardHand>().points;
 
-    private int GetDealerPoints() => 
+    public int GetDealerPoints() => 
         dealer.GetComponent<CardHand>().points;
 
     private void CalculateProbabilities()
@@ -3211,6 +3211,24 @@ private void EndHand(WinCode code)
         if (cardModel == null) return false;
         CardInfo cardInfo = GetCardInfoFromModel(cardModel);
         return IsJack(cardInfo);
+    }
+    
+    /// <summary>
+    /// Check if a card is a King (any suit)
+    /// </summary>
+    public bool IsKing(CardInfo cardInfo)
+    {
+        return cardInfo.suitIndex == 12; // King is at index 12 in each suit
+    }
+    
+    /// <summary>
+    /// Check if a card is a King using CardModel
+    /// </summary>
+    public bool IsKing(CardModel cardModel)
+    {
+        if (cardModel == null) return false;
+        CardInfo cardInfo = GetCardInfoFromModel(cardModel);
+        return IsKing(cardInfo);
     }
     
     /// <summary>

@@ -10,42 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
-  m_Name: TheThief
+  m_Name: TheDiplomat
   m_EditorClassIdentifier: 
-  bossName: TheThief
-  bossType: 2
-  bossPortrait: {fileID: 21300000, guid: 5cd97da1025da2546a5a7277be15d20c, type: 3}
-  bossDescription: Is able to steal cards from the player's hand, randomly acts upon
-    it.
+  bossName: TheDiplomat
+  bossType: 8
+  bossPortrait: {fileID: 21300000, guid: f8321adbd64675b4cace16e7ece1fafe, type: 3}
+  bossDescription: When playing a K, it adds as many points as needed to win, unless
+    effects nullify or alter it
   maxHealth: 3
   handsPerRound: 9
   difficultyMultiplier: 1
-  unlockOrder: 2
+  unlockOrder: 7
   mechanics:
-  - mechanicType: 1
-    mechanicName: Steal Cards
-    mechanicDescription: Is able to steal cards from the player's hand, randomly
-      acts upon it.
-    activationChance: 0.5
-    isPassive: 1
+  - mechanicType: 16
+    mechanicName: Diplomatic King
+    mechanicDescription: When The Diplomat plays a King, it adds exactly the points
+      needed to reach the winning score
+    activationChance: 1
+    isPassive: 0
     triggersOnPlayerAction: 0
     triggersOnCardDealt: 1
-    triggersOnRoundEnd: 1
-    mechanicValue: 1
+    triggersOnRoundEnd: 0
+    mechanicValue: 0
     mechanicMultiplier: 1
     mechanicTags: []
-  rewards:
-  - rewardName: Thief's Loot
-    rewardDescription: Unlocks the Hitman tarot card
-    rewardIcon: {fileID: 0}
-    grantsTarotCard: 1
-    tarotCardType: 24
-    grantsPermanentUpgrade: 0
-    upgradeName: 
-    upgradeValue: 0
-    grantsBonusBalance: 1
-    bonusAmount: 1000
-  bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
+  rewards: []
+  bossThemeColor: {r: 0.8, g: 0.6, b: 0.2, a: 1}
   bossMusic: {fileID: 0}
   bossDefeatSound: {fileID: 0}
   bossVictorySound: {fileID: 0}
