@@ -245,7 +245,7 @@ public class Deck : MonoBehaviour
         // Initialize boss system
         if (bossManager != null)
         {
-            bossManager.InitializeBoss(BossType.TheDrunkard); // Start with first boss
+            bossManager.InitializeBoss(BossType.TheDrunkard); // Start with The Captain for testing
             _currentBossState = BossState.Fighting;
         }
         
@@ -555,6 +555,11 @@ public class Deck : MonoBehaviour
         }
 
         GameObject newCard = dealer.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex], originalIndices[cardIndex]);
+        
+        // Debug: Log what card was dealt to dealer
+        CardInfo cardInfo = new CardInfo(cardIndex, values[cardIndex], faces[cardIndex], faces);
+        Debug.Log($"Dealt to dealer: {cardInfo.cardName} (Index: {cardIndex})");
+        
         cardIndex++;
         
         // Notify boss system about card dealt
@@ -575,6 +580,11 @@ public class Deck : MonoBehaviour
         }
 
         GameObject newCard = player.GetComponent<CardHand>().Push(faces[cardIndex], values[cardIndex], originalIndices[cardIndex]);
+        
+        // Debug: Log what card was dealt to player
+        CardInfo cardInfo = new CardInfo(cardIndex, values[cardIndex], faces[cardIndex], faces);
+        Debug.Log($"Dealt to player: {cardInfo.cardName} (Index: {cardIndex})");
+        
         cardIndex++;
         UpdateScoreDisplays();  
 
@@ -584,6 +594,13 @@ public class Deck : MonoBehaviour
         if (bossManager != null && newCard != null)
         {
             bossManager.OnCardDealt(newCard, true);
+        }
+        
+        // Apply Captain's Jack nullification if this is The Captain boss
+        if (bossManager != null && bossManager.currentBoss != null && 
+            bossManager.currentBoss.bossType == BossType.TheCaptain)
+        {
+            ApplyCaptainJackNullification();
         }
     }
 
@@ -2492,6 +2509,14 @@ private void EndHand(WinCode code)
             yield return new WaitForSeconds(Constants.CardDealDelay);
         }
 
+        // Apply Captain's Jack nullification after initial deal
+        if (bossManager != null && bossManager.currentBoss != null && 
+            bossManager.currentBoss.bossType == BossType.TheCaptain)
+        {
+            Debug.Log("Applying Captain's Jack nullification after initial deal");
+            ApplyCaptainJackNullification();
+        }
+
         // 🔮 Cursed Hourglass effect check — trigger redeal
         /*if (PlayerActuallyHasCard(TarotCardType.CursedHourglass))
         {
@@ -3072,7 +3097,216 @@ private void EndHand(WinCode code)
         }
     }
 
+    /// <summary>
+    /// Modify deck for The Captain boss - only Jacks and all Spades
+    /// </summary>
+    public void ModifyDeckForCaptain()
+    {
+        Debug.Log("=== MODIFYING DECK FOR CAPTAIN ===");
+        Debug.Log($"Original deck size: {faces.Length} cards");
+        
+        // Create a new deck with only Jacks and Spades
+        List<Sprite> newFaces = new List<Sprite>();
+        List<int> newValues = new List<int>();
+        List<int> newOriginalIndices = new List<int>();
+        
+        // Add all Jacks (one from each suit)
+        for (int suit = 0; suit < 4; suit++)
+        {
+            int jackIndex = (suit * Constants.CardsPerSuit) + 10; // Jack is at index 10 in each suit
+            if (jackIndex < faces.Length)
+            {
+                newFaces.Add(faces[jackIndex]);
+                newValues.Add(values[jackIndex]);
+                newOriginalIndices.Add(originalIndices[jackIndex]);
+                Debug.Log($"Added Jack: {GetCardInfo(jackIndex).cardName}");
+            }
+        }
+        
+        // Add all Spades (13 cards: A, 2-10, J, Q, K)
+        int spadesStartIndex = (int)CardSuit.Spades * Constants.CardsPerSuit; // 39
+        for (int i = 0; i < Constants.CardsPerSuit; i++)
+        {
+            int spadeIndex = spadesStartIndex + i;
+            if (spadeIndex < faces.Length)
+            {
+                newFaces.Add(faces[spadeIndex]);
+                newValues.Add(values[spadeIndex]);
+                newOriginalIndices.Add(originalIndices[spadeIndex]);
+                Debug.Log($"Added Spade: {GetCardInfo(spadeIndex).cardName}");
+            }
+        }
+        
+        // Replace the deck arrays
+        faces = newFaces.ToArray();
+        values = newValues.ToArray();
+        originalIndices = newOriginalIndices.ToArray();
+        
+        Debug.Log($"Captain's deck created: {faces.Length} cards ({newFaces.Count - 4} Spades + 4 Jacks)");
+        
+        // Reset card index and shuffle the new deck
+        cardIndex = 0;
+        ShuffleCards();
+        
+        // Debug: Print the first few cards after shuffle
+        Debug.Log("First 5 cards in Captain's deck after shuffle:");
+        for (int i = 0; i < Mathf.Min(5, faces.Length); i++)
+        {
+            CardInfo cardInfo = new CardInfo(i, values[i], faces[i], faces);
+            Debug.Log($"  Card {i}: {cardInfo.cardName}");
+        }
+        
+        Debug.Log("=== DECK MODIFICATION COMPLETE ===");
+        
+        // Show message to player
+        ShowCaptainDeckMessage();
+    }
+    
+    /// <summary>
+    /// Check if a card is a Jack (any suit)
+    /// </summary>
+    public bool IsJack(CardInfo cardInfo)
+    {
+        return cardInfo.suitIndex == 10; // Jack is at index 10 in each suit
+    }
+    
+    /// <summary>
+    /// Check if a card is a Jack using CardModel
+    /// </summary>
+    public bool IsJack(CardModel cardModel)
+    {
+        if (cardModel == null) return false;
+        CardInfo cardInfo = GetCardInfoFromModel(cardModel);
+        return IsJack(cardInfo);
+    }
+    
+    /// <summary>
+    /// Apply The Captain's Jack nullification to player's hand
+    /// </summary>
+    public void ApplyCaptainJackNullification()
+    {
+        if (player == null) return;
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return;
+        
+        bool hasJacks = false;
+        foreach (GameObject cardObj in playerHand.cards)
+        {
+            CardModel cardModel = cardObj.GetComponent<CardModel>();
+            if (cardModel != null && IsJack(cardModel))
+            {
+                // Nullify Jack value (set to 0)
+                cardModel.value = 0;
+                hasJacks = true;
+                
+                // Visual feedback - make the card appear "nullified"
+                SpriteRenderer spriteRenderer = cardObj.GetComponent<SpriteRenderer>();
+                if (spriteRenderer != null)
+                {
+                    spriteRenderer.color = new Color(0.7f, 0.7f, 0.7f, 0.8f); // Gray out the card
+                }
+                
+                Debug.Log($"Captain nullified Jack: {GetCardInfoFromModel(cardModel).cardName}");
+            }
+        }
+        
+        if (hasJacks)
+        {
+            // Update points after nullification
+            playerHand.UpdatePoints();
+            UpdateScoreDisplays();
+            Debug.Log("Captain's Jack nullification applied to player's hand");
+        }
+    }
+    
+    /// <summary>
+    /// Show Captain's deck modification message
+    /// </summary>
+    public void ShowCaptainDeckMessage()
+    {
+        if (finalMessage != null)
+        {
+            finalMessage.text = "The Captain's deck: Jacks and Spades only!\nYour Jacks will be nullified!";
+            finalMessage.gameObject.SetActive(true);
+            
+            // Hide the message after a few seconds
+            StartCoroutine(HideCaptainMessage());
+        }
+    }
+    
+    private IEnumerator HideCaptainMessage()
+    {
+        yield return new WaitForSeconds(3f);
+        if (finalMessage != null)
+        {
+            finalMessage.gameObject.SetActive(false);
+        }
+    }
 
+    /// <summary>
+    /// Ensure deck is properly set up for the current boss
+    /// </summary>
+    public void EnsureDeckSetup()
+    {
+        // If no boss system or no special deck is needed, do a regular shuffle
+        if (bossManager == null || (bossManager.currentBoss != null && !bossManager.currentBoss.usesSpecialDeck))
+        {
+            if (cardIndex == 0) // Only shuffle if not already done
+            {
+                ShuffleCards();
+                Debug.Log("Regular deck shuffled");
+            }
+        }
+    }
 
-
+    /// <summary>
+    /// Validate that The Captain's deck is properly set up
+    /// </summary>
+    public void ValidateCaptainDeck()
+    {
+        Debug.Log("=== VALIDATING CAPTAIN'S DECK ===");
+        Debug.Log($"Deck size: {faces.Length} cards");
+        
+        if (faces.Length != 17)
+        {
+            Debug.LogError($"Captain's deck should have 17 cards, but has {faces.Length}!");
+            return;
+        }
+        
+        int jackCount = 0;
+        int spadeCount = 0;
+        
+        for (int i = 0; i < faces.Length; i++)
+        {
+            CardInfo cardInfo = new CardInfo(i, values[i], faces[i], faces);
+            
+            if (cardInfo.suitIndex == 10) // Jack
+            {
+                jackCount++;
+                Debug.Log($"Jack found: {cardInfo.cardName}");
+            }
+            else if (cardInfo.suit == CardSuit.Spades)
+            {
+                spadeCount++;
+                Debug.Log($"Spade found: {cardInfo.cardName}");
+            }
+            else
+            {
+                Debug.LogError($"Invalid card in Captain's deck: {cardInfo.cardName} (Suit: {cardInfo.suit}, SuitIndex: {cardInfo.suitIndex})");
+            }
+        }
+        
+        Debug.Log($"Validation complete: {jackCount} Jacks, {spadeCount} Spades");
+        
+        if (jackCount != 4 || spadeCount != 13)
+        {
+            Debug.LogError($"Captain's deck validation failed! Expected 4 Jacks and 13 Spades, got {jackCount} Jacks and {spadeCount} Spades");
+        }
+        else
+        {
+            Debug.Log("Captain's deck validation successful!");
+        }
+        
+        Debug.Log("=== END VALIDATION ===");
+    }
 }

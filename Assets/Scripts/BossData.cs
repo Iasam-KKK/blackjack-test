@@ -44,7 +44,8 @@ public enum BossMechanicType
     TemporaryTheft,       // Temporarily steal cards/items
     MultiplierEffect,     // Apply special multiplier effects
     WinStreakEffect,      // Effects based on win streaks
-    PeekNextCards         // Peek at next cards and act upon them (Forgetful Seer)
+    PeekNextCards,        // Peek at next cards and act upon them (Forgetful Seer)
+    JackNullification     // Nullify Jacks in player's hand (The Captain)
 }
 
 [System.Serializable]

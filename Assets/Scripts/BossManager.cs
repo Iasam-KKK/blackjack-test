@@ -297,10 +297,36 @@ public class BossManager : MonoBehaviour
             ModifyDeckForBoss();
         }
         
+        // Special handling for The Captain
+        if (currentBoss.bossType == BossType.TheCaptain)
+        {
+            ApplyCaptainRules();
+        }
+        
         // Apply passive mechanics
         foreach (var mechanic in activeMechanics.Where(m => m.isPassive))
         {
             ApplyMechanic(mechanic);
+        }
+    }
+    
+    /// <summary>
+    /// Apply The Captain's special rules
+    /// </summary>
+    private void ApplyCaptainRules()
+    {
+        if (deck != null)
+        {
+            Debug.Log("=== APPLYING CAPTAIN RULES ===");
+            
+            // Jack nullification is handled in the deck when cards are dealt
+            Debug.Log("The Captain's Jack nullification will be applied when cards are dealt");
+            
+            Debug.Log("=== CAPTAIN RULES APPLIED ===");
+        }
+        else
+        {
+            Debug.LogError("Deck is null in ApplyCaptainRules!");
         }
     }
     
@@ -377,6 +403,15 @@ public class BossManager : MonoBehaviour
     public void OnCardDealt(GameObject card, bool isPlayer)
     {
         if (!isBossActive) return;
+        
+        // Special handling for The Captain - nullify Jacks in player's hand
+        if (currentBoss != null && currentBoss.bossType == BossType.TheCaptain && isPlayer)
+        {
+            if (deck != null)
+            {
+                deck.ApplyCaptainJackNullification();
+            }
+        }
          
         foreach (var mechanic in activeMechanics.Where(m => m.triggersOnCardDealt))
         {
@@ -642,6 +677,9 @@ public class BossManager : MonoBehaviour
                 break;
             case BossMechanicType.PeekNextCards:
                 PeekNextCards(mechanic);
+                break;
+            case BossMechanicType.JackNullification:
+                ApplyJackNullification(mechanic);
                 break;
         }
         
@@ -943,6 +981,18 @@ public class BossManager : MonoBehaviour
             deck.originalIndices[secondPos] = tempIndex;
             
             Debug.Log($"Swapped {nextCards[0].cardName} and {nextCards[1].cardName} positions");
+        }
+    }
+    
+    /// <summary>
+    /// Apply Jack nullification mechanic (The Captain)
+    /// </summary>
+    private void ApplyJackNullification(BossMechanic mechanic)
+    {
+        if (deck != null)
+        {
+            deck.ApplyCaptainJackNullification();
+            Debug.Log("The Captain's Jack nullification mechanic applied");
         }
     }
     
