@@ -2292,6 +2292,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 5d1f3138e0eb5f2498e62aac72535133, type: 2}
   - {fileID: 11400000, guid: e39bf47dc8832a145af92138e6414a48, type: 2}
   - {fileID: 11400000, guid: 527e319ad82f7ab4da6cf485a76e09bb, type: 2}
+  - {fileID: 11400000, guid: 8e54edbf9caff5d43a199bb8f9b2afbc, type: 2}
   currentBossHealth: 10
   currentHand: 1
   totalBossesDefeated: 0
@@ -4457,7 +4458,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 41.15
+  m_fontSize: 45.9
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -9529,7 +9530,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.14937115, y: 0.11119621}
   m_AnchorMax: {x: 0.41637117, y: 0.3986994}
-  m_AnchoredPosition: {x: 0.9834595, y: -1.8720093}
+  m_AnchoredPosition: {x: 0.9834595, y: -1.8720169}
   m_SizeDelta: {x: 8.4556, y: 4.4987}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1064538559

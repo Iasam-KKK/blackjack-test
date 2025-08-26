@@ -721,6 +721,11 @@ public class BossManager : MonoBehaviour
             case BossMechanicType.PermanentDestruction:
                 // This is handled in EndHand when boss wins
                 break;
+            case BossMechanicType.PermanentlystealsallQueensplayed:
+                StealQueens(mechanic);
+                Debug.Log("The Degenerate mechanic applied");
+                break;
+
         }
         
         OnBossMechanicTriggered?.Invoke(currentBoss);
@@ -878,13 +883,73 @@ public class BossManager : MonoBehaviour
             }
         }
     }
-    
+    private void StealQueens(BossMechanic mechanic)
+    {
+        if (deck == null || deck.player == null) return;
+
+        var playerHand = deck.player.GetComponent<CardHand>();
+        var dealerHand = deck.dealer.GetComponent<CardHand>();
+        if (playerHand == null || dealerHand == null) return;
+
+        // Collect all Queens from player's hand
+        List<GameObject> queensToSteal = new List<GameObject>();
+        foreach (var cardObj in playerHand.cards)
+        {
+            CardModel cardModel = cardObj.GetComponent<CardModel>();
+            if (cardModel != null)
+            {
+                CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+                if (cardInfo.suitIndex == 11) // Queen
+                {
+                    queensToSteal.Add(cardObj);
+                }
+            }
+        }
+
+        if (queensToSteal.Count == 0)
+        {
+            Debug.Log("The Degenerate: No Queens to steal.");
+            return;
+        }
+
+        // Steal all Queens immediately
+        foreach (var queen in queensToSteal)
+        {
+            // Remove from player's hand
+            playerHand.cards.Remove(queen);
+
+            // Add to dealer's hand
+            dealerHand.cards.Add(queen);
+            queen.transform.SetParent(dealerHand.transform);
+
+            // Animate the theft
+            StartCoroutine(AnimateCardTheft(queen, true));
+
+            // Debug log
+            CardModel cardModel = queen.GetComponent<CardModel>();
+            CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+            Debug.Log($"The Degenerate steals: {cardInfo.cardName}");
+        }
+
+        // Update hands and points
+        playerHand.ArrangeCardsInWindow();
+        playerHand.UpdatePoints();
+        dealerHand.ArrangeCardsInWindow();
+        dealerHand.UpdatePoints();
+        deck.UpdateScoreDisplays();
+
+        // Show boss message
+        if (newBossPanel != null)
+        {
+            newBossPanel.ShowBossMessage($"The Degenerate steals {queensToSteal.Count} Queen{(queensToSteal.Count > 1 ? "s" : "")} from your hand!");
+            StartCoroutine(HideBossMessageAfterDelay(2f));
+        }
+    }
     private void DestroyTableCards(BossMechanic mechanic)
     {
         // Implementation for destroying cards on the table
         Debug.Log("Destroying table cards...");
     }
-    
     private void ModifyBetAmount(BossMechanic mechanic)
     {
         if (deck != null)

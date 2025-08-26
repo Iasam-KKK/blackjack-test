@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
+  m_Name: TheDegenerate
+  m_EditorClassIdentifier: 
+  bossName: TheDegenerate
+  bossType: 11
+  bossPortrait: {fileID: 21300000, guid: fe2118953d973824d93d7d3ebe0e727f, type: 3}
+  bossDescription: Permanently steals all Queens played
+  maxHealth: 3
+  handsPerRound: 9
+  difficultyMultiplier: 1
+  unlockOrder: 7
+  mechanics:
+  - mechanicType: 16
+    mechanicName: Permanently steals all Queens played
+    mechanicDescription: Permanently steals all Queens played
+    activationChance: 0.6
+    isPassive: 0
+    triggersOnPlayerAction: 1
+    triggersOnCardDealt: 0
+    triggersOnRoundEnd: 1
+    mechanicValue: 0
+    mechanicMultiplier: 0
+    mechanicTags: []
+  rewards: []
+  bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
+  bossMusic: {fileID: 0}
+  bossDefeatSound: {fileID: 0}
+  bossVictorySound: {fileID: 0}
+  animationDuration: 0.5
+  animationCurve:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  disablesTarotCards: 0
+  usesSpecialDeck: 0
+  hasWinStreakEffect: 0
+  isFinalBoss: 0
+  allowTarotCards: 1
