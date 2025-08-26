@@ -48,7 +48,8 @@ public enum BossMechanicType
     JackNullification,    // Nullify Jacks in player's hand (The Captain)
     StealLaidOutCards,    // Steal cards already laid out and use them (The Traitor)
     PermanentDestruction, // Permanently destroy cards if boss wins (The Traitor)
-    DiplomaticKing        // King adds exactly the points needed to win (The Diplomat)
+    DiplomaticKing,       // King adds exactly the points needed to win (The Diplomat)
+    SeductressIntercept   // Intercept Kings and Jacks, value them optimally (The Seductress)
 }
 
 [System.Serializable]

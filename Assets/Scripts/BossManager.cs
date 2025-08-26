@@ -736,6 +736,9 @@ public class BossManager : MonoBehaviour
             case BossMechanicType.DiplomaticKing:
                 // This is handled in ApplyMechanicToCard when a King is dealt
                 break;
+            case BossMechanicType.SeductressIntercept:
+                // This is handled in ApplyMechanicToCard when K/J is dealt
+                break;
         }
         
         OnBossMechanicTriggered?.Invoke(currentBoss);
@@ -759,6 +762,9 @@ public class BossManager : MonoBehaviour
                 {
                     ApplyDiplomaticKing(card, mechanic);
                 }
+                break;
+            case BossMechanicType.SeductressIntercept:
+                ApplySeductressIntercept(card, mechanic, isPlayer);
                 break;
         }
     }
@@ -1397,6 +1403,238 @@ public class BossManager : MonoBehaviour
         yield return kingSequence.WaitForCompletion();
     }
     
+    /// <summary>
+    /// Apply The Seductress's card interception mechanic
+    /// </summary>
+    private void ApplySeductressIntercept(GameObject card, BossMechanic mechanic, bool isPlayer)
+    {
+        if (card == null || deck == null) return;
+        
+        CardModel cardModel = card.GetComponent<CardModel>();
+        if (cardModel == null) return;
+        
+        // Check if this is a King or Jack
+        CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+        bool isKingOrJack = (cardInfo.suitIndex == 10 || cardInfo.suitIndex == 12); // Jack=10, King=12
+        
+        Debug.Log($"The Seductress sees: {cardInfo.cardName} (suitIndex: {cardInfo.suitIndex}) for {(isPlayer ? "player" : "dealer")}");
+        
+        if (isKingOrJack)
+        {
+            Debug.Log($"The Seductress intercepts: {cardInfo.cardName}!");
+            
+            if (isPlayer)
+            {
+                // This card was intended for the player, but The Seductress intercepts it
+                StartCoroutine(InterceptPlayerCard(card, cardInfo));
+            }
+            else
+            {
+                // This card was intended for the dealer, apply optimal value
+                StartCoroutine(OptimizeSeductressCard(card, cardInfo));
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Intercept a King or Jack that was meant for the player
+    /// </summary>
+    private IEnumerator InterceptPlayerCard(GameObject card, CardInfo cardInfo)
+    {
+        // Wait a moment for the card to be properly positioned
+        yield return new WaitForEndOfFrame();
+        
+        if (deck == null || deck.player == null || deck.dealer == null) yield break;
+        
+        CardHand playerHand = deck.player.GetComponent<CardHand>();
+        CardHand dealerHand = deck.dealer.GetComponent<CardHand>();
+        
+        if (playerHand == null || dealerHand == null) yield break;
+        
+        // Remove from player's hand if it's there
+        if (playerHand.cards.Contains(card))
+        {
+            playerHand.cards.Remove(card);
+            Debug.Log($"Removed {cardInfo.cardName} from player's hand");
+        }
+        
+        // Add to dealer's hand
+        dealerHand.cards.Add(card);
+        card.transform.SetParent(dealerHand.transform);
+        
+        // Optimize the card value for The Seductress
+        yield return StartCoroutine(OptimizeInterceptedCard(card, cardInfo));
+        
+        // Update hands
+        playerHand.ArrangeCardsInWindow();
+        playerHand.UpdatePoints();
+        dealerHand.ArrangeCardsInWindow();
+        dealerHand.UpdatePoints();
+        
+        deck.UpdateScoreDisplays();
+        
+        // Show visual effect and message
+        StartCoroutine(AnimateSeductressIntercept(card));
+        
+        if (newBossPanel != null)
+        {
+            newBossPanel.ShowBossMessage($"The Seductress seduces your {cardInfo.cardName}!");
+            StartCoroutine(HideBossMessageAfterDelay(3f));
+        }
+    }
+    
+    /// <summary>
+    /// Optimize a King or Jack that was already going to the dealer
+    /// </summary>
+    private IEnumerator OptimizeSeductressCard(GameObject card, CardInfo cardInfo)
+    {
+        yield return new WaitForEndOfFrame();
+        
+        yield return StartCoroutine(OptimizeInterceptedCard(card, cardInfo));
+        
+        // Show message for optimized card
+        if (newBossPanel != null)
+        {
+            CardModel cardModel = card.GetComponent<CardModel>();
+            if (cardModel != null)
+            {
+                newBossPanel.ShowBossMessage($"The Seductress values her {cardInfo.cardName} as {cardModel.value}!");
+                StartCoroutine(HideBossMessageAfterDelay(2f));
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Optimize the value of an intercepted King or Jack
+    /// </summary>
+    private IEnumerator OptimizeInterceptedCard(GameObject card, CardInfo cardInfo)
+    {
+        if (deck == null || deck.dealer == null) yield break;
+        
+        CardModel cardModel = card.GetComponent<CardModel>();
+        if (cardModel == null) yield break;
+        
+        CardHand dealerHand = deck.dealer.GetComponent<CardHand>();
+        if (dealerHand == null) yield break;
+        
+        // Calculate current dealer points (excluding this card)
+        int currentPoints = 0;
+        foreach (GameObject otherCard in dealerHand.cards)
+        {
+            if (otherCard != card)
+            {
+                CardModel otherCardModel = otherCard.GetComponent<CardModel>();
+                if (otherCardModel != null)
+                {
+                    currentPoints += otherCardModel.value;
+                }
+            }
+        }
+        
+        int playerPoints = deck.GetPlayerPoints();
+        
+        // Decide optimal value: 10 or 1
+        int optimalValue = 10; // Default to 10
+        
+        // If using 10 would bust, use 1
+        if (currentPoints + 10 > Constants.Blackjack)
+        {
+            optimalValue = 1;
+            Debug.Log($"The Seductress chooses value 1 to avoid bust (current: {currentPoints})");
+        }
+        // If using 10 would give a perfect score (17-21), use it
+        else if (currentPoints + 10 >= 17 && currentPoints + 10 <= Constants.Blackjack)
+        {
+            optimalValue = 10;
+            Debug.Log($"The Seductress chooses value 10 for optimal score (current: {currentPoints})");
+        }
+        // If using 1 would allow drawing more cards safely, and current is low, use 1
+        else if (currentPoints < 11 && currentPoints + 1 < 12)
+        {
+            optimalValue = 1;
+            Debug.Log($"The Seductress chooses value 1 to keep options open (current: {currentPoints})");
+        }
+        // Otherwise, use 10 for maximum advantage
+        else
+        {
+            optimalValue = 10;
+            Debug.Log($"The Seductress chooses value 10 for maximum value (current: {currentPoints})");
+        }
+        
+        // Apply the optimal value
+        cardModel.value = optimalValue;
+        
+        Debug.Log($"The Seductress optimized {cardInfo.cardName} to value {optimalValue}");
+        
+        yield return null;
+    }
+    
+    /// <summary>
+    /// Animate The Seductress's card interception
+    /// </summary>
+    private IEnumerator AnimateSeductressIntercept(GameObject card)
+    {
+        if (card == null) yield break;
+        
+        Sequence seductionSequence = DOTween.Sequence();
+        
+        SpriteRenderer spriteRenderer = card.GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+        {
+            // Pink/red seductive glow
+            seductionSequence.Append(spriteRenderer.DOColor(new Color(1f, 0.4f, 0.7f), 0.3f));
+            seductionSequence.Append(spriteRenderer.DOColor(Color.white, 0.3f));
+            seductionSequence.Append(spriteRenderer.DOColor(new Color(1f, 0.4f, 0.7f), 0.3f));
+            seductionSequence.Append(spriteRenderer.DOColor(Color.white, 0.3f));
+        }
+        
+        // Gentle floating motion
+        seductionSequence.Join(card.transform.DOLocalMoveY(card.transform.localPosition.y + 0.5f, 0.6f)
+            .SetEase(Ease.InOutSine).SetLoops(2, LoopType.Yoyo));
+        
+        // Subtle rotation
+        seductionSequence.Join(card.transform.DORotate(new Vector3(0, 0, 10), 0.3f)
+            .SetEase(Ease.InOutSine).SetLoops(4, LoopType.Yoyo));
+        
+        yield return seductionSequence.WaitForCompletion();
+    }
+    
+    /// <summary>
+    /// Public method to handle The Seductress interception from Deck.cs
+    /// </summary>
+    public IEnumerator HandleSeductressInterception(GameObject card, CardInfo cardInfo, bool wasIntercepted)
+    {
+        if (wasIntercepted)
+        {
+            // This card was meant for the player but was intercepted
+            yield return StartCoroutine(OptimizeInterceptedCard(card, cardInfo));
+            
+            // Show visual effect and message
+            StartCoroutine(AnimateSeductressIntercept(card));
+            
+            if (newBossPanel != null)
+            {
+                newBossPanel.ShowBossMessage($"The Seductress seduces your {cardInfo.cardName}!");
+                StartCoroutine(HideBossMessageAfterDelay(3f));
+            }
+        }
+        else
+        {
+            // This card was already going to dealer, just optimize
+            yield return StartCoroutine(OptimizeInterceptedCard(card, cardInfo));
+            
+            if (newBossPanel != null)
+            {
+                CardModel cardModel = card.GetComponent<CardModel>();
+                if (cardModel != null)
+                {
+                    newBossPanel.ShowBossMessage($"The Seductress values her {cardInfo.cardName} as {cardModel.value}!");
+                    StartCoroutine(HideBossMessageAfterDelay(2f));
+                }
+            }
+        }
+    }
+    
     private void ModifyDeckForBoss()
     {
         // Implementation for special deck composition (like The Captain)
@@ -1627,6 +1865,83 @@ public class BossManager : MonoBehaviour
         else
         {
             Debug.LogError("Current boss is not The Diplomat!");
+        }
+    }
+    
+    /// <summary>
+    /// Test method to manually trigger Seductress mechanic
+    /// </summary>
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void TestSeductressMechanic()
+    {
+        if (currentBoss != null && currentBoss.bossType == BossType.TheSeductress)
+        {
+            var mechanic = currentBoss.GetMechanic(BossMechanicType.SeductressIntercept);
+            if (mechanic != null)
+            {
+                Debug.Log("Testing Seductress mechanic...");
+                
+                // Check both player and dealer hands for Kings/Jacks
+                if (deck != null)
+                {
+                    if (deck.player != null)
+                    {
+                        CardHand playerHand = deck.player.GetComponent<CardHand>();
+                        if (playerHand != null)
+                        {
+                            foreach (GameObject card in playerHand.cards)
+                            {
+                                CardModel cardModel = card.GetComponent<CardModel>();
+                                if (cardModel != null)
+                                {
+                                    CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+                                    Debug.Log($"Player has: {cardInfo.cardName} (suitIndex: {cardInfo.suitIndex})");
+                                    
+                                    if (cardInfo.suitIndex == 10 || cardInfo.suitIndex == 12) // Jack or King
+                                    {
+                                        Debug.Log("Found King/Jack in player's hand - manually triggering interception");
+                                        ApplySeductressIntercept(card, mechanic, true);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (deck.dealer != null)
+                    {
+                        CardHand dealerHand = deck.dealer.GetComponent<CardHand>();
+                        if (dealerHand != null)
+                        {
+                            foreach (GameObject card in dealerHand.cards)
+                            {
+                                CardModel cardModel = card.GetComponent<CardModel>();
+                                if (cardModel != null)
+                                {
+                                    CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+                                    Debug.Log($"Dealer has: {cardInfo.cardName} (suitIndex: {cardInfo.suitIndex})");
+                                    
+                                    if (cardInfo.suitIndex == 10 || cardInfo.suitIndex == 12) // Jack or King
+                                    {
+                                        Debug.Log("Found King/Jack in dealer's hand - manually triggering optimization");
+                                        ApplySeductressIntercept(card, mechanic, false);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Debug.Log("No Kings or Jacks found in either hand");
+                }
+            }
+            else
+            {
+                Debug.LogError("Seductress Intercept mechanic not found!");
+            }
+        }
+        else
+        {
+            Debug.LogError("Current boss is not The Seductress!");
         }
     }
     
