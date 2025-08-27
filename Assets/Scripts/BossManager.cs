@@ -23,6 +23,8 @@ public class BossManager : MonoBehaviour
     [Header("UI References")]
     public NewBossPanel newBossPanel;
     public BossPreviewPanel bossPreviewPanel;
+    public BossIntroPreviewPanel bossIntroPreviewPanel;
+    public BossUI bossUI;
     
     [Header("Boss Effects")]
     public AudioSource bossAudioSource;
@@ -118,6 +120,12 @@ public class BossManager : MonoBehaviour
         {
             allBosses.AddRange(allBossData);
             Debug.Log($"Loaded {allBosses.Count} boss data files: {string.Join(", ", allBosses.Select(b => b.bossName))}");
+            
+            // Debug boss portrait assignments
+            foreach (var boss in allBosses)
+            {
+                Debug.Log($"Boss {boss.bossName}: Portrait = {boss.bossPortrait != null} {(boss.bossPortrait != null ? $"({boss.bossPortrait.name})" : "")}");
+            }
         }
         else
         {
@@ -241,6 +249,28 @@ public class BossManager : MonoBehaviour
         // Apply boss-specific rules
         ApplyBossRules();
     
+        // Show dramatic center-screen introduction for the first time
+        if (bossUI != null)
+        {
+            Debug.Log("BossUI found, starting introduction sequence");
+            StartCoroutine(ShowBossIntroductionSequence());
+        }
+        else
+        {
+            Debug.LogError("BossUI is null! Make sure to assign the BossUI component in the BossManager Inspector.");
+        }
+        
+        // Show boss intro preview panel
+        if (bossIntroPreviewPanel != null)
+        {
+            Debug.Log("BossIntroPreviewPanel found, showing boss intro");
+            bossIntroPreviewPanel.ShowBossIntro(currentBoss);
+        }
+        else
+        {
+            Debug.LogWarning("BossIntroPreviewPanel is null! Make sure to assign it in the BossManager Inspector.");
+        }
+        
         // Update UI
         if (newBossPanel != null)
         {
@@ -657,11 +687,48 @@ public class BossManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Show boss introduction sequence for current boss
+    /// </summary>
+    private IEnumerator ShowBossIntroductionSequence()
+    {
+        if (currentBoss != null && bossUI != null)
+        {
+            bossUI.ShowBossInCenter(currentBoss);
+            // Panel will auto-hide after 5 seconds, so we don't need to wait or animate to panel
+            yield return new WaitForSeconds(0.1f); // Small delay to ensure the introduction starts
+        }
+    }
+    
+    /// <summary>
     /// Show next boss introduction with dramatic effect
     /// </summary>
     private IEnumerator ShowNextBossIntroduction(BossData nextBoss)
     {
         Debug.Log($"Showing next boss introduction: {nextBoss.bossName}");
+        
+        // Show boss intro preview panel first
+        if (bossIntroPreviewPanel != null)
+        {
+            Debug.Log("BossIntroPreviewPanel found for next boss, showing intro");
+            bossIntroPreviewPanel.ShowBossIntro(nextBoss);
+        }
+        else
+        {
+            Debug.LogWarning("BossIntroPreviewPanel is null in ShowNextBossIntroduction!");
+        }
+        
+        // Show dramatic center-screen introduction using BossUI
+        if (bossUI != null)
+        {
+            Debug.Log("BossUI found for next boss, showing center introduction");
+            bossUI.ShowBossInCenter(nextBoss);
+            // Panel will auto-hide after 5 seconds, no need to manually transition
+            yield return new WaitForSeconds(0.1f); // Small delay to ensure the introduction starts
+        }
+        else
+        {
+            Debug.LogError("BossUI is null in ShowNextBossIntroduction! Make sure to assign the BossUI component in the BossManager Inspector.");
+        }
         
         // Show the boss panel with next boss info
         if (newBossPanel != null)
@@ -670,7 +737,7 @@ public class BossManager : MonoBehaviour
             newBossPanel.ShowNextBossIntroduction(nextBoss);
             
             // Wait for the introduction to be visible
-            yield return new WaitForSeconds(4f);
+            yield return new WaitForSeconds(2f);
         }
         
         // Update the preview panel with next boss info

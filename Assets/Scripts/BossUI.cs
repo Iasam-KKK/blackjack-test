@@ -33,11 +33,15 @@ public class BossUI : MonoBehaviour
     
     private BossManager bossManager;
     private bool isVisible = false;
+    private Coroutine autoHideCoroutine;
     
     private void Start()
     {
         // Find BossManager
         bossManager = FindObjectOfType<BossManager>();
+        
+        // Debug component assignments
+        DebugComponentAssignments();
         
         // Set up initial state
         if (bossBackground != null)
@@ -47,13 +51,77 @@ public class BossUI : MonoBehaviour
             bossBackground.color = color;
         }
         
-        // Hide initially with delay
-        StartCoroutine(DelayedHide());
+        // Don't hide initially - let the boss management system control visibility
+        // StartCoroutine(DelayedHide()); // Commented out to prevent auto-hiding
+    }
+    
+    /// <summary>
+    /// Debug method to check component assignments
+    /// </summary>
+    private void DebugComponentAssignments()
+    {
+        Debug.Log("=== BossUI Component Assignment Debug ===");
+        Debug.Log($"bossPortrait: {bossPortrait != null} {(bossPortrait != null ? $"(GameObject: {bossPortrait.gameObject.name})" : "")}");
+        Debug.Log($"bossNameText: {bossNameText != null}");
+        Debug.Log($"bossDescriptionText: {bossDescriptionText != null}");
+        Debug.Log($"bossBackground: {bossBackground != null}");
+        Debug.Log($"centerPosition: {centerPosition != null}");
+        Debug.Log($"panelPosition: {panelPosition != null}");
+        Debug.Log("=========================================");
+    }
+    
+    /// <summary>
+    /// Test method to manually trigger boss introduction (for debugging)
+    /// </summary>
+    [System.Diagnostics.Conditional("UNITY_EDITOR")]
+    public void TestBossIntroduction()
+    {
+        Debug.Log("Manual test: Starting boss introduction");
+        if (bossManager != null && bossManager.GetCurrentBoss() != null)
+        {
+            ShowBossInCenter(bossManager.GetCurrentBoss());
+        }
+        else
+        {
+            Debug.LogWarning("Cannot test boss introduction - no current boss found");
+        }
     }
     private IEnumerator DelayedHide()
     {
         yield return new WaitForSeconds(2.5f);
         gameObject.SetActive(false);
+    }
+    
+    /// <summary>
+    /// Auto-hide the boss introduction panel after a delay
+    /// </summary>
+    private IEnumerator AutoHideAfterDelay(float delay)
+    {
+        Debug.Log($"AutoHideAfterDelay started, will hide in {delay} seconds");
+        yield return new WaitForSeconds(delay);
+        
+        Debug.Log("AutoHideAfterDelay timer completed, starting fade out");
+        
+        // Fade out and hide
+        CanvasGroup canvasGroup = GetComponent<CanvasGroup>();
+        if (canvasGroup != null)
+        {
+            Debug.Log("Fading out CanvasGroup");
+            canvasGroup.DOFade(0f, fadeInDuration).OnComplete(() => {
+                Debug.Log("Fade complete, hiding GameObject");
+                gameObject.SetActive(false);
+                isVisible = false;
+            });
+        }
+        else
+        {
+            Debug.Log("No CanvasGroup found, hiding GameObject immediately");
+            gameObject.SetActive(false);
+            isVisible = false;
+        }
+        
+        autoHideCoroutine = null; // Clear the reference
+        Debug.Log("Boss introduction panel auto-hidden after delay");
     }
 
     
@@ -294,14 +362,55 @@ public class BossUI : MonoBehaviour
     /// </summary>
     public void ShowBossInCenter(BossData bossData)
     {
-        if (bossPortrait != null && bossData.bossPortrait != null)
+        Debug.Log($"ShowBossInCenter called for boss: {bossData?.bossName}");
+        
+        // Ensure the GameObject is active and visible state is set
+        gameObject.SetActive(true);
+        isVisible = true;
+        
+        // Set boss data with force refresh
+        Debug.Log($"Attempting to set boss portrait. bossPortrait component: {bossPortrait != null}");
+        if (bossData != null)
         {
+            Debug.Log($"Boss data exists: {bossData.bossName}, Portrait sprite: {bossData.bossPortrait != null}");
+            if (bossData.bossPortrait != null)
+            {
+                Debug.Log($"Portrait sprite name: {bossData.bossPortrait.name}");
+            }
+        }
+        
+        if (bossPortrait != null && bossData?.bossPortrait != null)
+        {
+            Debug.Log($"Setting boss portrait to: {bossData.bossPortrait.name}");
             bossPortrait.sprite = bossData.bossPortrait;
+            
+            // Force the image to refresh and ensure it's enabled
+            bossPortrait.enabled = false;
+            bossPortrait.enabled = true;
+            bossPortrait.gameObject.SetActive(false);
+            bossPortrait.gameObject.SetActive(true);
+            
+            Debug.Log($"Boss portrait updated successfully. Current sprite: {bossPortrait.sprite?.name}");
+        }
+        else
+        {
+            Debug.LogError($"Failed to set boss portrait! Portrait component: {bossPortrait != null}, Boss data: {bossData != null}, Portrait sprite: {bossData?.bossPortrait != null}");
+            if (bossPortrait == null)
+            {
+                Debug.LogError("BossPortrait Image component is not assigned in the Inspector!");
+            }
         }
         
         if (bossNameText != null)
         {
             bossNameText.text = bossData.bossName;
+            Debug.Log($"Set boss name to: {bossData.bossName}");
+        }
+        
+        if (bossDescriptionText != null)
+        {
+            bossDescriptionText.text = bossData.bossDescription;
+            Debug.Log($"Set boss description to: {bossData.bossDescription}");
         }
         
         // Move to center position
@@ -315,7 +424,6 @@ public class BossUI : MonoBehaviour
         transform.DOScale(Vector3.one * 1.5f, fadeInDuration).SetEase(Ease.OutBack);
         
         // Show with fade in
-        gameObject.SetActive(true);
         CanvasGroup canvasGroup = GetComponent<CanvasGroup>();
         if (canvasGroup == null)
         {
@@ -323,6 +431,19 @@ public class BossUI : MonoBehaviour
         }
         canvasGroup.alpha = 0f;
         canvasGroup.DOFade(1f, fadeInDuration);
+        
+        // Animate background fade in
+        if (bossBackground != null)
+        {
+            bossBackground.DOFade(0.3f, fadeInDuration);
+        }
+        
+        // Stop any existing auto-hide coroutine and start a new one
+        if (autoHideCoroutine != null)
+        {
+            StopCoroutine(autoHideCoroutine);
+        }
+        autoHideCoroutine = StartCoroutine(AutoHideAfterDelay(5f));
     }
     
     /// <summary>
