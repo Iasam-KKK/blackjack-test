@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Betrayed Couple
   m_EditorClassIdentifier: 
   cardName: The Betrayed Couple
-  cardImage: {fileID: 21300000, guid: d78b35f6ec510404e8e1b8ade76266aa, type: 3}
+  cardImage: {fileID: 21300000, guid: d41fdc44d5d3669479b655346582b250, type: 3}
   price: 100
   description: Removes all heart cards played from your side or the enemy's
   cardType: 13

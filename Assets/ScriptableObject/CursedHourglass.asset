@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: CursedHourglass
   m_EditorClassIdentifier: 
   cardName: CursedHourglass
-  cardImage: {fileID: 21300000, guid: b2a1f08fe5a235a49b28c13531ed68bf, type: 3}
+  cardImage: {fileID: 21300000, guid: f57b0df4d3c6eb54e909c36a7750cd85, type: 3}
   price: 100
   description: 'Lose half of your bet, but temporarily discard all cards in play
     from both sides

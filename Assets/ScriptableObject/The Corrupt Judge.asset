@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Corrupt Judge
   m_EditorClassIdentifier: 
   cardName: The Corrupt Judge
-  cardImage: {fileID: 21300000, guid: 62908ade6bcdf2843ba9730dd7c23342, type: 3}
+  cardImage: {fileID: 21300000, guid: 0955ac3d39d6e6d4f968e7beb74e4ff2, type: 3}
   price: 100
   description: Peek into the next three cards in your hand and rearrange the first
     two if desired

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Housekeeper
   m_EditorClassIdentifier: 
   cardName: The Housekeeper
-  cardImage: {fileID: 21300000, guid: c7f7f22a071e2a844b55eecf8ec20ffe, type: 3}
+  cardImage: {fileID: 21300000, guid: d4c41ab1993448345a7edea1a2e60357, type: 3}
   price: 100
   description: Ads +10 points per JQK in winning play
   cardType: 16

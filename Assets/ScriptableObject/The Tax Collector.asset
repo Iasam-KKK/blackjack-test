@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Tax Collector
   m_EditorClassIdentifier: 
   cardName: The Tax Collector
-  cardImage: {fileID: 21300000, guid: 2896819a7a0a3f34a991a31cc6f8245c, type: 3}
+  cardImage: {fileID: 21300000, guid: ac500640a9efc0a45a1ca5bdda0afa9b, type: 3}
   price: 100
   description: Removes all diamond cards played from your side or the enemy's
   cardType: 15

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The_Assassin
   m_EditorClassIdentifier: 
   cardName: The Assassin
-  cardImage: {fileID: 21300000, guid: 80a337f1425560d4ebf6ce5340169b6b, type: 3}
+  cardImage: {fileID: 21300000, guid: b3d4c6f6f7c25a2448e1848e847607d4, type: 3}
   price: 100
   description: ' Adds a +50 bonus per each spade in the winning hand'
   cardType: 6

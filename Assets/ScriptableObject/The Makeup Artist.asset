@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Makeup Artist
   m_EditorClassIdentifier: 
   cardName: The Makeup Artist
-  cardImage: {fileID: 21300000, guid: abdd3e2cc9b47f04b923efa46ef7c578, type: 3}
+  cardImage: {fileID: 21300000, guid: 809b481ca9f733444b77173a4f505e98, type: 3}
   price: 100
   description: Allows to select a card and allow to pass it for another
   cardType: 9

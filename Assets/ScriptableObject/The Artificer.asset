@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Artificer
   m_EditorClassIdentifier: 
   cardName: The Artificer
-  cardImage: {fileID: 21300000, guid: 2d64185e1639da44887c94d54a34e21b, type: 3}
+  cardImage: {fileID: 21300000, guid: 5b2a1d5fa62f32b4ba4f2e9b195dabc6, type: 3}
   price: 100
   description: Increases the multiplier by 10%
   cardType: 4

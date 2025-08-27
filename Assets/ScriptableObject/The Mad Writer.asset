@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Mad Writer
   m_EditorClassIdentifier: 
   cardName: The Mad Writer
-  cardImage: {fileID: 21300000, guid: c8f5d9bb51122b54ea51cb891dd8a8a3, type: 3}
+  cardImage: {fileID: 21300000, guid: eba487c13fde2b64d9df277c6b363094, type: 3}
   price: 100
   description: Take a look at the next card and shuffle the whole deck if desired
   cardType: 22

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Hitman
   m_EditorClassIdentifier: 
   cardName: The Hitman
-  cardImage: {fileID: 21300000, guid: 42ce33520985b1e44a647698d7083ebd, type: 3}
+  cardImage: {fileID: 21300000, guid: 8380437d5ddb1d94fa910cb689c3e662, type: 3}
   price: 100
   description: Peek into the first three cards on your deck and remove one at discretion
     from play

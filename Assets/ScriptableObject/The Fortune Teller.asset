@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Fortune Teller
   m_EditorClassIdentifier: 
   cardName: The Fortune Teller
-  cardImage: {fileID: 21300000, guid: af8aa03ccdf120a4f97f547e484d8573, type: 3}
+  cardImage: {fileID: 21300000, guid: e4681a5c424ef0242b035a49d4670913, type: 3}
   price: 100
   description: Take a peek into the next two cards on your deck
   cardType: 21

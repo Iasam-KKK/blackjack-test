@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Saboteur
   m_EditorClassIdentifier: 
   cardName: Saboteur
-  cardImage: {fileID: 21300000, guid: f02741fd20d8b1a43a7695c7a0a02dc3, type: 3}
+  cardImage: {fileID: 21300000, guid: 66fdfe1bb5788c14f9ab006f95a6a66b, type: 3}
   price: 100
   description: "Lose \xBC of your bet, temporarily discard all cards from the enemy's
     played side"

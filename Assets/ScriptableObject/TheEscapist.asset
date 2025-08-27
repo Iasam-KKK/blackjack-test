@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: TheEscapist
   m_EditorClassIdentifier: 
   cardName: The Escapist
-  cardImage: {fileID: 21300000, guid: c860cc3dd28881d4eb6f128223699ff4, type: 3}
+  cardImage: {fileID: 21300000, guid: 0b5739652e702fb4aaf7a00dd7d101ea, type: 3}
   price: 100
   description: Prevents losing by destroying the last card hit, but self destroying
     regardless of material

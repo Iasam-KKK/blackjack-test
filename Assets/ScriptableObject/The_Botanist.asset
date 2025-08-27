@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The_Botanist
   m_EditorClassIdentifier: 
   cardName: The Botanist
-  cardImage: {fileID: 21300000, guid: 15560f6f45872a341a789ccd40f4050f, type: 3}
+  cardImage: {fileID: 21300000, guid: ce4c7fb6fee0dec4dbcec5ca14870d11, type: 3}
   price: 100
   description: Adds a +50 bonus per each clover in the winning hand
   cardType: 5

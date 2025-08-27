@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Blacksmith
   m_EditorClassIdentifier: 
   cardName: The Blacksmith
-  cardImage: {fileID: 21300000, guid: 379346db7039b2e4f91c0c91c4bb6a6f, type: 3}
+  cardImage: {fileID: 21300000, guid: bf640e10f8fe8694aa3e15000be3f1fc, type: 3}
   price: 100
   description: Removes all spade cards played from your side or the enemy's
   cardType: 14

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Gardener
   m_EditorClassIdentifier: 
   cardName: The Gardener
-  cardImage: {fileID: 21300000, guid: 9b27190cc5feb6749aeb41de54adf5e5, type: 3}
+  cardImage: {fileID: 21300000, guid: 8a4ccd53ad562874babcd4ee1310a8ec, type: 3}
   price: 100
   description: Removes all clover cards played from your side or the enemy's
   cardType: 12

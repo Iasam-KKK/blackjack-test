@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Spy
   m_EditorClassIdentifier: 
   cardName: The Spy
-  cardImage: {fileID: 21300000, guid: e0a46cec96f7cfa49898e1e76c952ce5, type: 3}
+  cardImage: {fileID: 21300000, guid: fd84293053cf1c840aa8bd48a89909f3, type: 3}
   price: 100
   description: Allows to peek at the next enemy card (show and hide)
   cardType: 17

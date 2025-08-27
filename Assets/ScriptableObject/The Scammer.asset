@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Scammer
   m_EditorClassIdentifier: 
   cardName: The Scammer
-  cardImage: {fileID: 21300000, guid: 111d64cb466d55e429289697c27b1dbb, type: 3}
+  cardImage: {fileID: 21300000, guid: 0801355cefe41064580fcfcdb9e4bf6c, type: 3}
   price: 100
   description: Reverts the enemy's winning play discarding the played card at the
     cost of half the bet

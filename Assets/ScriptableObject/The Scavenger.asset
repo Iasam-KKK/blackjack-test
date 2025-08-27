@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Scavenger
   m_EditorClassIdentifier: 
   cardName: The Scavenger
-  cardImage: {fileID: 21300000, guid: 39927ce8f882e7449a4c89c58eb1b5d3, type: 3}
+  cardImage: {fileID: 21300000, guid: 52ad343b7df358f479460e2468f37c62, type: 3}
   price: 100
   description: Removes all cards played from your side lower than 7 in value
   cardType: 11
