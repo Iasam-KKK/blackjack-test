@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
   m_Name: TheForgetfulSeer
   m_EditorClassIdentifier: 
-  bossName: TheForgetfulSeer
+  bossName: The Forgetful Seer
   bossType: 3
   bossPortrait: {fileID: 21300000, guid: 27bbde1d496e30247afdf23dad84f979, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: 2aa59516d9776544a8180a588d29cffe, type: 3}
   bossDescription: Can see the player's next 2 cards in hand, randomly acts upon
     it
   maxHealth: 3
@@ -24,7 +25,8 @@ MonoBehaviour:
   mechanics:
   - mechanicType: 11
     mechanicName: Peek Next Cards
-    mechanicDescription: Can see the player's next 2 cards in hand, randomly acts upon it
+    mechanicDescription: Can see the player's next 2 cards in hand, randomly acts
+      upon it
     activationChance: 0.8
     isPassive: 0
     triggersOnPlayerAction: 0

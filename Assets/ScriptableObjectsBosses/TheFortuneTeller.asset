@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
   m_Name: TheFortuneTeller
   m_EditorClassIdentifier: 
-  bossName: TheFortuneTeller
+  bossName: The Fortune Teller
   bossType: 1
   bossPortrait: {fileID: 21300000, guid: db183fd8d0ef2354a86639e2adbad70f, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: 474dfa7e11aab914fb56797a9fbe7f51, type: 3}
   bossDescription: Tarot cards introduction. Regular experience, with the use of
     basic Tarot cards
   maxHealth: 3

@@ -10,6 +10,7 @@ public class BossIntroPreviewPanel : MonoBehaviour
     public Image bossPreviewImage;
     public Image bossIntroPanelBg;  // New field for background image
     public TextMeshProUGUI bossNameText;
+    public TextMeshProUGUI bossDescriptionText;  // New field for boss description
     public TextMeshProUGUI bossStatusText;
     
     [Header("Animation Settings")]
@@ -154,6 +155,17 @@ public class BossIntroPreviewPanel : MonoBehaviour
             Debug.LogWarning("Boss name text component is null");
         }
         
+        // Update boss description
+        if (bossDescriptionText != null)
+        {
+            bossDescriptionText.text = boss.bossDescription;
+            Debug.Log($"Updated boss description text: {boss.bossDescription}");
+        }
+        else
+        {
+            Debug.LogWarning("Boss description text component is null");
+        }
+        
         // Update boss status
         if (bossStatusText != null)
         {
@@ -196,6 +208,28 @@ public class BossIntroPreviewPanel : MonoBehaviour
             bossIntroPanelBg.color = bgColor;
         }
         
+        // Reset text alpha values
+        if (bossNameText != null)
+        {
+            var nameColor = bossNameText.color;
+            nameColor.a = 0f;
+            bossNameText.color = nameColor;
+        }
+        
+        if (bossDescriptionText != null)
+        {
+            var descColor = bossDescriptionText.color;
+            descColor.a = 0f;
+            bossDescriptionText.color = descColor;
+        }
+        
+        if (bossStatusText != null)
+        {
+            var statusColor = bossStatusText.color;
+            statusColor.a = 0f;
+            bossStatusText.color = statusColor;
+        }
+        
         // Create animation sequence
         Sequence introSequence = DOTween.Sequence();
         
@@ -213,6 +247,22 @@ public class BossIntroPreviewPanel : MonoBehaviour
         if (bossPreviewImage != null)
         {
             introSequence.Join(bossPreviewImage.DOFade(1f, introFadeDuration * 0.6f));
+        }
+        
+        // Fade in text elements with staggered timing
+        if (bossNameText != null)
+        {
+            introSequence.Insert(introFadeDuration * 0.4f, bossNameText.DOFade(1f, introFadeDuration * 0.5f));
+        }
+        
+        if (bossDescriptionText != null)
+        {
+            introSequence.Insert(introFadeDuration * 0.6f, bossDescriptionText.DOFade(1f, introFadeDuration * 0.5f));
+        }
+        
+        if (bossStatusText != null)
+        {
+            introSequence.Insert(introFadeDuration * 0.8f, bossStatusText.DOFade(1f, introFadeDuration * 0.4f));
         }
         
         // Add shake effect at the end
@@ -274,6 +324,22 @@ public class BossIntroPreviewPanel : MonoBehaviour
         if (bossIntroPanelBg != null)
         {
             hideSequence.Join(bossIntroPanelBg.DOFade(0f, introFadeDuration * 0.5f));
+        }
+        
+        // Fade out text elements
+        if (bossNameText != null)
+        {
+            hideSequence.Join(bossNameText.DOFade(0f, introFadeDuration * 0.3f));
+        }
+        
+        if (bossDescriptionText != null)
+        {
+            hideSequence.Join(bossDescriptionText.DOFade(0f, introFadeDuration * 0.3f));
+        }
+        
+        if (bossStatusText != null)
+        {
+            hideSequence.Join(bossStatusText.DOFade(0f, introFadeDuration * 0.3f));
         }
         
         // Scale down
@@ -373,6 +439,9 @@ public class BossIntroPreviewPanel : MonoBehaviour
         DOTween.Kill(transform);
         if (bossPreviewImage != null) DOTween.Kill(bossPreviewImage.transform);
         if (bossIntroPanelBg != null) DOTween.Kill(bossIntroPanelBg.transform);
+        if (bossNameText != null) DOTween.Kill(bossNameText);
+        if (bossDescriptionText != null) DOTween.Kill(bossDescriptionText);
+        if (bossStatusText != null) DOTween.Kill(bossStatusText);
         
         gameObject.SetActive(false);
     }
@@ -389,6 +458,9 @@ public class BossIntroPreviewPanel : MonoBehaviour
         DOTween.Kill(transform);
         if (bossPreviewImage != null) DOTween.Kill(bossPreviewImage.transform);
         if (bossIntroPanelBg != null) DOTween.Kill(bossIntroPanelBg.transform);
+        if (bossNameText != null) DOTween.Kill(bossNameText);
+        if (bossDescriptionText != null) DOTween.Kill(bossDescriptionText);
+        if (bossStatusText != null) DOTween.Kill(bossStatusText);
         
         // Unsubscribe from events
         if (bossManager != null)

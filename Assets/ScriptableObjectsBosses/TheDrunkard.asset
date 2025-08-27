@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
   m_Name: TheDrunkard
   m_EditorClassIdentifier: 
-  bossName: TheDrunkard
+  bossName: The Drunkard
   bossType: 0
   bossPortrait: {fileID: 21300000, guid: e294bbd4ff55aed4a8aae809d8b98afc, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: 7e88edb7dd040964f8ec986591e61694, type: 3}
   bossDescription: An absolute average playing experience. Random use of regular
     cards. No tarot.
   maxHealth: 3

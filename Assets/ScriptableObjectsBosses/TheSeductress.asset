@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
   m_Name: TheSeductress
   m_EditorClassIdentifier: 
-  bossName: TheSeductress
+  bossName: The Seductress
   bossType: 10
   bossPortrait: {fileID: 21300000, guid: 7ccdf307412f2c144bd1927b45a4a920, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: e889123b687c3c14f90132ae1a6282d6, type: 3}
   bossDescription: Ks and J's played go to the Seductress hand in first place, they
     add 10 or 1 at convenience
   maxHealth: 3

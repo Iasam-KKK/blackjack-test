@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
   m_Name: TheThief
   m_EditorClassIdentifier: 
-  bossName: TheThief
+  bossName: The Thief
   bossType: 2
   bossPortrait: {fileID: 21300000, guid: 5cd97da1025da2546a5a7277be15d20c, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: 7467907fd0fe6b240a2d2997b4d46df9, type: 3}
   bossDescription: Is able to steal cards from the player's hand, randomly acts upon
     it.
   maxHealth: 3
