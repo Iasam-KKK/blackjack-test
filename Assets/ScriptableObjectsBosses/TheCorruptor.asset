@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
   m_Name: TheCorruptor
   m_EditorClassIdentifier: 
-  bossName: TheCorruptor
+  bossName: The Corruptor
   bossType: 15
   bossPortrait: {fileID: 21300000, guid: 839ba56b8bb41354fb250c333fb45378, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: 043a320716669a046b08a74b8ba5e2a2, type: 3}
   bossDescription: When a card is laid down, it can randomly inflate or deflate its
     value
   maxHealth: 3

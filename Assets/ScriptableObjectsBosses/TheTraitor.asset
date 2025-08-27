@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
   m_Name: TheTraitor
   m_EditorClassIdentifier: 
-  bossName: TheTraitor
+  bossName: The Traitor
   bossType: 7
   bossPortrait: {fileID: 21300000, guid: e6bb2c94962c58b4d99ff2b32bee2655, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: 9c1aa8dee13155f4589a050dc1ecca5d, type: 3}
   bossDescription: Steals laid out cards, uses them, if it wins, they are permanently
     destroyed
   maxHealth: 3

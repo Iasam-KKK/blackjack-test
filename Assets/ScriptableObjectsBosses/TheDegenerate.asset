@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
   m_Name: TheDegenerate
   m_EditorClassIdentifier: 
-  bossName: TheDegenerate
+  bossName: The Degenerate
   bossType: 11
   bossPortrait: {fileID: 21300000, guid: fe2118953d973824d93d7d3ebe0e727f, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: ea8407e2279b98e439fadc90ea4ef91d, type: 3}
   bossDescription: Permanently steals all Queens played
   maxHealth: 3
   handsPerRound: 9

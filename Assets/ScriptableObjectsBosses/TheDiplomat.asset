@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
   m_Name: TheDiplomat
   m_EditorClassIdentifier: 
-  bossName: TheDiplomat
+  bossName: The Diplomat
   bossType: 8
   bossPortrait: {fileID: 21300000, guid: f8321adbd64675b4cace16e7ece1fafe, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: 4e59ca7b110f6a84aa6bbe00499a656a, type: 3}
   bossDescription: When playing a K, it adds as many points as needed to win, unless
     effects nullify or alter it
   maxHealth: 3

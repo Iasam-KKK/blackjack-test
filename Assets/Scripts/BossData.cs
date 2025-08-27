@@ -106,6 +106,7 @@ public class BossData : ScriptableObject
     public string bossName;
     public BossType bossType;
     public Sprite bossPortrait;
+    public Sprite bossIntroPanelBg;  // Background image for boss intro panel
     [TextArea(3, 6)]
     public string bossDescription;
     
