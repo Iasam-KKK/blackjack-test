@@ -139,34 +139,7 @@ public class ShopManager : MonoBehaviour
     
 
     
-    /*
-    public void SetupShop()
-    {
-        // Clear any existing cards
-        foreach (Transform child in shopPanel)
-        {
-            if (child.GetComponent<TarotCard>() != null)
-                Destroy(child.gameObject);
-        }
-        
-        // Create cards for each available tarot card, placing them in slots
-        for (int i = 0; i < Mathf.Min(availableTarotCards.Count, shopSlots.Count); i++)
-        {
-            GameObject cardObject = Instantiate(tarotCardPrefab, shopSlots[i]);
-            cardObject.transform.localPosition = Vector3.zero; // Center in slot
-            
-            TarotCard card = cardObject.GetComponent<TarotCard>();
-            if (card != null)
-            {
-                card.cardData = availableTarotCards[i];
-                card.isInShop = true;
-                card.deck = deck;
-            }
-        }
-        
-        FixCardPositioning();
-    }
-    */
+    
     public void SetupShop()
     {
         // 🔹 Check if tarot cards are disabled for this boss

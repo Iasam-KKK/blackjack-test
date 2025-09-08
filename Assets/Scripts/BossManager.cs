@@ -66,6 +66,9 @@ public class BossManager : MonoBehaviour
     
     private void Start()
     {
+        StartCoroutine(ShowBossIntroPanel());
+
+        bossIntroPreviewPanel.gameObject.SetActive(true);
         // Find references if not assigned
         if (deck == null) deck = FindObjectOfType<Deck>();
         if (shopManager == null) shopManager = FindObjectOfType<ShopManager>();
@@ -163,7 +166,12 @@ public class BossManager : MonoBehaviour
         Debug.Log($"Total boss data loaded via AssetDatabase: {allBosses.Count}");
     }
     #endif
-    
+    IEnumerator ShowBossIntroPanel()
+    {
+        bossIntroPreviewPanel.gameObject.SetActive(true);
+        yield return new WaitForSeconds(3f);
+        bossIntroPreviewPanel.gameObject.SetActive(false);
+    }
     /// <summary>
     /// Initialize a specific boss
     /// </summary>
