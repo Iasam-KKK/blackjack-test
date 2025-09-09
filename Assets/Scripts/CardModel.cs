@@ -258,4 +258,26 @@ public class CardModel : MonoBehaviour
             }
         }
     }
+    // Mutate the card’s value and (optionally) update its face sprite
+    public void MutateCard(int newValue, Sprite newFrontSprite = null)
+    {
+        // Update the logical value
+        value = newValue;
+
+        // Update the sprite if provided
+        if (newFrontSprite != null)
+        {
+            cardFront = newFrontSprite;
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.sprite = cardFront;
+            }
+        }
+
+        // Refresh collider size since sprite may change
+        UpdateColliderSize();
+
+        Debug.Log($"[MutateCard] Card {name} mutated to value {newValue}");
+    }
+
 }

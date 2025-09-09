@@ -2669,6 +2669,7 @@ MonoBehaviour:
   currentBoss: {fileID: 11400000, guid: 15fe2c3a399185c4f86ed822c4d056a2, type: 2}
   allBosses:
   - {fileID: 11400000, guid: 15fe2c3a399185c4f86ed822c4d056a2, type: 2}
+  - {fileID: 11400000, guid: 27344157a17b1eb4794ce9ab277077a2, type: 2}
   - {fileID: 11400000, guid: 967ab479678fbeb4bbc4ed3297e38b95, type: 2}
   - {fileID: 11400000, guid: f021d01f1ab394c4eb6e27185f9df345, type: 2}
   - {fileID: 11400000, guid: 387919796449b8145bd6d18a535b5432, type: 2}
@@ -5017,7 +5018,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.15782836, y: 0.35121515}
   m_AnchorMax: {x: 0.8525267, y: 0.82061046}
-  m_AnchoredPosition: {x: -6.046997, y: -3}
+  m_AnchoredPosition: {x: -6.0470276, y: -3}
   m_SizeDelta: {x: 10.910301, y: -3.641098}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &509030047
@@ -8319,7 +8320,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.09470969, y: 0.8366994}
   m_AnchorMax: {x: 0.55700004, y: 0.89069945}
-  m_AnchoredPosition: {x: -1.2165833, y: 0}
+  m_AnchoredPosition: {x: -1.216568, y: 0}
   m_SizeDelta: {x: 2.1506996, y: 0.91190004}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &776578049
@@ -16262,7 +16263,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1683604078
 RectTransform:
   m_ObjectHideFlags: 0

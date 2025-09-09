@@ -51,7 +51,9 @@ public enum BossMechanicType
     DiplomaticKing,       // King adds exactly the points needed to win (The Diplomat)
     SeductressIntercept,  // Intercept Kings and Jacks, value them optimally (The Seductress)
     CorruptCard ,          // Randomly inflate or deflate card values when laid down (The Corruptor)
-    PermanentlystealsallQueensplayed // Permanently steals all Queens played
+    PermanentlystealsallQueensplayed, // Permanently steals all Queens played
+    MutateCards  // The Alchemist - Mutates cards for benefit (boss) or damage (player)
+
 
 }
 
