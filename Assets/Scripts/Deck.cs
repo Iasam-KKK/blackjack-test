@@ -1004,6 +1004,12 @@ private void EndHand(WinCode code)
             buttonText.text = "Play Again";
         }
     }
+    
+    // Return stolen cards for The Naughty Child after each hand
+    if (bossManager != null)
+    {
+        bossManager.ReturnNaughtyChildStolenCards();
+    }
 }
 
     public void PlayAgain()

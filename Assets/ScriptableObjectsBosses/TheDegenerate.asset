@@ -20,7 +20,7 @@ MonoBehaviour:
   maxHealth: 3
   handsPerRound: 9
   difficultyMultiplier: 1
-  unlockOrder: 7
+  unlockOrder: 10
   mechanics:
   - mechanicType: 16
     mechanicName: Permanently steals all Queens played

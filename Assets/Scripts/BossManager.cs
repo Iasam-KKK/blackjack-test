@@ -48,6 +48,11 @@ public class BossManager : MonoBehaviour
     private List<GameObject> traitorStolenCards = new List<GameObject>();
     private List<int> traitorStolenCardIndices = new List<int>(); // Track original deck indices for permanent destruction
     
+    // The Naughty Child specific tracking
+    private List<GameObject> naughtyChildStolenCards = new List<GameObject>();
+    private List<TarotCard> naughtyChildStolenTarots = new List<TarotCard>();
+    private List<Transform> naughtyChildOriginalTarotSlots = new List<Transform>();
+    
     // Singleton pattern
     public static BossManager Instance { get; private set; }
     
@@ -242,6 +247,7 @@ public class BossManager : MonoBehaviour
     
         // Clear any previous boss-specific tracking
         ClearTraitorTracking();
+        ClearNaughtyChildTracking();
         
         // Load boss mechanics
         LoadBossMechanics();
@@ -806,6 +812,12 @@ public class BossManager : MonoBehaviour
                 break;
             case BossMechanicType.PermanentDestruction:
                 // This is handled in EndHand when boss wins
+                break;
+            case BossMechanicType.HideConsumables:
+                HideConsumables();
+                break;
+            case BossMechanicType.TemporaryCardTheft:
+                TemporaryCardTheft(mechanic);
                 break;
             case BossMechanicType.DiplomaticKing:
                 // This is handled in ApplyMechanicToCard when a King is dealt
@@ -2297,6 +2309,229 @@ public class BossManager : MonoBehaviour
     {
         traitorStolenCards.Clear();
         traitorStolenCardIndices.Clear();
+    }
+    
+    /// <summary>
+    /// Clear The Naughty Child's tracking when initializing a new boss
+    /// </summary>
+    private void ClearNaughtyChildTracking()
+    {
+        naughtyChildStolenCards.Clear();
+        naughtyChildStolenTarots.Clear();
+        naughtyChildOriginalTarotSlots.Clear();
+    }
+    
+    /// <summary>
+    /// Hide all consumables (tarot cards) by greying them out and disabling them
+    /// </summary>
+    private void HideConsumables()
+    {
+        if (shopManager != null && shopManager.tarotPanel != null)
+        {
+            var tarotCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
+            foreach (var card in tarotCards)
+            {
+                if (card != null)
+                {
+                    // Disable the card's functionality
+                    card.enabled = false;
+                    
+                    // Grey out the card visually
+                    var cardImage = card.GetComponent<Image>();
+                    if (cardImage != null)
+                    {
+                        cardImage.color = Color.gray;
+                    }
+                    
+                    Debug.Log($"The Naughty Child hides tarot card: {card.cardData?.cardName}");
+                }
+            }
+            
+            // Show boss message
+            if (newBossPanel != null)
+            {
+                newBossPanel.ShowBossMessage("The Naughty Child hides all your tarot cards!");
+                StartCoroutine(HideBossMessageAfterDelay(2f));
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Temporarily steal cards from player (both deck cards and tarot cards)
+    /// </summary>
+    private void TemporaryCardTheft(BossMechanic mechanic)
+    {
+        int deckCardsToSteal = 0; // Declare at method scope
+        
+        if (deck != null && deck.player != null)
+        {
+            var playerHand = deck.player.GetComponent<CardHand>();
+            
+            if (playerHand != null && playerHand.cards.Count > 0)
+            {
+                // Steal deck cards
+                deckCardsToSteal = Mathf.Min(mechanic.mechanicValue, playerHand.cards.Count - 1); // Leave at least 1 card
+                deckCardsToSteal = Mathf.Max(0, deckCardsToSteal);
+                
+                for (int i = 0; i < deckCardsToSteal; i++)
+                {
+                    if (playerHand.cards.Count > 1) // Ensure we don't steal all cards
+                    {
+                        int randomIndex = Random.Range(0, playerHand.cards.Count);
+                        GameObject cardToSteal = playerHand.cards[randomIndex];
+                        
+                        // Remove from player's hand and track it
+                        playerHand.cards.RemoveAt(randomIndex);
+                        naughtyChildStolenCards.Add(cardToSteal);
+                        
+                        // Hide the card
+                        cardToSteal.SetActive(false);
+                        
+                        CardModel cardModel = cardToSteal.GetComponent<CardModel>();
+                        if (cardModel != null)
+                        {
+                            Debug.Log($"The Naughty Child steals deck card: {deck.GetCardInfoFromModel(cardModel).cardName}");
+                        }
+                    }
+                }
+                
+                // Update player hand after stealing deck cards
+                if (deckCardsToSteal > 0)
+                {
+                    playerHand.ArrangeCardsInWindow();
+                    playerHand.UpdatePoints();
+                    deck.UpdateScoreDisplays();
+                }
+            }
+            
+            // Steal tarot cards
+            if (shopManager != null && shopManager.tarotPanel != null)
+            {
+                var tarotCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
+                var availableTarots = tarotCards.Where(t => t != null && t.gameObject.activeSelf && !t.isInShop).ToList();
+                
+                int tarotCardsToSteal = Mathf.Min(2, availableTarots.Count); // Steal up to 2 tarot cards
+                
+                for (int i = 0; i < tarotCardsToSteal; i++)
+                {
+                    if (availableTarots.Count > 0)
+                    {
+                        int randomIndex = Random.Range(0, availableTarots.Count);
+                        TarotCard tarotToSteal = availableTarots[randomIndex];
+                        
+                        // Store original slot for return
+                        naughtyChildOriginalTarotSlots.Add(tarotToSteal.transform.parent);
+                        naughtyChildStolenTarots.Add(tarotToSteal);
+                        
+                        // Hide the tarot card
+                        tarotToSteal.gameObject.SetActive(false);
+                        
+                        Debug.Log($"The Naughty Child steals tarot card: {tarotToSteal.cardData?.cardName}");
+                        
+                        availableTarots.RemoveAt(randomIndex);
+                    }
+                }
+            }
+            
+            // Show boss message
+            if (newBossPanel != null && (deckCardsToSteal > 0 || naughtyChildStolenTarots.Count > 0))
+            {
+                int totalStolen = deckCardsToSteal + naughtyChildStolenTarots.Count;
+                newBossPanel.ShowBossMessage($"The Naughty Child steals {totalStolen} cards from you!");
+                StartCoroutine(HideBossMessageAfterDelay(2f));
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Return all stolen cards to the player after the round
+    /// </summary>
+    public void ReturnNaughtyChildStolenCards()
+    {
+        if (currentBoss?.bossType != BossType.TheNaughtyChild) return;
+        
+        int cardsReturned = 0;
+        
+        // Return stolen deck cards
+        if (deck != null && deck.player != null)
+        {
+            var playerHand = deck.player.GetComponent<CardHand>();
+            if (playerHand != null)
+            {
+                foreach (GameObject stolenCard in naughtyChildStolenCards)
+                {
+                    if (stolenCard != null)
+                    {
+                        // Re-activate the card and add back to player's hand
+                        stolenCard.SetActive(true);
+                        playerHand.cards.Add(stolenCard);
+                        cardsReturned++;
+                        
+                        CardModel cardModel = stolenCard.GetComponent<CardModel>();
+                        if (cardModel != null)
+                        {
+                            Debug.Log($"The Naughty Child returns deck card: {deck.GetCardInfoFromModel(cardModel).cardName}");
+                        }
+                    }
+                }
+                
+                // Update player hand
+                if (naughtyChildStolenCards.Count > 0)
+                {
+                    playerHand.ArrangeCardsInWindow();
+                    playerHand.UpdatePoints();
+                    deck.UpdateScoreDisplays();
+                }
+            }
+        }
+        
+        // Return stolen tarot cards
+        for (int i = 0; i < naughtyChildStolenTarots.Count; i++)
+        {
+            if (i < naughtyChildOriginalTarotSlots.Count && 
+                naughtyChildStolenTarots[i] != null && 
+                naughtyChildOriginalTarotSlots[i] != null)
+            {
+                // Return tarot to its original slot
+                naughtyChildStolenTarots[i].transform.SetParent(naughtyChildOriginalTarotSlots[i], false);
+                naughtyChildStolenTarots[i].transform.localPosition = Vector3.zero;
+                naughtyChildStolenTarots[i].gameObject.SetActive(true);
+                cardsReturned++;
+                
+                Debug.Log($"The Naughty Child returns tarot card: {naughtyChildStolenTarots[i].cardData?.cardName}");
+            }
+        }
+        
+        // Re-enable tarot cards (unhide consumables)
+        if (shopManager != null && shopManager.tarotPanel != null)
+        {
+            var tarotCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>(true); // Include inactive ones
+            foreach (var card in tarotCards)
+            {
+                if (card != null)
+                {
+                    // Re-enable the card's functionality
+                    card.enabled = true;
+                    
+                    // Restore normal color
+                    var cardImage = card.GetComponent<Image>();
+                    if (cardImage != null)
+                    {
+                        cardImage.color = Color.white;
+                    }
+                }
+            }
+        }
+        
+        // Show return message
+        if (cardsReturned > 0 && newBossPanel != null)
+        {
+            newBossPanel.ShowBossMessage($"The Naughty Child returns {cardsReturned} stolen cards!");
+            StartCoroutine(HideBossMessageAfterDelay(2f));
+        }
+        
+        // Clear tracking
+        ClearNaughtyChildTracking();
     }
     
     // Smart stealing helper methods
