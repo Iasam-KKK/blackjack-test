@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf873f44d0e06e24ebec95a52aaac9d5, type: 3}
+  m_Name: The Empress
+  m_EditorClassIdentifier: 
+  bossName: The Empress
+  bossType: 27
+  bossPortrait: {fileID: 21300000, guid: 6a4a168d91cc0a343a0bb2d588b879d8, type: 3}
+  bossIntroPanelBg: {fileID: 21300000, guid: 15de6301c72a0654aa56ae6d5e0b3c39, type: 3}
+  bossDescription: Its own and player's Ks and Js add to its convenience, only Ks
+    and Js are affected, Qs are immune
+  maxHealth: 3
+  handsPerRound: 9
+  difficultyMultiplier: 1.3
+  unlockOrder: 12
+  mechanics:
+  - mechanicType: 22
+    mechanicName: Empress Intercept
+    mechanicDescription: Intercepts all Kings and Jacks dealt to the player and redirects them to the dealer. Queens are immune.
+    activationChance: 1
+    isPassive: 1
+    triggersOnPlayerAction: 0
+    triggersOnCardDealt: 1
+    triggersOnRoundEnd: 0
+    mechanicValue: 0
+    mechanicMultiplier: 1
+    mechanicTags: []
+  rewards: []
+  bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
+  bossMusic: {fileID: 0}
+  bossDefeatSound: {fileID: 0}
+  bossVictorySound: {fileID: 0}
+  animationDuration: 0.5
+  animationCurve:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  disablesTarotCards: 0
+  usesSpecialDeck: 0
+  hasWinStreakEffect: 0
+  isFinalBoss: 0
+  allowTarotCards: 1

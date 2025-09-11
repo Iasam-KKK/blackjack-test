@@ -430,8 +430,6 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                         {
                             deck.StartCoroutine(deck.ReplaceCardWithMakeupArtist(deck.selectedCardForMakeupArtist));
                             deck.selectedCardForMakeupArtist = null;
-                            hasBeenUsedThisRound = true;
-                            cardImage.color = new Color(0.5f, 0.5f, 0.5f);
                             effectApplied = true;
                         }
                         else
@@ -696,8 +694,18 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                         Debug.Log("The Escapist activated by player click!");
                         deck.StartCoroutine(deck.UseEscapistCard());
                         hasBeenUsedThisRound = true;
-                        cardImage.color = new Color(0.5f, 0.5f, 0.5f);
+                        
+                        // Remove from PlayerStats if it exists there
+                        if (PlayerStats.instance != null && PlayerStats.instance.ownedCards != null && cardData != null)
+                        {
+                            PlayerStats.instance.ownedCards.Remove(cardData);
+                            Debug.Log("Removed " + cardData.cardName + " from player's owned cards after use");
+                        }
+                        
+                        // The Escapist has its own destruction animation in Deck.cs, so just destroy this instance
+                        StartCoroutine(AnimateCardDestruction());
                         effectApplied = true;
+                        return; // Exit early since we're handling destruction manually
                     }
                     else if (hasBeenUsedThisRound)
                     {
@@ -714,12 +722,20 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     return;
             }
             
-            // Mark as used for this round (if effect was successfully applied and card is not reusable)
+            // Destroy the card after use (if effect was successfully applied and card is not reusable)
             if (effectApplied && !cardData.isReusable)
             {
                 hasBeenUsedThisRound = true;
-                // Visual indication it's been used
-                cardImage.color = new Color(0.5f, 0.5f, 0.5f);
+                
+                // Remove from PlayerStats if it exists there
+                if (PlayerStats.instance != null && PlayerStats.instance.ownedCards != null && cardData != null)
+                {
+                    PlayerStats.instance.ownedCards.Remove(cardData);
+                    Debug.Log("Removed " + cardData.cardName + " from player's owned cards after use");
+                }
+                
+                // Animate the card destruction
+                StartCoroutine(AnimateCardDestruction());
             }
         }
     }
@@ -873,5 +889,39 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     {
         hasBeenUsedThisRound = false;
         cardImage.color = Color.white;
+    }
+    
+    // Animate the destruction of the tarot card after use
+    private System.Collections.IEnumerator AnimateCardDestruction()
+    {
+        // Create a destruction animation
+        Sequence destructionSequence = DOTween.Sequence();
+        
+        // Flash to indicate destruction
+        if (cardImage != null)
+        {
+            Color originalColor = cardImage.color;
+            destructionSequence.Append(cardImage.DOColor(Color.red, 0.15f));
+            destructionSequence.Append(cardImage.DOColor(originalColor, 0.15f));
+            destructionSequence.Append(cardImage.DOColor(Color.red, 0.15f));
+        }
+        
+        // Shake and scale up before destruction
+        destructionSequence.Append(transform.DOShakePosition(0.3f, 20f, 20, 90, false, true));
+        destructionSequence.Join(transform.DOScale(transform.localScale * 1.2f, 0.3f));
+        
+        // Final destruction - fade out and shrink
+        if (cardImage != null)
+        {
+            destructionSequence.Append(cardImage.DOFade(0f, 0.4f));
+        }
+        destructionSequence.Join(transform.DOScale(Vector3.zero, 0.4f)
+            .SetEase(Ease.InQuart));
+        
+        yield return destructionSequence.WaitForCompletion();
+        
+        // Destroy the card object after animation completes
+        Debug.Log("Destroying tarot card: " + (cardData != null ? cardData.cardName : "Unknown"));
+        Destroy(gameObject);
     }
 } 

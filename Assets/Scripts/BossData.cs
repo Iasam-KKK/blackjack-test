@@ -53,7 +53,8 @@ public enum BossMechanicType
     CorruptCard ,          // Randomly inflate or deflate card values when laid down (The Corruptor)
     PermanentlystealsallQueensplayed, // Permanently steals all Queens played
     HideConsumables,       // Hide/disable all tarot cards (The Naughty Child)
-    TemporaryCardTheft     // Temporarily steal cards and return after round (The Naughty Child)
+    TemporaryCardTheft,    // Temporarily steal cards and return after round (The Naughty Child)
+    EmpressIntercept       // Intercept Kings and Jacks for The Empress
 
 }
 

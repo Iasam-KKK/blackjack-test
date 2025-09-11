@@ -493,6 +493,12 @@ public class BossManager : MonoBehaviour
                 deck.ApplyCaptainJackNullification();
             }
         }
+        
+        // Special handling for The Empress - intercept Kings and Jacks
+        if (currentBoss != null && currentBoss.bossType == BossType.TheEmpress)
+        {
+            InterceptEmpressCards(card, isPlayer);
+        }
          
         foreach (var mechanic in activeMechanics.Where(m => m.triggersOnCardDealt))
         {
@@ -767,7 +773,7 @@ public class BossManager : MonoBehaviour
     /// <summary>
     /// Apply a mechanic to the game
     /// </summary>
-    private void ApplyMechanic(BossMechanic mechanic)
+    public void ApplyMechanic(BossMechanic mechanic)
     {
         switch (mechanic.mechanicType)
         {
@@ -818,6 +824,9 @@ public class BossManager : MonoBehaviour
                 break;
             case BossMechanicType.TemporaryCardTheft:
                 TemporaryCardTheft(mechanic);
+                break;
+            case BossMechanicType.EmpressIntercept:
+                // This is handled in OnCardDealt when K/J is dealt
                 break;
             case BossMechanicType.DiplomaticKing:
                 // This is handled in ApplyMechanicToCard when a King is dealt
@@ -2357,6 +2366,35 @@ public class BossManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Restore hidden consumables (tarot cards) by re-enabling them and restoring color
+    /// </summary>
+    private void RestoreHiddenConsumables()
+    {
+        if (shopManager != null && shopManager.tarotPanel != null)
+        {
+            var tarotCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>(true); // Include inactive ones
+            foreach (var card in tarotCards)
+            {
+                if (card != null)
+                {
+                    // Re-enable the card's functionality
+                    card.enabled = true;
+                    
+                    // Restore normal color
+                    var cardImage = card.GetComponent<Image>();
+                    if (cardImage != null)
+                    {
+                        cardImage.color = Color.white;
+                    }
+                    
+                    Debug.Log($"The Naughty Child restores tarot card: {card.cardData?.cardName}");
+                }
+            }
+        }
+    }
+    
+    
+    /// <summary>
     /// Temporarily steal cards from player (both deck cards and tarot cards)
     /// </summary>
     private void TemporaryCardTheft(BossMechanic mechanic)
@@ -2450,6 +2488,8 @@ public class BossManager : MonoBehaviour
     {
         if (currentBoss?.bossType != BossType.TheNaughtyChild) return;
         
+        Debug.Log($"[NAUGHTY CHILD] ReturnNaughtyChildStolenCards called - Stolen deck cards: {naughtyChildStolenCards.Count}, Stolen tarots: {naughtyChildStolenTarots.Count}");
+        
         int cardsReturned = 0;
         
         // Return stolen deck cards
@@ -2486,8 +2526,11 @@ public class BossManager : MonoBehaviour
         }
         
         // Return stolen tarot cards
+        Debug.Log($"[NAUGHTY CHILD] Attempting to return {naughtyChildStolenTarots.Count} stolen tarot cards");
         for (int i = 0; i < naughtyChildStolenTarots.Count; i++)
         {
+            Debug.Log($"[NAUGHTY CHILD] Checking tarot card {i}: Card null? {naughtyChildStolenTarots[i] == null}, Slot null? {(i < naughtyChildOriginalTarotSlots.Count ? naughtyChildOriginalTarotSlots[i] == null : "Index out of range")}");
+            
             if (i < naughtyChildOriginalTarotSlots.Count && 
                 naughtyChildStolenTarots[i] != null && 
                 naughtyChildOriginalTarotSlots[i] != null)
@@ -2498,40 +2541,85 @@ public class BossManager : MonoBehaviour
                 naughtyChildStolenTarots[i].gameObject.SetActive(true);
                 cardsReturned++;
                 
-                Debug.Log($"The Naughty Child returns tarot card: {naughtyChildStolenTarots[i].cardData?.cardName}");
+                Debug.Log($"[NAUGHTY CHILD] Successfully returned tarot card: {naughtyChildStolenTarots[i].cardData?.cardName} to slot {naughtyChildOriginalTarotSlots[i].name}");
+            }
+            else
+            {
+                Debug.LogWarning($"[NAUGHTY CHILD] Failed to return tarot card {i} - missing card or slot reference");
             }
         }
         
-        // Re-enable tarot cards (unhide consumables)
-        if (shopManager != null && shopManager.tarotPanel != null)
-        {
-            var tarotCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>(true); // Include inactive ones
-            foreach (var card in tarotCards)
-            {
-                if (card != null)
-                {
-                    // Re-enable the card's functionality
-                    card.enabled = true;
-                    
-                    // Restore normal color
-                    var cardImage = card.GetComponent<Image>();
-                    if (cardImage != null)
-                    {
-                        cardImage.color = Color.white;
-                    }
-                }
-            }
-        }
+        // Restore tarot cards functionality after returning stolen cards
+        RestoreHiddenConsumables();
         
         // Show return message
         if (cardsReturned > 0 && newBossPanel != null)
         {
-            newBossPanel.ShowBossMessage($"The Naughty Child returns {cardsReturned} stolen cards!");
+            newBossPanel.ShowBossMessage($"The Naughty Child returns {cardsReturned} stolen cards and restores your tarot cards!");
+            StartCoroutine(HideBossMessageAfterDelay(3f));
+        }
+        else if (newBossPanel != null)
+        {
+            // Even if no cards were stolen, still notify about tarot restoration
+            newBossPanel.ShowBossMessage("The Naughty Child restores your tarot cards for this round!");
             StartCoroutine(HideBossMessageAfterDelay(2f));
         }
         
         // Clear tracking
         ClearNaughtyChildTracking();
+    }
+    
+    /// <summary>
+    /// Intercept Kings and Jacks for The Empress - redirect them to dealer
+    /// </summary>
+    private void InterceptEmpressCards(GameObject card, bool isPlayer)
+    {
+        if (card == null || deck == null) return;
+        
+        CardModel cardModel = card.GetComponent<CardModel>();
+        if (cardModel == null) return;
+        
+        CardInfo cardInfo = deck.GetCardInfoFromModel(cardModel);
+        
+        // Check if it's a King or Jack (Queens are immune)
+        if (cardInfo.suitIndex == 10 || cardInfo.suitIndex == 12) // Jack = 10, King = 12 (Queen = 11 is immune)
+        {
+            string cardName = cardInfo.cardName;
+            
+            if (isPlayer)
+            {
+                // Card was meant for player, redirect to dealer
+                var playerHand = deck.player.GetComponent<CardHand>();
+                var dealerHand = deck.dealer.GetComponent<CardHand>();
+                
+                if (playerHand != null && dealerHand != null)
+                {
+                    // Remove from player's hand
+                    playerHand.cards.Remove(card);
+                    
+                    // Add to dealer's hand
+                    dealerHand.cards.Add(card);
+                    card.transform.SetParent(dealerHand.transform);
+                    
+                    // Update hands
+                    playerHand.ArrangeCardsInWindow();
+                    playerHand.UpdatePoints();
+                    dealerHand.ArrangeCardsInWindow();
+                    dealerHand.UpdatePoints();
+                    deck.UpdateScoreDisplays();
+                    
+                    Debug.Log($"[EMPRESS] Intercepted {cardName} from player to dealer!");
+                    
+                    // Show boss message
+                    if (newBossPanel != null)
+                    {
+                        newBossPanel.ShowBossMessage($"The Empress steals your {cardName}!");
+                        StartCoroutine(HideBossMessageAfterDelay(2f));
+                    }
+                }
+            }
+            // If card was meant for dealer, no interception needed - it's already helping The Empress
+        }
     }
     
     // Smart stealing helper methods

@@ -1055,11 +1055,39 @@ private void EndHand(WinCode code)
         // Reset The Escapist tracking
         _lastHitCard = null;
         
+        // Re-apply Naughty Child consumable hiding for new round
+        if (bossManager != null && bossManager.currentBoss != null && 
+            bossManager.currentBoss.bossType == BossType.TheNaughtyChild)
+        {
+            // Re-hide consumables at the start of each new round
+            StartCoroutine(ReHideConsumablesAfterDelay());
+        }
+        
         ShuffleCards();
         UpdateStreakUI(); // Update streak UI for new round
         
         // Go back to betting state instead of immediately starting game
         InitializeBettingState();  
+    }
+    
+    /// <summary>
+    /// Coroutine to re-hide consumables after a short delay for Naughty Child boss
+    /// </summary>
+    private IEnumerator ReHideConsumablesAfterDelay()
+    {
+        // Wait a moment for the round to properly start
+        yield return new WaitForSeconds(1f);
+        
+        // Re-apply the hide consumables mechanic
+        if (bossManager != null && bossManager.currentBoss != null && 
+            bossManager.currentBoss.bossType == BossType.TheNaughtyChild)
+        {
+            var hideConsumablesMechanic = bossManager.currentBoss.mechanics.Find(m => m.mechanicType == BossMechanicType.HideConsumables);
+            if (hideConsumablesMechanic != null)
+            {
+                bossManager.ApplyMechanic(hideConsumablesMechanic);
+            }
+        }
     }
 
     public void RaiseBet()
@@ -2328,7 +2356,7 @@ private void EndHand(WinCode code)
              
             _lastHitCard = null;
              
-            RemoveEscapistFromTarotPanel();
+            // Note: The Escapist card now destroys itself in TarotCard.cs
             
                                  Debug.Log("The Escapist: Card removal completed - continuing game flow");
                      
