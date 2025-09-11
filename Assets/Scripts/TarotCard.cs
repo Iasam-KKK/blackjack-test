@@ -41,6 +41,21 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     
     private void Start()
     {
+        // Find material background if not assigned
+        if (materialBackground == null)
+        {
+            materialBackground = GetComponentInChildren<Image>();
+            if (materialBackground != null && materialBackground.name != "MaterialBackground")
+            {
+                // Look specifically for MaterialBackground child
+                Transform bgTransform = transform.Find("MaterialBackground");
+                if (bgTransform != null)
+                {
+                    materialBackground = bgTransform.GetComponent<Image>();
+                }
+            }
+        }
+        
         // Initialize material data if not already set
         if (cardData != null && cardData.assignedMaterial != null)
         {

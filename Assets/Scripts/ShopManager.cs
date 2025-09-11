@@ -219,11 +219,28 @@ public class ShopManager : MonoBehaviour
         }
     }
 
-    // Clear any existing cards
-    foreach (Transform child in shopPanel)
+    // Clear any existing cards from shop slots
+    foreach (Transform slot in shopSlots)
     {
+        // Clear all children from each shop slot
+        for (int i = slot.childCount - 1; i >= 0; i--)
+        {
+            Transform child = slot.GetChild(i);
+            if (child.GetComponent<TarotCard>() != null)
+            {
+                Destroy(child.gameObject);
+            }
+        }
+    }
+    
+    // Also clear any cards directly under shopPanel (fallback)
+    for (int i = shopPanel.childCount - 1; i >= 0; i--)
+    {
+        Transform child = shopPanel.GetChild(i);
         if (child.GetComponent<TarotCard>() != null)
+        {
             Destroy(child.gameObject);
+        }
     }
 
     // Default: show all available cards (make a copy and shuffle it)
@@ -254,9 +271,20 @@ public class ShopManager : MonoBehaviour
         TarotCard card = cardObject.GetComponent<TarotCard>();
         if (card != null)
         {
-            card.cardData = cardsToShow[i];
+            // Create a copy of the card data to avoid modifying the original ScriptableObject
+            TarotCardData cardDataCopy = Instantiate(cardsToShow[i]);
+            
+            // Assign random material based on rarity
+            MaterialData randomMaterial = MaterialManager.GetRandomMaterial();
+            cardDataCopy.AssignMaterial(randomMaterial);
+            
+            card.cardData = cardDataCopy;
             card.isInShop = true;
             card.deck = deck;
+            
+            Debug.Log("Shop card " + cardDataCopy.cardName + " assigned material: " + 
+                     cardDataCopy.GetMaterialDisplayName() + " (Max uses: " + 
+                     (cardDataCopy.maxUses == -1 ? "Unlimited" : cardDataCopy.maxUses.ToString()) + ")");
         }
     }
 

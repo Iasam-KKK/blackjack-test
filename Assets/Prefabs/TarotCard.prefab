@@ -129,7 +129,7 @@ MonoBehaviour:
   materialBackground: {fileID: 3172892229947376545}
   cardNameText: {fileID: 3470274113439057710}
   priceText: {fileID: 8870951990370382726}
-  durabilityText: {fileID: 0}
+  durabilityText: {fileID: 3481470828451555622}
   isInShop: 1
   isEquipped: 0
   hasBeenUsedThisRound: 0
