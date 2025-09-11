@@ -10,8 +10,10 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     
     [Header("UI Components")]
     public Image cardImage;
+    public Image materialBackground; // Background image for material
     public Text cardNameText;
     public Text priceText;
+    public Text durabilityText; // Display remaining uses
     
     [Header("State")]
     public bool isInShop = true;        // Whether card is in shop or player's inventory
@@ -39,6 +41,11 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     
     private void Start()
     {
+        // Initialize material data if not already set
+        if (cardData != null && cardData.assignedMaterial != null)
+        {
+            cardData.InitializeMaterial();
+        }
         UpdateCardDisplay();
     }
     
@@ -51,6 +58,41 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             if (cardImage != null && cardData.cardImage != null)
             {
                 cardImage.sprite = cardData.cardImage;
+            }
+            
+            // Update material background
+            if (materialBackground != null)
+            {
+                if (cardData.assignedMaterial != null)
+                {
+                    // Prioritize background sprite over color tint
+                    Sprite materialSprite = cardData.GetMaterialBackgroundSprite();
+                    if (materialSprite != null)
+                    {
+                        // Use the material background image
+                        materialBackground.sprite = materialSprite;
+                        materialBackground.color = Color.white; // Use sprite at full opacity
+                        materialBackground.type = Image.Type.Simple; // Ensure proper display
+                        materialBackground.preserveAspect = false; // Stretch to fit card
+                    }
+                    else
+                    {
+                        // Fallback to color tint if no sprite is available
+                        materialBackground.sprite = null;
+                        materialBackground.color = cardData.GetMaterialColor();
+                    }
+                    materialBackground.gameObject.SetActive(true);
+                    
+                    // Debug log to help with troubleshooting
+                    string materialInfo = materialSprite != null ? 
+                        $"Using sprite: {materialSprite.name}" : 
+                        $"Using color tint: {cardData.GetMaterialColor()}";
+                    Debug.Log($"Material background for {cardData.cardName}: {materialInfo}");
+                }
+                else
+                {
+                    materialBackground.gameObject.SetActive(false);
+                }
             }
             
             if (cardNameText != null)
@@ -71,10 +113,54 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 }
             }
             
-            // Visual state for used cards
-            if (hasBeenUsedThisRound)
+            // Update durability display
+            if (durabilityText != null)
             {
-                cardImage.color = new Color(0.5f, 0.5f, 0.5f);
+                int remainingUses = cardData.GetRemainingUses();
+                if (remainingUses == -1)
+                {
+                    durabilityText.text = "∞"; // Unlimited uses
+                }
+                else
+                {
+                    durabilityText.text = remainingUses.ToString();
+                }
+                
+                // Show durability only when not in shop
+                if (isInShop)
+                {
+                    durabilityText.gameObject.SetActive(false);
+                }
+                else
+                {
+                    durabilityText.gameObject.SetActive(true);
+                    
+                    // Color code durability: red when low, yellow when medium, green when high
+                    if (remainingUses == -1)
+                    {
+                        durabilityText.color = Color.cyan; // Special color for unlimited
+                    }
+                    else if (remainingUses <= 1)
+                    {
+                        durabilityText.color = Color.red;
+                    }
+                    else if (remainingUses <= 3)
+                    {
+                        durabilityText.color = Color.yellow;
+                    }
+                    else
+                    {
+                        durabilityText.color = Color.green;
+                    }
+                }
+            }
+            
+            // Visual state for used cards or cards that can't be used
+            bool canBeUsed = cardData.CanBeUsed() && (!hasBeenUsedThisRound || cardData.isReusable);
+            
+            if (!canBeUsed)
+            {
+                cardImage.color = new Color(0.5f, 0.5f, 0.5f, 0.8f); // Grayed out
             }
             else
             {
@@ -167,7 +253,22 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 }
             }
             
-            TooltipManager.Instance.ShowTooltip(cardData.cardName, description, transform.position, true);
+            // Add material information to tooltip
+            string materialInfo = "";
+            if (cardData.assignedMaterial != null)
+            {
+                materialInfo = "\n\n<color=#FFD700>Material: " + cardData.GetMaterialDisplayName() + "</color>";
+                if (cardData.GetRemainingUses() == -1)
+                {
+                    materialInfo += "\n<color=#00FFFF>Durability: Unlimited</color>";
+                }
+                else
+                {
+                    materialInfo += "\n<color=#FFFF00>Durability: " + cardData.GetRemainingUses() + "/" + cardData.maxUses + "</color>";
+                }
+            }
+            
+            TooltipManager.Instance.ShowTooltip(cardData.cardName, description + materialInfo, transform.position, true);
         }
         
         // Visual feedback
@@ -194,9 +295,16 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         {
             TryPurchaseCard();
         }
-        else if (!hasBeenUsedThisRound || cardData.isReusable)
+        else if (cardData.CanBeUsed() && (!hasBeenUsedThisRound || cardData.isReusable))
         {
             TryUseCard();
+        }
+        else if (!cardData.CanBeUsed())
+        {
+            // Card is out of durability
+            transform.DOShakePosition(0.3f, 5f, 10, 90, false, true);
+            Debug.Log("Card has no remaining uses! Material: " + cardData.GetMaterialDisplayName() + 
+                     ", Uses: " + cardData.currentUses + "/" + cardData.maxUses);
         }
     }
     
@@ -334,6 +442,13 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         if (hasBeenUsedThisRound && !cardData.isReusable)
         {
             Debug.Log("Card has already been used this round");
+            return;
+        }
+        
+        // Check material durability
+        if (!cardData.CanBeUsed())
+        {
+            Debug.Log("Card has no remaining uses! Material durability exhausted.");
             return;
         }
         
@@ -722,20 +837,42 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     return;
             }
             
-            // Destroy the card after use (if effect was successfully applied and card is not reusable)
-            if (effectApplied && !cardData.isReusable)
+            // Handle card usage and durability
+            if (effectApplied)
             {
-                hasBeenUsedThisRound = true;
-                
-                // Remove from PlayerStats if it exists there
-                if (PlayerStats.instance != null && PlayerStats.instance.ownedCards != null && cardData != null)
+                // Mark as used this round if not reusable
+                if (!cardData.isReusable)
                 {
-                    PlayerStats.instance.ownedCards.Remove(cardData);
-                    Debug.Log("Removed " + cardData.cardName + " from player's owned cards after use");
+                    hasBeenUsedThisRound = true;
                 }
                 
-                // Animate the card destruction
-                StartCoroutine(AnimateCardDestruction());
+                // Consume material durability
+                cardData.UseCard();
+                
+                // Update visual display
+                UpdateCardDisplay();
+                
+                // Check if card is completely used up (no durability left)
+                if (!cardData.CanBeUsed())
+                {
+                    Debug.Log("Card " + cardData.cardName + " has been completely used up! Material: " + 
+                             cardData.GetMaterialDisplayName());
+                    
+                    // Remove from PlayerStats
+                    if (PlayerStats.instance != null && PlayerStats.instance.ownedCards != null && cardData != null)
+                    {
+                        PlayerStats.instance.ownedCards.Remove(cardData);
+                        Debug.Log("Removed " + cardData.cardName + " from player's owned cards - durability exhausted");
+                    }
+                    
+                    // Animate the card destruction
+                    StartCoroutine(AnimateCardDestruction());
+                }
+                else
+                {
+                    Debug.Log("Card " + cardData.cardName + " used. Remaining uses: " + 
+                             cardData.GetRemainingUses() + " (" + cardData.GetMaterialDisplayName() + ")");
+                }
             }
         }
     }

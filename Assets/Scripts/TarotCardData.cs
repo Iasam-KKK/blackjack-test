@@ -21,6 +21,12 @@ public class TarotCardData : ScriptableObject
     [TextArea(2, 5)]
     public string description;
     
+    [Header("Material System")]
+    public MaterialData assignedMaterial; // The material assigned to this card instance
+    public int currentUses = 0; // Track how many times this card has been used
+    [HideInInspector]
+    public int maxUses = 1; // Will be set based on assigned material
+    
     [Header("Gameplay")]
     public TarotCardType cardType;
     public bool isReusable = false; // If true, can be used multiple times per round
@@ -29,6 +35,84 @@ public class TarotCardData : ScriptableObject
     [Header("Animation")]
     public float animationDuration = 0.5f;
     public AnimationCurve animationCurve;
+    
+    // Initialize material data when the card is created or material is assigned
+    public void InitializeMaterial()
+    {
+        if (assignedMaterial != null)
+        {
+            maxUses = assignedMaterial.maxUses;
+            currentUses = 0;
+        }
+        else
+        {
+            maxUses = 1; // Default to single use if no material assigned
+            currentUses = 0;
+        }
+    }
+    
+    // Assign a material to this card
+    public void AssignMaterial(MaterialData material)
+    {
+        assignedMaterial = material;
+        InitializeMaterial();
+    }
+    
+    // Check if the card can still be used based on material durability
+    public bool CanBeUsed()
+    {
+        if (assignedMaterial == null) return currentUses < 1; // Default single use
+        if (assignedMaterial.HasUnlimitedUses()) return true; // Unlimited uses (Diamond)
+        return currentUses < maxUses;
+    }
+    
+    // Use the card (increment usage counter)
+    public bool UseCard()
+    {
+        if (!CanBeUsed()) return false;
+        
+        if (assignedMaterial == null || !assignedMaterial.HasUnlimitedUses())
+        {
+            currentUses++;
+        }
+        return true;
+    }
+    
+    // Reset usage for new round (but keep material durability)
+    public void ResetForNewRound()
+    {
+        // Note: We don't reset currentUses here because material durability persists across rounds
+        // Only the isReusable flag affects per-round usage
+    }
+    
+    // Get remaining uses
+    public int GetRemainingUses()
+    {
+        if (assignedMaterial == null) return Mathf.Max(0, 1 - currentUses); // Default single use
+        if (assignedMaterial.HasUnlimitedUses()) return -1; // Unlimited
+        return Mathf.Max(0, maxUses - currentUses);
+    }
+    
+    // Get material display info
+    public string GetMaterialDisplayName()
+    {
+        if (assignedMaterial == null) return "No Material";
+        return assignedMaterial.GetDisplayName();
+    }
+    
+    // Get material color
+    public Color GetMaterialColor()
+    {
+        if (assignedMaterial == null) return Color.white;
+        return assignedMaterial.GetMaterialColor();
+    }
+    
+    // Get material background sprite
+    public Sprite GetMaterialBackgroundSprite()
+    {
+        if (assignedMaterial == null) return null;
+        return assignedMaterial.backgroundSprite;
+    }
 }
 
 // Define the different types of tarot cards

@@ -214,9 +214,20 @@ public class ShopManager : MonoBehaviour
             TarotCard card = cardObject.GetComponent<TarotCard>();
             if (card != null)
             {
-                card.cardData = cardsToShow[i];
+                // Create a copy of the card data to avoid modifying the original ScriptableObject
+                TarotCardData cardDataCopy = Instantiate(cardsToShow[i]);
+                
+                // Assign random material based on rarity
+                MaterialData randomMaterial = MaterialManager.GetRandomMaterial();
+                cardDataCopy.AssignMaterial(randomMaterial);
+                
+                card.cardData = cardDataCopy;
                 card.isInShop = true;
                 card.deck = deck;
+                
+                Debug.Log("Shop card " + cardDataCopy.cardName + " assigned material: " + 
+                         cardDataCopy.GetMaterialDisplayName() + " (Max uses: " + 
+                         (cardDataCopy.maxUses == -1 ? "Unlimited" : cardDataCopy.maxUses.ToString()) + ")");
             }
         }
 
