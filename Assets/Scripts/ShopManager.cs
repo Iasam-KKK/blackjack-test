@@ -139,35 +139,8 @@ public class ShopManager : MonoBehaviour
     
 
     
-    /*
-    public void SetupShop()
-    {
-        // Clear any existing cards
-        foreach (Transform child in shopPanel)
-        {
-            if (child.GetComponent<TarotCard>() != null)
-                Destroy(child.gameObject);
-        }
-        
-        // Create cards for each available tarot card, placing them in slots
-        for (int i = 0; i < Mathf.Min(availableTarotCards.Count, shopSlots.Count); i++)
-        {
-            GameObject cardObject = Instantiate(tarotCardPrefab, shopSlots[i]);
-            cardObject.transform.localPosition = Vector3.zero; // Center in slot
-            
-            TarotCard card = cardObject.GetComponent<TarotCard>();
-            if (card != null)
-            {
-                card.cardData = availableTarotCards[i];
-                card.isInShop = true;
-                card.deck = deck;
-            }
-        }
-        
-        FixCardPositioning();
-    }
-    */
-    public void SetupShop()
+    
+    /*public void SetupShop()
     {
         // 🔹 Check if tarot cards are disabled for this boss
         BossManager bossManager = FindObjectOfType<BossManager>();
@@ -232,7 +205,74 @@ public class ShopManager : MonoBehaviour
         }
 
         FixCardPositioning();
+    }*/
+    public void SetupShop()
+{
+    // 🔹 Check if tarot cards are disabled for this boss
+    BossManager bossManager = FindObjectOfType<BossManager>();
+    if (bossManager != null && bossManager.GetCurrentBoss() != null)
+    {
+        if (!bossManager.GetCurrentBoss().allowTarotCards)
+        {
+            Debug.Log("Tarot cards disabled for this boss: " + bossManager.GetCurrentBoss().bossName);
+            return; // 🚫 Stop before spawning any tarot cards
+        }
     }
+
+    // Clear any existing cards
+    foreach (Transform child in shopPanel)
+    {
+        if (child.GetComponent<TarotCard>() != null)
+            Destroy(child.gameObject);
+    }
+
+    // Default: show all available cards (make a copy and shuffle it)
+    List<TarotCardData> cardsToShow = new List<TarotCardData>(availableTarotCards);
+    ShuffleList(cardsToShow);
+
+    if (bossManager != null && bossManager.GetCurrentBoss() != null)
+    {
+        var currentBoss = bossManager.GetCurrentBoss();
+
+        // 🔹 Special cases by boss type
+        if (currentBoss.bossType == BossType.TheFortuneTeller)
+        {
+            cardsToShow = cardsToShow.GetRange(0, Mathf.Min(2, cardsToShow.Count));
+        }
+        else if (currentBoss.bossType == BossType.TheThief)
+        {
+            cardsToShow = cardsToShow.GetRange(0, Mathf.Min(3, cardsToShow.Count));
+        }
+    }
+
+    // Create cards in shop slots
+    for (int i = 0; i < Mathf.Min(cardsToShow.Count, shopSlots.Count); i++)
+    {
+        GameObject cardObject = Instantiate(tarotCardPrefab, shopSlots[i]);
+        cardObject.transform.localPosition = Vector3.zero; // Center in slot
+
+        TarotCard card = cardObject.GetComponent<TarotCard>();
+        if (card != null)
+        {
+            card.cardData = cardsToShow[i];
+            card.isInShop = true;
+            card.deck = deck;
+        }
+    }
+
+    FixCardPositioning();
+}
+
+// 🔹 Helper to shuffle a list
+private void ShuffleList<T>(List<T> list)
+{
+    for (int i = 0; i < list.Count; i++)
+    {
+        int randomIndex = Random.Range(i, list.Count);
+        (list[i], list[randomIndex]) = (list[randomIndex], list[i]);
+    }
+}
+
 
     private void FixCardPositioning()
     {

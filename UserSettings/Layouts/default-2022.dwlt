@@ -73,7 +73,7 @@ MonoBehaviour:
     height: 30
   m_MinSize: {x: 0, y: 0}
   m_MaxSize: {x: 0, y: 0}
-  m_LastLoadedLayoutName: 
+  m_LastLoadedLayoutName: MobileLandScape
 --- !u!114 &4
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -121,7 +121,7 @@ MonoBehaviour:
   m_MinSize: {x: 400, y: 100}
   m_MaxSize: {x: 32384, y: 16192}
   vertical: 0
-  controlID: 2636
+  controlID: 22876
   draggingID: 0
 --- !u!114 &6
 MonoBehaviour:
@@ -147,7 +147,7 @@ MonoBehaviour:
   m_MinSize: {x: 100, y: 100}
   m_MaxSize: {x: 8096, y: 16192}
   vertical: 1
-  controlID: 2495
+  controlID: 22776
   draggingID: 0
 --- !u!114 &7
 MonoBehaviour:
@@ -421,7 +421,7 @@ MonoBehaviour:
       collapsed: 0
       displayed: 1
       snapOffset: {x: 0, y: 0}
-      snapOffsetDelta: {x: -179, y: -26}
+      snapOffsetDelta: {x: -174.39996, y: -26.399994}
       snapCorner: 3
       id: Tool Settings
       index: 0
@@ -764,9 +764,9 @@ MonoBehaviour:
   m_PlayAudio: 0
   m_AudioPlay: 0
   m_Position:
-    m_Target: {x: 687.9047, y: 539.77484, z: -2.0853732}
+    m_Target: {x: 1996.9673, y: 652.98804, z: 0}
     speed: 2
-    m_Value: {x: 687.9047, y: 539.77484, z: -2.0853732}
+    m_Value: {x: 1996.9673, y: 652.98804, z: 0}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -816,9 +816,9 @@ MonoBehaviour:
     speed: 2
     m_Value: {x: 0, y: 0, z: 0, w: 1}
   m_Size:
-    m_Target: 303.19244
+    m_Target: 332.66794
     speed: 2
-    m_Value: 303.19244
+    m_Value: 332.66794
   m_Ortho:
     m_Target: 1
     speed: 2
@@ -880,10 +880,10 @@ MonoBehaviour:
     m_OverlaysVisible: 1
   m_SceneHierarchy:
     m_TreeViewState:
-      scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 0ec4000028c10000
-      m_LastClickedID: 49448
-      m_ExpandedIDs: ec72ffff3673ffffd676ffff0877fffffefaffffa46c000042c30000
+      scrollPos: {x: 0, y: 512}
+      m_SelectedIDs: 5a620000
+      m_LastClickedID: 0
+      m_ExpandedIDs: 005affff2a5dffff22fbffffb6670000ce670000e86700002268000040680000bc680000e0680000f26800005069000082690000e8690000306a0000906a0000bc6a0000d46a0000ee6a0000046b00003a6b00004e6b0000706b0000b46b0000f86b00002c6c0000586c00006a6c00008c6c00000c6d0000146d00003e6d0000466d00001e6e0000306e00006a6e0000
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -943,7 +943,7 @@ MonoBehaviour:
     m_SaveData: []
     m_OverlaysVisible: 1
   m_SearchFilter:
-    m_NameFilter: 
+    m_NameFilter: dec
     m_ClassNames: []
     m_AssetLabels: []
     m_AssetBundleNames: []
@@ -953,24 +953,24 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/ScriptableObjectsBosses
+    - Assets/TarotMaterialScriptables
     m_Globs: []
-    m_OriginalText: 
+    m_OriginalText: dec
     m_ImportLogFlags: 0
     m_FilterByTypeIntersection: 0
   m_ViewMode: 1
-  m_StartGridSize: 16
+  m_StartGridSize: 64
   m_LastFolders:
-  - Assets/ScriptableObjectsBosses
-  m_LastFoldersGridSize: 16
-  m_LastProjectPath: D:\Black-Jack\blackjack-test
+  - Assets/TarotMaterialScriptables
+  m_LastFoldersGridSize: -1
+  m_LastProjectPath: C:\Users\majid\OneDrive\Desktop\Balantaro\blackjack-test
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
-    m_SelectedIDs: fa730000
-    m_LastClickedID: 29690
-    m_ExpandedIDs: 00000000dc73000000ca9a3bffffff7f
+    m_SelectedIDs: 162c0100
+    m_LastClickedID: 76822
+    m_ExpandedIDs: 000000005e7300006273000000ca9a3b
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -998,7 +998,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 00000000dc73000000ca9a3bffffff7f
+    m_ExpandedIDs: 000000005e7300006273000000ca9a3b
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1026,7 +1026,7 @@ MonoBehaviour:
     m_SelectedInstanceIDs: 
     m_LastClickedInstanceID: 0
     m_HadKeyboardFocusLastEvent: 0
-    m_ExpandedInstanceIDs: 00000000
+    m_ExpandedInstanceIDs: 
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1051,7 +1051,7 @@ MonoBehaviour:
       m_ResourceFile: 
     m_NewAssetIndexInList: -1
     m_ScrollPosition: {x: 0, y: 0}
-    m_GridSize: 16
+    m_GridSize: 64
   m_SkipHiddenPackages: 0
   m_DirectoriesAreaWidth: 207
 --- !u!114 &16

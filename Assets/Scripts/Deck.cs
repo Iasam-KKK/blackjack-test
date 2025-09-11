@@ -1294,7 +1294,7 @@ private void EndHand(WinCode code)
     {
         playerScoreText.text = "Score: " + GetVisibleScore(player, true);
         dealerScoreText.text = "Score: " + GetVisibleScore(dealer, false);
-        }
+    }
     
     // Make UpdateDiscardButtonState public so it can be called from CardModel
     public void UpdateDiscardButtonState()
@@ -3001,6 +3001,28 @@ private void EndHand(WinCode code)
             hand.ArrangeCardsInWindow();
         }
     }
+public GameObject SpawnCardWithValue(CardHand targetHand, int forcedValue)
+{
+    if (targetHand == null) return null;
+
+    // Just reuse the last card in hand as a placeholder
+    if (targetHand.cards.Count == 0) return null;
+
+    // Clone the last card
+    GameObject newCard = Instantiate(targetHand.cards[targetHand.cards.Count - 1], targetHand.transform);
+    CardModel cm = newCard.GetComponent<CardModel>();
+    if (cm != null)
+    {
+        cm.value = forcedValue;
+        cm.ToggleFace(true);
+    }
+
+    targetHand.cards.Add(newCard);
+    targetHand.ArrangeCardsInWindow();
+    targetHand.UpdatePoints();
+
+    return newCard;
+}
 
     private Vector3 CalculateFinalCardPosition(CardHand hand, int cardIndex)
     {

@@ -71,6 +71,9 @@ public class BossManager : MonoBehaviour
     
     private void Start()
     {
+        StartCoroutine(ShowBossIntroPanel());
+
+        bossIntroPreviewPanel.gameObject.SetActive(true);
         // Find references if not assigned
         if (deck == null) deck = FindObjectOfType<Deck>();
         if (shopManager == null) shopManager = FindObjectOfType<ShopManager>();
@@ -168,7 +171,12 @@ public class BossManager : MonoBehaviour
         Debug.Log($"Total boss data loaded via AssetDatabase: {allBosses.Count}");
     }
     #endif
-    
+    IEnumerator ShowBossIntroPanel()
+    {
+        bossIntroPreviewPanel.gameObject.SetActive(true);
+        yield return new WaitForSeconds(3f);
+        bossIntroPreviewPanel.gameObject.SetActive(false);
+    }
     /// <summary>
     /// Initialize a specific boss
     /// </summary>
@@ -838,12 +846,113 @@ public class BossManager : MonoBehaviour
                 StealQueens(mechanic);
                 Debug.Log("The Degenerate mechanic applied");
                 break;
+            case BossMechanicType.MutateCards:
+                MutateCards(mechanic);
+                break;
+
+            
+
 
         }
         
         OnBossMechanicTriggered?.Invoke(currentBoss);
     }
-    
+    /// <summary>
+/// The Alchemist’s mechanic – mutates cards for benefit (boss) or damage (player).
+/// </summary>
+        
+    private void MutateCards(BossMechanic mechanic)
+    {
+        if (deck == null) return;
+
+        bool mutatePlayer = Random.value < 0.5f;
+
+        CardHand targetHand = mutatePlayer
+            ? deck.player.GetComponent<CardHand>()
+            : deck.dealer.GetComponent<CardHand>();
+
+        if (targetHand == null || targetHand.cards.Count == 0) return;
+
+        // Get the last card
+        GameObject oldCard = targetHand.cards[targetHand.cards.Count - 1];
+        CardModel oldModel = oldCard.GetComponent<CardModel>();
+        if (oldModel == null) return;
+
+        int originalValue = oldModel.value;
+        int newValue;
+
+        if (mutatePlayer)
+        {
+            // Player nerf → spawn a smaller card (1–3)
+            int[] smallValues = { 1, 2, 3 };
+            newValue = smallValues[Random.Range(0, smallValues.Length)];
+        }
+        else
+        {
+            // Dealer buff → spawn a bigger card (9–K → all count as 10)
+            int[] bigValues = { 8,9, 10, 10, 10 };
+            newValue = bigValues[Random.Range(0, bigValues.Length)];
+        }
+
+        // Start animation to drop old card and replace with new one
+        StartCoroutine(AnimateCardMutation(oldCard, targetHand, originalValue, newValue, mutatePlayer));
+    }
+
+    private IEnumerator AnimateCardMutation(GameObject oldCard, CardHand ownerHand, int originalValue, int newValue, bool mutatePlayer)
+    {
+        if (oldCard == null || ownerHand == null) yield break;
+
+        SpriteRenderer sr = oldCard.GetComponent<SpriteRenderer>();
+        if (sr == null) yield break;
+
+        Color originalColor = sr.color;
+        Color mutationColor = mutatePlayer ? Color.green : Color.yellow;
+
+        // Animate old card dropping down
+        Vector3 dropPos = oldCard.transform.localPosition + Vector3.down * 10f;
+
+        Sequence seq = DOTween.Sequence();
+        seq.Append(sr.DOColor(mutationColor, 0.15f));
+        seq.Append(sr.DOColor(originalColor, 0.15f));
+        seq.Append(oldCard.transform.DOLocalMove(dropPos, 0.6f).SetEase(Ease.InQuad));
+
+        yield return seq.WaitForCompletion();
+
+        // Remove old card
+        ownerHand.cards.Remove(oldCard);
+        Destroy(oldCard);
+
+        yield return new WaitForSeconds(0.1f);
+
+        // Spawn new card with mutated value
+        GameObject newCard = deck.SpawnCardWithValue(ownerHand, newValue);
+        if (newCard != null)
+        {
+            CardModel cm = newCard.GetComponent<CardModel>();
+            if (cm != null)
+            {
+                cm.value = newValue;
+                cm.originalDeckIndex = newValue;
+                cm.ToggleFace(true);
+            }
+
+            var playerHand = deck.player.GetComponent<CardHand>();
+            var dealerHand = deck.dealer.GetComponent<CardHand>();
+            dealerHand.ArrangeCardsInWindow();
+            dealerHand.UpdatePoints();
+            playerHand.ArrangeCardsInWindow();
+            playerHand.UpdatePoints();
+            deck.UpdateScoreDisplays();
+
+            
+        }
+
+        // ✅ Update score text only, don’t trigger win/lose here
+
+        Debug.Log($"The Alchemist mutated {(mutatePlayer ? "player's" : "dealer's")} card {originalValue} → {newValue}");
+    }
+
+
     /// <summary>
     /// Apply mechanic to a specific card
     /// </summary>

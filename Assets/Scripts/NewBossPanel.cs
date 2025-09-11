@@ -47,7 +47,7 @@ public class NewBossPanel : MonoBehaviour
         }
         
         // Don't hide initially - let the ShowBossPanel method control visibility
-        // gameObject.SetActive(false); // Removed this line
+         gameObject.SetActive(true); // Removed this line
     }
     
     private void Update()
