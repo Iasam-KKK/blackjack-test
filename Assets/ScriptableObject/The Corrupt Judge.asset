@@ -17,6 +17,9 @@ MonoBehaviour:
   price: 100
   description: Peek into the next three cards in your hand and rearrange the first
     two if desired
+  assignedMaterial: {fileID: 11400000, guid: ce48707311da09e469848e1b5c9f8341, type: 2}
+  currentUses: 0
+  maxUses: 1
   cardType: 19
   isReusable: 0
   animationDuration: 0.5

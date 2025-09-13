@@ -17,6 +17,9 @@ MonoBehaviour:
   price: 100
   description: 'Transformation: Replace the first selected card with a duplicate
     of the second selected card. Uses 1 token. Can only be used once per round.'
+  assignedMaterial: {fileID: 11400000, guid: ce48707311da09e469848e1b5c9f8341, type: 2}
+  currentUses: 0
+  maxUses: 1
   cardType: 2
   isReusable: 0
   animationDuration: 0.5

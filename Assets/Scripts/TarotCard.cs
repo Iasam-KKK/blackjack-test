@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using DG.Tweening;
+using TMPro;
 
 public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
@@ -13,7 +14,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     public Image materialBackground; // Background image for material
     public Text cardNameText;
     public Text priceText;
-    public Text durabilityText; // Display remaining uses
+    public TextMeshProUGUI durabilityText; // Display remaining uses
     
     [Header("State")]
     public bool isInShop = true;        // Whether card is in shop or player's inventory
@@ -41,6 +42,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     
     private void Start()
     {
+        
         // Find material background if not assigned
         if (materialBackground == null)
         {
@@ -119,7 +121,9 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             {
                 if (isInShop)
                 {
-                    priceText.text = cardData.price + "$";
+                    /*priceText.text = cardData.price + "$";
+                    priceText.gameObject.SetActive(true);*/
+                    priceText.text = GetFinalPrice() + "$";
                     priceText.gameObject.SetActive(true);
                 }
                 else
@@ -144,7 +148,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 // Show durability only when not in shop
                 if (isInShop)
                 {
-                    durabilityText.gameObject.SetActive(false);
+                   // durabilityText.gameObject.SetActive(false);
                 }
                 else
                 {
@@ -326,13 +330,17 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     // Try to purchase the card from the shop
     public void TryPurchaseCard()
     {
-        if (deck != null && deck.Balance >= (uint)cardData.price)
+        /*if (deck != null && deck.Balance >= (uint)cardData.price)
         {
-            uint cost = (uint)cardData.price;
+            uint cost = (uint)cardData.price;*/
             
             // Deduct balance
-            deck.Balance -= cost;
-            
+            //deck.Balance -= cost;
+            uint cost = GetFinalPrice(); // ✅ use the adjusted material price
+            if (deck != null && deck.Balance >= cost)
+            {
+                deck.Balance -= (uint)cost;
+
             // Add card to PlayerStats
             if (PlayerStats.instance != null && cardData != null)
             {
@@ -363,7 +371,46 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             }
         }
     }
-    
+    // Get final price depending on material
+    public uint GetFinalPrice()
+    {
+        int finalPrice = cardData.price; // Base price from TarotCardData (100)
+
+        if (cardData.assignedMaterial != null)
+        {
+            // Example: Gold makes it x3 more expensive
+            switch (cardData.assignedMaterial.materialType)
+            {
+                case TarotMaterialType.Paper:
+                    finalPrice = cardData.price; // 100
+                    break;
+                case TarotMaterialType.Cardboard:
+                    finalPrice = cardData.price * 2; // 200
+                    break;
+                case TarotMaterialType.Wood:
+                    finalPrice = cardData.price * 3; // 300
+                    break;
+                case TarotMaterialType.Copper:
+                    finalPrice = cardData.price * 4; // 400
+                    break;
+                case TarotMaterialType.Silver:
+                    finalPrice = cardData.price * 5; // 500
+                    break;
+                case TarotMaterialType.Gold:
+                    finalPrice = cardData.price * 6; // 600
+                    break;
+                case TarotMaterialType.Platinum:
+                    finalPrice = cardData.price * 7; // 700
+                    break;
+                case TarotMaterialType.Diamond:
+                    finalPrice = cardData.price * 10; // 1000
+                    break;
+            }
+        }
+
+        return (uint)finalPrice;
+    }
+
     // Move card from shop to tarot panel
     private void MoveToTarotPanel()
     {

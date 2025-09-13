@@ -17,6 +17,9 @@ MonoBehaviour:
   price: 100
   description: Prevents losing by destroying the last card hit, but self destroying
     regardless of material
+  assignedMaterial: {fileID: 11400000, guid: ce48707311da09e469848e1b5c9f8341, type: 2}
+  currentUses: 0
+  maxUses: 1
   cardType: 26
   isReusable: 0
   animationDuration: 0.5
