@@ -20,7 +20,7 @@ MonoBehaviour:
   maxHealth: 3
   handsPerRound: 9
   difficultyMultiplier: 1
-  unlockOrder: 1
+  unlockOrder: 13
   mechanics:
   - mechanicType: 20
     mechanicName: MutateCards

@@ -16,6 +16,9 @@ MonoBehaviour:
   cardImage: {fileID: 21300000, guid: eba487c13fde2b64d9df277c6b363094, type: 3}
   price: 100
   description: Take a look at the next card and shuffle the whole deck if desired
+  assignedMaterial: {fileID: 11400000, guid: ce48707311da09e469848e1b5c9f8341, type: 2}
+  currentUses: 0
+  maxUses: 1
   cardType: 22
   isReusable: 0
   animationDuration: 0.5
