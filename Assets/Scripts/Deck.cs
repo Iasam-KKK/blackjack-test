@@ -866,7 +866,7 @@ private void EndHand(WinCode code)
             if (lossAmount <= _balance)
             {
                 Balance -= lossAmount;
-                if (PlayerStats.instance.PlayerHasCard(TarotCardType.WitchDoctor))
+                if (PlayerStats.instance.PlayerHasEquippedCard(TarotCardType.WitchDoctor))
                 {
                     int refund = Mathf.RoundToInt(_bet * 0.1f);
                     Balance += (uint)refund;
@@ -2139,6 +2139,21 @@ private void EndHand(WinCode code)
     // HELPER FUNCTION - Check if player actually has a tarot card in the panel
     public bool PlayerActuallyHasCard(TarotCardType cardType)
     {
+        // First check the new inventory system for equipped cards
+        if (InventoryManager.Instance != null)
+        {
+            var equippedCards = InventoryManager.Instance.GetEquippedUsableCards();
+            foreach (var card in equippedCards)
+            {
+                if (card.cardType == cardType && card.CanBeUsed())
+                {
+                    return true;
+                }
+            }
+            return false; // If inventory system is available, only use equipped cards
+        }
+        
+        // Fallback to old system if inventory manager not available
         ShopManager shopManager = FindObjectOfType<ShopManager>();
         if (shopManager == null || shopManager.tarotPanel == null)
         {
