@@ -341,11 +341,39 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             {
                 deck.Balance -= (uint)cost;
 
-            // Add card to PlayerStats
+            // Add card to PlayerStats (for compatibility)
             if (PlayerStats.instance != null && cardData != null)
             {
                 PlayerStats.instance.ownedCards.Add(cardData);
                 Debug.Log("Added " + cardData.cardName + " to player's owned cards");
+            }
+            
+            // Prioritize the regular InventoryManager if it has data (used by FinalInventorySetup)
+            if (InventoryManager.Instance != null && InventoryManager.Instance.inventoryData != null && cardData != null)
+            {
+                bool addedToInventory = InventoryManager.Instance.AddPurchasedCard(cardData);
+                if (addedToInventory)
+                {
+                    // Try to auto-equip the card
+                    var storageSlots = InventoryManager.Instance.inventoryData.storageSlots;
+                    for (int i = 0; i < storageSlots.Count; i++)
+                    {
+                        if (storageSlots[i].isOccupied && storageSlots[i].storedCard == cardData)
+                        {
+                            // Found the card in storage, try to equip it
+                            bool equipped = InventoryManager.Instance.EquipCardFromStorage(i);
+                            if (equipped)
+                            {
+                                Debug.Log($"Auto-equipped purchased card: {cardData.cardName}");
+                            }
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("Failed to add card to inventory - inventory might be full!");
+                }
             }
             
             // Notify the deck about the purchase
@@ -357,8 +385,9 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 shopManager.OnCardPurchased(this);
             }
             
-            // Move card to player's tarot panel
-            MoveToTarotPanel();
+            // Card is handled by inventory system - destroy the shop card
+            Debug.Log("Card handled by inventory system - destroying shop card");
+            Destroy(gameObject);
         }
         else
         {
@@ -920,11 +949,17 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     Debug.Log("Card " + cardData.cardName + " has been completely used up! Material: " + 
                              cardData.GetMaterialDisplayName());
                     
-                    // Remove from PlayerStats
+                    // Remove from PlayerStats (for compatibility)
                     if (PlayerStats.instance != null && PlayerStats.instance.ownedCards != null && cardData != null)
                     {
                         PlayerStats.instance.ownedCards.Remove(cardData);
                         Debug.Log("Removed " + cardData.cardName + " from player's owned cards - durability exhausted");
+                    }
+                    
+                    // Remove from Inventory System
+                    if (InventoryManager.Instance != null && cardData != null)
+                    {
+                        InventoryManager.Instance.RemoveUsedUpCard(cardData);
                     }
                     
                     // Animate the card destruction

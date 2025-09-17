@@ -7,6 +7,7 @@ public class GameMenuManager : MonoBehaviour
     [Header("UI References")]
     public Button pauseButton;        // Button to toggle pause menu
     public Button resumeButton;       // Button to resume game (hide panel)
+    public Button inventoryButton;    // Button to open inventory
     public Button mainMenuButton;     // Optional: return to main menu
     public Button restartButton;      // Optional: restart game
     public GameObject pauseMenuPanel; // The panel that slides down
@@ -14,6 +15,9 @@ public class GameMenuManager : MonoBehaviour
     [Header("Animation Settings")]
     public float animationDuration = 0.5f;
     public float slideDistance = 500f;
+    
+    [Header("Inventory")]
+    public InventoryPanelUI inventoryPanelUI; // Reference to inventory panel
 
     private bool isPaused = false;
     private Vector3 originalPosition;
@@ -39,6 +43,9 @@ public class GameMenuManager : MonoBehaviour
 
         if (resumeButton != null)
             resumeButton.onClick.AddListener(HidePauseMenu);
+
+        if (inventoryButton != null)
+            inventoryButton.onClick.AddListener(OnInventoryButtonClicked);
 
         if (mainMenuButton != null)
             mainMenuButton.onClick.AddListener(GoToMainMenu);
@@ -109,6 +116,21 @@ public class GameMenuManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Called when Inventory button is clicked
+    /// </summary>
+    public void OnInventoryButtonClicked()
+    {
+        if (inventoryPanelUI != null)
+        {
+            inventoryPanelUI.ToggleInventory();
+        }
+        else
+        {
+            Debug.LogWarning("Inventory Panel UI not assigned in Game Menu Manager!");
+        }
+    }
+
+    /// <summary>
     /// Go to main menu
     /// </summary>
     public void GoToMainMenu()
@@ -148,6 +170,9 @@ public class GameMenuManager : MonoBehaviour
 
         if (resumeButton != null)
             resumeButton.onClick.RemoveListener(HidePauseMenu);
+
+        if (inventoryButton != null)
+            inventoryButton.onClick.RemoveListener(OnInventoryButtonClicked);
 
         if (mainMenuButton != null)
             mainMenuButton.onClick.RemoveListener(GoToMainMenu);

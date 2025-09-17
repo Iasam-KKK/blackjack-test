@@ -7,6 +7,7 @@ public class MainMenuManager : MonoBehaviour
     [Header("UI References")]
     public Button playButton;
     public Button tutorialButton;      // New tutorial button
+    public Button inventoryButton;     // New inventory button
     public Button settingsButton;
     public Button quitButton;
     // public TextMeshProUGUI titleText;
@@ -17,6 +18,9 @@ public class MainMenuManager : MonoBehaviour
     public Button replayTutorialButton;      // Button to replay tutorial
     public Toggle tutorialEnabledToggle;     // Toggle to enable/disable tutorial for new players
     public Button tutorialSettingsCloseButton;
+
+    [Header("Inventory")]
+    public InventoryPanelUI inventoryPanelUI; // Reference to inventory panel
 
     [Header("Audio")]
     public AudioSource buttonClickSound;
@@ -29,6 +33,9 @@ public class MainMenuManager : MonoBehaviour
         
         if (tutorialButton != null)
             tutorialButton.onClick.AddListener(OnTutorialButtonClicked);
+        
+        if (inventoryButton != null)
+            inventoryButton.onClick.AddListener(OnInventoryButtonClicked);
         
         if (settingsButton != null)
             settingsButton.onClick.AddListener(OnSettingsButtonClicked);
@@ -107,6 +114,23 @@ public class MainMenuManager : MonoBehaviour
         else
         {
             UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
+        }
+    }
+
+    /// <summary>
+    /// Called when Inventory button is clicked
+    /// </summary>
+    public void OnInventoryButtonClicked()
+    {
+        PlayButtonSound();
+        
+        if (inventoryPanelUI != null)
+        {
+            inventoryPanelUI.ToggleInventory();
+        }
+        else
+        {
+            Debug.LogWarning("Inventory Panel UI not assigned in Main Menu Manager!");
         }
     }
 
@@ -251,6 +275,9 @@ public class MainMenuManager : MonoBehaviour
         
         if (tutorialButton != null)
             tutorialButton.onClick.RemoveListener(OnTutorialButtonClicked);
+        
+        if (inventoryButton != null)
+            inventoryButton.onClick.RemoveListener(OnInventoryButtonClicked);
         
         if (settingsButton != null)
             settingsButton.onClick.RemoveListener(OnSettingsButtonClicked);
