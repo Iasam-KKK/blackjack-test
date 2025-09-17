@@ -752,7 +752,7 @@ MonoBehaviour:
   m_Position:
     m_Target: {x: 227.24196, y: 303.53064, z: -860.1199}
     speed: 2
-    m_Value: {x: 244.95511, y: 306.58258, z: -859.9505}
+    m_Value: {x: 227.24196, y: 303.53064, z: -860.1199}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -804,7 +804,7 @@ MonoBehaviour:
   m_Size:
     m_Target: 393.27356
     speed: 2
-    m_Value: 376.33835
+    m_Value: 393.27356
   m_Ortho:
     m_Target: 1
     speed: 2
@@ -930,23 +930,23 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: cce5fdff
-      m_LastClickedID: -137780
+      m_SelectedIDs: fc80ffff
+      m_LastClickedID: -32516
       m_ExpandedIDs: 9ce5fdffcce5fdff58eafdffbcfafdff8812feff8419feff9c19feff3a22feff162cfeffa640feff364bfeff7860fefffc6bfeff6c61ffffa063ffffb863ffffd063ffff288affff328affff528affffccf100007af30000dcf40000
       m_RenameOverlay:
         m_UserAcceptedRename: 0
-        m_Name: InventoryPanel
-        m_OriginalName: InventoryPanel
+        m_Name: 
+        m_OriginalName: 
         m_EditFieldRect:
           serializedVersion: 2
           x: 0
           y: 0
           width: 0
           height: 0
-        m_UserData: -137780
+        m_UserData: 0
         m_IsWaitingForDelay: 0
         m_IsRenaming: 0
-        m_OriginalEventType: 0
+        m_OriginalEventType: 11
         m_IsRenamingFilename: 0
         m_TrimLeadingAndTrailingWhitespace: 0
         m_ClientGUIView: {fileID: 7}
@@ -1105,8 +1105,8 @@ MonoBehaviour:
       m_Icon: {fileID: 0}
       m_ResourceFile: 
   m_ListAreaState:
-    m_SelectedInstanceIDs: cce5fdff
-    m_LastClickedInstanceID: -137780
+    m_SelectedInstanceIDs: fc80ffff
+    m_LastClickedInstanceID: -32516
     m_HadKeyboardFocusLastEvent: 0
     m_ExpandedInstanceIDs: 
     m_RenameOverlay:
