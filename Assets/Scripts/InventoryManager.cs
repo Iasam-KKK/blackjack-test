@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
@@ -12,7 +13,7 @@ public class InventoryManager : MonoBehaviour
     
     [Header("Persistence")]
     public bool enablePersistence = true;
-    private const string INVENTORY_SAVE_KEY = "InventoryData_v1";
+    private const string INVENTORY_SAVE_KEY = "FinalInventoryData_v1";
     
     [Header("Old System Integration")]
     public ShopManager shopManager;
@@ -90,6 +91,10 @@ public class InventoryManager : MonoBehaviour
             if (shopManager == null)
             {
                 shopManager = FindObjectOfType<ShopManager>();
+                if (shopManager != null)
+                {
+                    Debug.Log("✅ Found and assigned ShopManager reference");
+                }
             }
             
             Debug.Log("✅ Inventory force-initialized with " + inventoryData.storageSlotCount + " storage slots and " + 
@@ -467,15 +472,7 @@ public class InventoryManager : MonoBehaviour
             {
                 if (slot.isOccupied && slot.storedCard != null)
                 {
-                    saveData.storageCards.Add(new CardSaveData
-                    {
-                        cardName = slot.storedCard.cardName,
-                        cardType = slot.storedCard.cardType,
-                        currentUses = slot.storedCard.currentUses,
-                        maxUses = slot.storedCard.maxUses,
-                        materialName = slot.storedCard.assignedMaterial?.materialName ?? "",
-                        slotIndex = slot.slotIndex
-                    });
+                    saveData.storageCards.Add(CardSaveData.FromTarotCardData(slot.storedCard, slot.slotIndex));
                 }
             }
             
@@ -484,15 +481,7 @@ public class InventoryManager : MonoBehaviour
             {
                 if (slot.isOccupied && slot.storedCard != null)
                 {
-                    saveData.equippedCards.Add(new CardSaveData
-                    {
-                        cardName = slot.storedCard.cardName,
-                        cardType = slot.storedCard.cardType,
-                        currentUses = slot.storedCard.currentUses,
-                        maxUses = slot.storedCard.maxUses,
-                        materialName = slot.storedCard.assignedMaterial?.materialName ?? "",
-                        slotIndex = slot.slotIndex
-                    });
+                    saveData.equippedCards.Add(CardSaveData.FromTarotCardData(slot.storedCard, slot.slotIndex));
                 }
             }
             
@@ -527,12 +516,22 @@ public class InventoryManager : MonoBehaviour
             
             Debug.Log($"📊 Parsed save data: {saveData.storageCards.Count} storage cards, {saveData.equippedCards.Count} equipped cards");
             
+            // Clear existing slots first
+            foreach (var slot in inventoryData.storageSlots)
+            {
+                slot.RemoveCard();
+            }
+            foreach (var slot in inventoryData.equipmentSlots)
+            {
+                slot.RemoveCard();
+            }
+            
             // Load storage cards
             foreach (var cardSave in saveData.storageCards)
             {
                 Debug.Log($"🔄 Loading storage card: {cardSave.cardName} (Type: {cardSave.cardType}, Uses: {cardSave.currentUses}/{cardSave.maxUses}, Slot: {cardSave.slotIndex})");
                 
-                TarotCardData card = FindOrCreateCardData(cardSave);
+                TarotCardData card = CreateCardFromSaveData(cardSave);
                 if (card != null && cardSave.slotIndex < inventoryData.storageSlots.Count)
                 {
                     inventoryData.storageSlots[cardSave.slotIndex].StoreCard(card);
@@ -549,7 +548,7 @@ public class InventoryManager : MonoBehaviour
             {
                 Debug.Log($"🔄 Loading equipped card: {cardSave.cardName} (Type: {cardSave.cardType}, Uses: {cardSave.currentUses}/{cardSave.maxUses}, Slot: {cardSave.slotIndex})");
                 
-                TarotCardData card = FindOrCreateCardData(cardSave);
+                TarotCardData card = CreateCardFromSaveData(cardSave);
                 if (card != null && cardSave.slotIndex < inventoryData.equipmentSlots.Count)
                 {
                     inventoryData.equipmentSlots[cardSave.slotIndex].StoreCard(card);
@@ -562,6 +561,9 @@ public class InventoryManager : MonoBehaviour
             }
             
             Debug.Log($"✅ Inventory loaded from PlayerPrefs: {saveData.storageCards.Count} storage, {saveData.equippedCards.Count} equipped");
+            
+            // Force a UI refresh after loading cards to ensure images display
+            StartCoroutine(ForceUIRefreshAfterLoad());
         }
         catch (Exception e)
         {
@@ -569,38 +571,264 @@ public class InventoryManager : MonoBehaviour
         }
     }
     
-    private TarotCardData FindOrCreateCardData(CardSaveData saveData)
+    private TarotCardData CreateCardFromSaveData(CardSaveData saveData)
     {
-        // Try to find existing card data first
-        if (PlayerStats.instance != null)
+        // Create TarotCardData from save data
+        TarotCardData card = saveData.ToTarotCardData();
+        
+        // Method 1: Try to find original card data from Resources folder first
+        TarotCardData originalCard = FindOriginalCardDataFromResources(saveData.cardType);
+        if (originalCard != null)
         {
-            var existingCard = PlayerStats.instance.ownedCards.FirstOrDefault(c => 
-                c.cardName == saveData.cardName && 
-                c.cardType == saveData.cardType &&
-                c.currentUses == saveData.currentUses);
+            card.cardImage = originalCard.cardImage;
+            card.description = originalCard.description;
+            card.price = originalCard.price;
             
-            if (existingCard != null) return existingCard;
+            Debug.Log($"✅ Enhanced card with Resources sprite: {saveData.cardName}");
         }
-        
-        // Create new card data if not found
-        TarotCardData newCard = ScriptableObject.CreateInstance<TarotCardData>();
-        newCard.cardName = saveData.cardName;
-        newCard.cardType = saveData.cardType;
-        newCard.currentUses = saveData.currentUses;
-        newCard.maxUses = saveData.maxUses;
-        
-        // Try to find and assign material
-        if (!string.IsNullOrEmpty(saveData.materialName))
+        else
         {
-            // You might want to implement a material lookup system here
-            // For now, create a basic material
-            MaterialData material = ScriptableObject.CreateInstance<MaterialData>();
-            material.materialName = saveData.materialName;
-            material.maxUses = saveData.maxUses;
-            newCard.AssignMaterial(material);
+            // Method 2: Try to find existing card sprite from scene cards
+            TarotCard[] existingCards = FindObjectsOfType<TarotCard>();
+            foreach (var existingCard in existingCards)
+            {
+                if (existingCard.cardData != null && existingCard.cardData.cardType == saveData.cardType)
+                {
+                    card.cardImage = existingCard.cardData.cardImage;
+                    card.description = existingCard.cardData.description;
+                    card.price = existingCard.cardData.price;
+                    
+                    Debug.Log($"✅ Enhanced card with scene sprite: {saveData.cardName}");
+                    break;
+                }
+            }
         }
         
-        return newCard;
+        // If no sprite found, use placeholder
+        if (card.cardImage == null)
+        {
+            card.cardImage = CreatePlaceholderSprite();
+            card.description = "Inventory card";
+            card.price = 100;
+            Debug.Log($"⚠️ Using placeholder sprite for: {saveData.cardName}");
+        }
+        
+        // Always use correct material based on saved material type
+        if (card.assignedMaterial != null)
+        {
+            // Try to load the actual MaterialData from Resources first
+            MaterialData originalMaterial = LoadMaterialFromResources(saveData.materialType);
+            if (originalMaterial != null && originalMaterial.backgroundSprite != null)
+            {
+                card.assignedMaterial.backgroundSprite = originalMaterial.backgroundSprite;
+                Debug.Log($"🎨 Loaded original material background for {saveData.cardName}: {saveData.materialType}");
+            }
+            else
+            {
+                // Fallback to creating a colored sprite
+                card.assignedMaterial.backgroundSprite = CreateMaterialBackgroundSprite(saveData.materialType);
+                Debug.Log($"🎨 Created fallback material background for {saveData.cardName}: {saveData.materialType}");
+            }
+        }
+        
+        Debug.Log($"✅ Recreated card: {saveData.cardName} ({saveData.materialType}, {saveData.currentUses}/{saveData.maxUses} uses)");
+        return card;
+    }
+    
+    private TarotCardData FindOriginalCardDataFromResources(TarotCardType cardType)
+    {
+        // Try to load from Resources folder first
+        TarotCardData[] allCards = Resources.LoadAll<TarotCardData>("");
+        foreach (var card in allCards)
+        {
+            if (card.cardType == cardType)
+            {
+                Debug.Log($"✅ Found original card data for {cardType} from Resources root");
+                return card;
+            }
+        }
+        
+        // Try from Materials subfolder in Resources
+        TarotCardData[] materialCards = Resources.LoadAll<TarotCardData>("Materials");
+        foreach (var card in materialCards)
+        {
+            if (card.cardType == cardType)
+            {
+                Debug.Log($"✅ Found original card data for {cardType} from Resources/Materials");
+                return card;
+            }
+        }
+        
+        // For now, since ScriptableObjects are not in Resources, we'll use UnityEditor to load them
+        // This is a workaround - ideally these should be moved to Resources folder
+        #if UNITY_EDITOR
+        string[] guids = UnityEditor.AssetDatabase.FindAssets("t:TarotCardData", new[] {"Assets/ScriptableObject"});
+        foreach (string guid in guids)
+        {
+            string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+            TarotCardData card = UnityEditor.AssetDatabase.LoadAssetAtPath<TarotCardData>(path);
+            if (card != null && card.cardType == cardType)
+            {
+                Debug.Log($"✅ Found original card data for {cardType} from ScriptableObject folder: {path}");
+                return card;
+            }
+        }
+        #endif
+        
+        Debug.Log($"⚠️ Could not find original card data for {cardType} anywhere");
+        return null;
+    }
+    
+    private MaterialData LoadMaterialFromResources(TarotMaterialType materialType)
+    {
+        // Try to load the specific material from Resources/Materials folder
+        string materialName = materialType.ToString();
+        MaterialData material = Resources.Load<MaterialData>($"Materials/{materialName}");
+        
+        if (material != null)
+        {
+            Debug.Log($"✅ Loaded MaterialData from Resources: {materialName}");
+            return material;
+        }
+        
+        // Try alternative naming (CardBoard vs Cardboard)
+        if (materialType == TarotMaterialType.Cardboard)
+        {
+            material = Resources.Load<MaterialData>("Materials/CardBoard");
+            if (material != null)
+            {
+                Debug.Log($"✅ Loaded MaterialData from Resources: CardBoard (alt naming)");
+                return material;
+            }
+        }
+        
+        Debug.Log($"⚠️ Could not load MaterialData for {materialType} from Resources");
+        return null;
+    }
+    
+    private Sprite CreatePlaceholderSprite()
+    {
+        // Try to find an existing sprite in the game first
+        Sprite existingSprite = TryGetExistingCardSprite();
+        if (existingSprite != null)
+        {
+            Debug.Log("✅ Using existing card sprite for placeholder");
+            return existingSprite;
+        }
+        
+        // Create a simple 64x64 texture with a border as placeholder
+        Texture2D texture = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+        Color[] pixels = new Color[64 * 64];
+        
+        // Create a simple card-like image with border
+        for (int y = 0; y < 64; y++)
+        {
+            for (int x = 0; x < 64; x++)
+            {
+                // Create border
+                if (x < 2 || x > 61 || y < 2 || y > 61)
+                {
+                    pixels[y * 64 + x] = Color.black;
+                }
+                // Inner area - make it more visible
+                else if (x > 10 && x < 54 && y > 10 && y < 54)
+                {
+                    pixels[y * 64 + x] = new Color(0.8f, 0.8f, 1f, 1f); // Light blue
+                }
+                else
+                {
+                    pixels[y * 64 + x] = new Color(0.9f, 0.9f, 0.9f, 1f); // Light gray
+                }
+            }
+        }
+        
+        texture.SetPixels(pixels);
+        texture.Apply();
+        texture.name = "PlaceholderCardSprite";
+        
+        Sprite sprite = Sprite.Create(texture, new Rect(0, 0, 64, 64), new Vector2(0.5f, 0.5f));
+        sprite.name = "PlaceholderCardSprite";
+        
+        Debug.Log("✅ Created placeholder card sprite");
+        return sprite;
+    }
+    
+    private Sprite TryGetExistingCardSprite()
+    {
+        // Try to find any existing tarot card in the scene and use its sprite
+        TarotCard existingCard = FindObjectOfType<TarotCard>();
+        if (existingCard != null && existingCard.cardData != null && existingCard.cardData.cardImage != null)
+        {
+            return existingCard.cardData.cardImage;
+        }
+        
+        // Try to get Unity's built-in sprite
+        return Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+    }
+    
+    private Sprite CreateMaterialBackgroundSprite(TarotMaterialType materialType)
+    {
+        // Create a colored background based on material type
+        Texture2D texture = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+        Color materialColor = GetMaterialColor(materialType);
+        
+        Color[] pixels = new Color[64 * 64];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            pixels[i] = materialColor;
+        }
+        texture.SetPixels(pixels);
+        texture.Apply();
+        texture.name = $"Material_{materialType}";
+        
+        Sprite sprite = Sprite.Create(texture, new Rect(0, 0, 64, 64), new Vector2(0.5f, 0.5f));
+        sprite.name = $"Material_{materialType}";
+        
+        Debug.Log($"✅ Created {materialType} material background sprite");
+        return sprite;
+    }
+    
+    private Color GetMaterialColor(TarotMaterialType materialType)
+    {
+        switch (materialType)
+        {
+            case TarotMaterialType.Paper: return new Color(0.9f, 0.9f, 0.8f, 0.8f); // Light beige
+            case TarotMaterialType.Cardboard: return new Color(0.7f, 0.6f, 0.4f, 0.8f); // Brown
+            case TarotMaterialType.Wood: return new Color(0.6f, 0.4f, 0.2f, 0.8f); // Dark brown
+            case TarotMaterialType.Copper: return new Color(0.8f, 0.5f, 0.2f, 0.8f); // Copper color
+            case TarotMaterialType.Silver: return new Color(0.8f, 0.8f, 0.9f, 0.8f); // Silver
+            case TarotMaterialType.Gold: return new Color(1f, 0.8f, 0.2f, 0.8f); // Gold
+            case TarotMaterialType.Platinum: return new Color(0.9f, 0.9f, 1f, 0.8f); // Platinum
+            case TarotMaterialType.Diamond: return new Color(0.9f, 0.9f, 1f, 1f); // Bright white/diamond
+            default: return Color.white;
+        }
+    }
+    
+    private System.Collections.IEnumerator ForceUIRefreshAfterLoad()
+    {
+        yield return new WaitForSeconds(0.5f); // Wait a bit for UI to be ready
+        
+        // Find and refresh the inventory UI
+        InventoryPanelUI inventoryUI = FindObjectOfType<InventoryPanelUI>();
+        if (inventoryUI != null)
+        {
+            Debug.Log("🔄 Forcing UI refresh after card loading...");
+            
+            var refreshMethod = inventoryUI.GetType().GetMethod("ForceRefreshInventoryDisplay", 
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                
+            if (refreshMethod != null)
+            {
+                refreshMethod.Invoke(inventoryUI, null);
+                Debug.Log("✅ UI refreshed after card loading");
+            }
+            else
+            {
+                // Fallback to regular refresh
+                inventoryUI.ForceRefreshInventoryDisplay();
+                Debug.Log("✅ UI refreshed after card loading (direct call)");
+            }
+        }
     }
     
     // TAROT PANEL SYNC METHODS
@@ -737,5 +965,41 @@ public class CardSaveData
     public int currentUses;
     public int maxUses;
     public string materialName;
+    public TarotMaterialType materialType;
     public int slotIndex;
+    
+    // Convert from TarotCardData
+    public static CardSaveData FromTarotCardData(TarotCardData card, int slot = -1)
+    {
+        return new CardSaveData
+        {
+            cardName = card.cardName,
+            cardType = card.cardType,
+            currentUses = card.currentUses,
+            maxUses = card.maxUses,
+            materialName = card.assignedMaterial?.materialName ?? "",
+            materialType = card.assignedMaterial?.materialType ?? TarotMaterialType.Paper,
+            slotIndex = slot
+        };
+    }
+    
+    // Convert back to TarotCardData
+    public TarotCardData ToTarotCardData()
+    {
+        // Create runtime TarotCardData
+        TarotCardData card = ScriptableObject.CreateInstance<TarotCardData>();
+        card.cardName = cardName;
+        card.cardType = cardType;
+        card.currentUses = currentUses;
+        card.maxUses = maxUses;
+        
+        // Create runtime MaterialData
+        MaterialData material = ScriptableObject.CreateInstance<MaterialData>();
+        material.materialName = materialName;
+        material.materialType = materialType;
+        material.maxUses = maxUses;
+        
+        card.AssignMaterial(material);
+        return card;
+    }
 }
