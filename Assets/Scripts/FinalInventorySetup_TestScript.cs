@@ -910,7 +910,8 @@ public class FinalInventorySetup : MonoBehaviour
         inventoryPanelUI.unequipButton = buttons[1];
         inventoryPanelUI.discardButton = buttons[2];
     }
-    
+
+        
     private void CreateInfoTexts(GameObject parent)
     {
         // Inventory stats text
