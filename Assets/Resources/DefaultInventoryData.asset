@@ -55,6 +55,14 @@ MonoBehaviour:
     isEquipmentSlot: 0
     storedCard: {fileID: 0}
     isOccupied: 0
+  - slotIndex: 10
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 11
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
   equipmentSlots:
   - slotIndex: 0
     isEquipmentSlot: 1
