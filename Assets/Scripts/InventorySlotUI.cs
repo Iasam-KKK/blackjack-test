@@ -51,13 +51,31 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnte
     
     public void UpdateSlotDisplay()
     {
-        if (slotData == null) return;
+        if (slotData == null) 
+        {
+            Debug.LogWarning($"UpdateSlotDisplay: slotData is null for slot {slotIndex}");
+            return;
+        }
         
         bool hasCard = slotData.isOccupied && slotData.storedCard != null;
         
+        // Only log for equipment slots or when there are issues
+        if (isEquipmentSlot || !hasCard)
+        {
+            Debug.Log($"🔄 UpdateSlotDisplay for slot {slotIndex} ({(isEquipmentSlot ? "Equipment" : "Storage")}): hasCard={hasCard}, cardName={slotData.storedCard?.cardName ?? "null"}, cardImage={slotData.storedCard?.cardImage?.name ?? "null"}, material={slotData.storedCard?.assignedMaterial?.materialType.ToString() ?? "null"}");
+        }
+        
         // Show/hide components based on whether slot has a card
-        if (cardImage != null) cardImage.gameObject.SetActive(hasCard);
-        if (materialBackground != null) materialBackground.gameObject.SetActive(hasCard);
+        if (cardImage != null) 
+        {
+            cardImage.gameObject.SetActive(hasCard);
+            if (isEquipmentSlot) Debug.Log($"   CardImage active: {hasCard}");
+        }
+        if (materialBackground != null) 
+        {
+            materialBackground.gameObject.SetActive(hasCard);
+            if (isEquipmentSlot) Debug.Log($"   MaterialBackground active: {hasCard}");
+        }
         if (cardNameText != null) cardNameText.gameObject.SetActive(hasCard);
         if (durabilityText != null) durabilityText.gameObject.SetActive(hasCard);
         if (emptySlotIndicator != null) emptySlotIndicator.SetActive(!hasCard);
@@ -66,32 +84,77 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnte
         {
             var card = slotData.storedCard;
             
-            // Update card image
-            if (cardImage != null && card.cardImage != null)
+            // Update card image - with more robust handling
+            if (cardImage != null)
             {
-                cardImage.sprite = card.cardImage;
-                cardImage.color = Color.white;
-            }
-            
-            // Update material background
-            if (materialBackground != null && card.assignedMaterial != null)
-            {
-                if (card.assignedMaterial.backgroundSprite != null)
+                if (card.cardImage != null)
                 {
-                    materialBackground.sprite = card.assignedMaterial.backgroundSprite;
-                    materialBackground.color = Color.white;
+                    cardImage.sprite = card.cardImage;
+                    cardImage.color = Color.white;
+                    Debug.Log($"   ✅ Set card image: {card.cardImage.name} on GameObject: {cardImage.gameObject.name} (active: {cardImage.gameObject.activeInHierarchy})");
+                    
+                    // Force immediate refresh of the image component
+                    cardImage.enabled = false;
+                    cardImage.enabled = true;
                 }
                 else
                 {
-                    materialBackground.sprite = null;
-                    materialBackground.color = card.GetMaterialColor();
+                    // Try to create a placeholder or find an alternative
+                    cardImage.sprite = null;
+                    cardImage.color = Color.gray;
+                    Debug.LogWarning($"   ⚠️ Card image is null for {card.cardName}");
                 }
+            }
+            else
+            {
+                Debug.LogError($"   ❌ cardImage component is null for slot {slotIndex}!");
+            }
+            
+            // Update material background - with more robust handling
+            if (materialBackground != null)
+            {
+                if (card.assignedMaterial != null)
+                {
+                    if (card.assignedMaterial.backgroundSprite != null)
+                    {
+                        materialBackground.sprite = card.assignedMaterial.backgroundSprite;
+                        materialBackground.color = Color.white;
+                        Debug.Log($"   ✅ Set material background sprite: {card.assignedMaterial.backgroundSprite.name} on GameObject: {materialBackground.gameObject.name} (active: {materialBackground.gameObject.activeInHierarchy})");
+                        
+                        // Force immediate refresh of the material background component
+                        materialBackground.enabled = false;
+                        materialBackground.enabled = true;
+                    }
+                    else
+                    {
+                        // Use solid color background
+                        materialBackground.sprite = null;
+                        materialBackground.color = card.GetMaterialColor();
+                        Debug.Log($"   ✅ Set material background color: {card.GetMaterialColor()} for {card.assignedMaterial.materialType} on GameObject: {materialBackground.gameObject.name}");
+                        
+                        // Force immediate refresh
+                        materialBackground.enabled = false;
+                        materialBackground.enabled = true;
+                    }
+                }
+                else
+                {
+                    // Fallback material display
+                    materialBackground.sprite = null;
+                    materialBackground.color = Color.white;
+                    Debug.LogWarning($"   ⚠️ No assigned material for {card.cardName}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"   ❌ materialBackground component is null for slot {slotIndex}!");
             }
             
             // Update card name
             if (cardNameText != null)
             {
                 cardNameText.text = card.cardName;
+                Debug.Log($"   ✅ Set card name: {card.cardName}");
             }
             
             // Update durability display
@@ -114,16 +177,46 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnte
                     durabilityText.text = "0";
                     durabilityText.color = Color.red;
                 }
+                Debug.Log($"   ✅ Set durability: {durabilityText.text} (remaining: {remainingUses})");
             }
             
             // Update slot background to show it's occupied
-            slotBackground.color = occupiedSlotColor;
+            if (slotBackground != null)
+            {
+                slotBackground.color = occupiedSlotColor;
+            }
         }
         else
         {
+            // Clear all components for empty slot
+            if (cardImage != null)
+            {
+                cardImage.sprite = null;
+                cardImage.color = Color.white;
+            }
+            if (materialBackground != null)
+            {
+                materialBackground.sprite = null;
+                materialBackground.color = Color.white;
+            }
+            if (cardNameText != null)
+            {
+                cardNameText.text = "";
+            }
+            if (durabilityText != null)
+            {
+                durabilityText.text = "";
+            }
+            
             // Reset to original background color
-            slotBackground.color = originalBackgroundColor;
+            if (slotBackground != null)
+            {
+                slotBackground.color = originalBackgroundColor;
+            }
         }
+        
+        // Force canvas update to ensure visual changes are applied immediately
+        Canvas.ForceUpdateCanvases();
     }
     
     public void OnPointerClick(PointerEventData eventData)

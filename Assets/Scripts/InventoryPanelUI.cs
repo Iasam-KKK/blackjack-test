@@ -160,7 +160,9 @@ public class InventoryPanelUI : MonoBehaviour
         
         // Force refresh the inventory display with debug logging
         Debug.Log("🔄 ShowInventory: Refreshing inventory display...");
-        ForceRefreshInventoryDisplay();
+        
+        // Use a small delay to ensure UI components are ready
+        StartCoroutine(DelayedForceRefresh());
     }
     
     public void HideInventory()
@@ -383,7 +385,8 @@ public class InventoryPanelUI : MonoBehaviour
         bool success = InventoryManager.Instance.EquipCardFromStorage(selectedSlot.slotIndex);
         if (success)
         {
-            RefreshInventoryDisplay();
+            // Wait a frame then refresh to ensure sync is complete
+            StartCoroutine(DelayedRefresh());
             SetSelectedSlot(null); // Clear selection after action
         }
     }
@@ -397,9 +400,78 @@ public class InventoryPanelUI : MonoBehaviour
         {
             // Sync with tarot panel to remove visual duplicate
             InventoryManager.Instance.SyncWithTarotPanel();
-            RefreshInventoryDisplay();
+            
+            // Wait a frame then refresh to ensure sync is complete
+            StartCoroutine(DelayedRefresh());
             SetSelectedSlot(null); // Clear selection after action
         }
+    }
+    
+    private System.Collections.IEnumerator DelayedRefresh()
+    {
+        yield return null; // Wait one frame
+        RefreshInventoryDisplay();
+    }
+    
+    private System.Collections.IEnumerator DelayedForceRefresh()
+    {
+        yield return null; // Wait one frame for UI to be ready
+        yield return new WaitForEndOfFrame(); // Wait for end of frame to ensure all UI is initialized
+        ForceRefreshInventoryDisplay();
+    }
+    
+    private void RefreshSlotDataReferences()
+    {
+        // Update slot data references even when UI is not visible
+        // This ensures that when the inventory is opened, it has the correct data
+        
+        if (InventoryManager.Instance == null || InventoryManager.Instance.inventoryData == null)
+            return;
+            
+        Debug.Log("🔄 RefreshSlotDataReferences: Updating slot references while UI is hidden");
+        
+        // Update storage slot data references
+        for (int i = 0; i < storageSlots.Count && i < InventoryManager.Instance.inventoryData.storageSlots.Count; i++)
+        {
+            var slotData = InventoryManager.Instance.GetStorageSlot(i);
+            storageSlots[i].slotData = slotData;
+        }
+        
+        // Update equipment slot data references
+        for (int i = 0; i < equipmentSlots.Count && i < InventoryManager.Instance.inventoryData.equipmentSlots.Count; i++)
+        {
+            var slotData = InventoryManager.Instance.GetEquipmentSlot(i);
+            equipmentSlots[i].slotData = slotData;
+        }
+    }
+    
+    private System.Collections.IEnumerator AggressiveRefreshForPurchasedCard()
+    {
+        // Wait a bit to ensure all purchase operations are complete
+        yield return new WaitForSeconds(0.2f);
+        
+        Debug.Log("🔄 AggressiveRefreshForPurchasedCard: Forcing slot updates after purchase");
+        
+        // Force update all slot data references
+        RefreshSlotDataReferences();
+        
+        // Force update all equipment slots (this is the critical part)
+        ForceUpdateAllEquipmentSlots();
+        
+        // Force update storage slots too
+        foreach (var slot in storageSlots)
+        {
+            if (slot != null)
+            {
+                slot.slotData = InventoryManager.Instance.GetStorageSlot(slot.slotIndex);
+                slot.UpdateSlotDisplay();
+            }
+        }
+        
+        // Final canvas update
+        Canvas.ForceUpdateCanvases();
+        
+        Debug.Log("✅ AggressiveRefreshForPurchasedCard completed");
     }
     
     private void OnDiscardButtonClicked()
@@ -417,26 +489,126 @@ public class InventoryPanelUI : MonoBehaviour
     // Event handlers for inventory changes
     private void OnCardAddedToInventory(TarotCardData card)
     {
+        Debug.Log($"🎯 OnCardAddedToInventory: {card?.cardName ?? "null"} (isVisible: {isVisible})");
         if (isVisible)
         {
-            RefreshInventoryDisplay();
+            StartCoroutine(DelayedForceRefresh());
+        }
+        else
+        {
+            // Even if not visible, we should refresh the slot data references
+            // so when the inventory is opened, it shows correctly
+            RefreshSlotDataReferences();
+            
+            // Also force a more aggressive refresh for purchased cards
+            StartCoroutine(AggressiveRefreshForPurchasedCard());
         }
     }
     
     private void OnCardRemovedFromInventory(TarotCardData card)
     {
+        Debug.Log($"🗑️ OnCardRemovedFromInventory: {card?.cardName ?? "null"} (isVisible: {isVisible})");
         if (isVisible)
         {
-            RefreshInventoryDisplay();
+            StartCoroutine(DelayedForceRefresh());
+        }
+        else
+        {
+            RefreshSlotDataReferences();
         }
     }
     
     private void OnCardEquippedChanged(TarotCardData card, bool isEquipped)
     {
+        Debug.Log($"⚔️ OnCardEquippedChanged: {card?.cardName ?? "null"} equipped={isEquipped} (isVisible: {isVisible})");
         if (isVisible)
         {
-            RefreshInventoryDisplay();
+            StartCoroutine(DelayedForceRefresh());
         }
+        else
+        {
+            RefreshSlotDataReferences();
+            
+            // Also force aggressive refresh for equipment changes
+            StartCoroutine(AggressiveRefreshForPurchasedCard());
+        }
+    }
+    
+    // Public method to allow InventoryManager to directly update equipment slots
+    public void ForceUpdateEquipmentSlot(int slotIndex, TarotCardData card)
+    {
+        if (equipmentSlots == null)
+        {
+            Debug.LogWarning("⚠️ Equipment slots list is null - inventory UI may not be initialized yet");
+            return;
+        }
+        
+        if (slotIndex < 0 || slotIndex >= equipmentSlots.Count)
+        {
+            Debug.LogError($"❌ Invalid equipment slot index: {slotIndex} (valid range: 0-{equipmentSlots.Count - 1})");
+            return;
+        }
+        
+        Debug.Log($"🔧 InventoryPanelUI.ForceUpdateEquipmentSlot: Updating slot {slotIndex} with {card?.cardName ?? "null"}");
+        
+        var slotUI = equipmentSlots[slotIndex];
+        if (slotUI != null)
+        {
+            // Update the slot data reference immediately
+            if (InventoryManager.Instance != null)
+            {
+                slotUI.slotData = InventoryManager.Instance.GetEquipmentSlot(slotIndex);
+                
+                // Force the slot to update its display
+                slotUI.UpdateSlotDisplay();
+                
+                Debug.Log($"✅ Successfully force-updated equipment slot {slotIndex}");
+            }
+            else
+            {
+                Debug.LogError("❌ InventoryManager.Instance is null!");
+            }
+        }
+        else
+        {
+            Debug.LogError($"❌ Equipment slot UI {slotIndex} is null!");
+        }
+    }
+    
+    // Force update ALL equipment slots immediately
+    public void ForceUpdateAllEquipmentSlots()
+    {
+        if (equipmentSlots == null)
+        {
+            Debug.LogWarning("⚠️ Equipment slots list is null - inventory UI may not be initialized yet");
+            return;
+        }
+        
+        if (InventoryManager.Instance == null)
+        {
+            Debug.LogError("❌ InventoryManager.Instance is null!");
+            return;
+        }
+        
+        Debug.Log($"🔧 ForceUpdateAllEquipmentSlots: Updating all {equipmentSlots.Count} equipment slots");
+        
+        for (int i = 0; i < equipmentSlots.Count; i++)
+        {
+            var slotUI = equipmentSlots[i];
+            if (slotUI != null)
+            {
+                // Update the slot data reference immediately
+                slotUI.slotData = InventoryManager.Instance.GetEquipmentSlot(i);
+                
+                // Force the slot to update its display
+                slotUI.UpdateSlotDisplay();
+            }
+        }
+        
+        // Force canvas update
+        Canvas.ForceUpdateCanvases();
+        
+        Debug.Log($"✅ Successfully force-updated all equipment slots");
     }
     
     private void OnDestroy()
