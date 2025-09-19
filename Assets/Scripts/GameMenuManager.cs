@@ -120,14 +120,50 @@ public class GameMenuManager : MonoBehaviour
     /// </summary>
     public void OnInventoryButtonClicked()
     {
+        Debug.Log($"🎯 GameMenuManager.OnInventoryButtonClicked() called! isPaused={isPaused}, inventoryPanelUI={inventoryPanelUI != null}");
+        
         if (inventoryPanelUI != null)
         {
-            inventoryPanelUI.ToggleInventory();
+            // First, hide the pause menu and resume the game
+            // Use a callback to open inventory after pause menu animation completes
+            HidePauseMenuAndOpenInventory();
         }
         else
         {
             Debug.LogWarning("Inventory Panel UI not assigned in Game Menu Manager!");
         }
+    }
+    
+    /// <summary>
+    /// Hide pause menu and then open inventory
+    /// </summary>
+    private void HidePauseMenuAndOpenInventory()
+    {
+        Debug.Log($"🔧 HidePauseMenuAndOpenInventory() called! isPaused={isPaused}");
+        
+        if (!isPaused) 
+        {
+            // If not paused, just open inventory directly
+            Debug.Log("📂 Game not paused, opening inventory directly");
+            inventoryPanelUI.ShowInventory();
+            return;
+        }
+
+        Debug.Log("⏸️ Game is paused, hiding pause menu first then opening inventory");
+        
+        // Animate sliding up the pause menu
+        panelRect.DOAnchorPos(hiddenPosition, animationDuration)
+            .SetEase(Ease.InBack)
+            .SetUpdate(true)
+            .OnComplete(() => {
+                Debug.Log("✅ Pause menu animation complete, resuming game and opening inventory");
+                pauseMenuPanel.SetActive(false);
+                isPaused = false;
+                Time.timeScale = 1f; // Resume the game
+                
+                // Now open the inventory
+                inventoryPanelUI.ShowInventory();
+            });
     }
 
     /// <summary>

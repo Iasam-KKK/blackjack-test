@@ -144,18 +144,10 @@ public class InventoryPanelUI : MonoBehaviour
         
         isVisible = true;
         
-        // Show panel
+        // Simply show panel - don't touch scale or anything else
         if (inventoryPanel != null)
         {
             inventoryPanel.SetActive(true);
-            
-            // Animate panel appearance
-            RectTransform panelRect = inventoryPanel.GetComponent<RectTransform>();
-            if (panelRect != null)
-            {
-                panelRect.localScale = Vector3.zero;
-                panelRect.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
-            }
         }
         
         // Force refresh the inventory display with debug logging
@@ -171,19 +163,10 @@ public class InventoryPanelUI : MonoBehaviour
         
         isVisible = false;
         
-        // Animate panel disappearance
+        // Simply hide panel without any scaling or animation
         if (inventoryPanel != null)
         {
-            RectTransform panelRect = inventoryPanel.GetComponent<RectTransform>();
-            if (panelRect != null)
-            {
-                panelRect.DOScale(Vector3.zero, animationDuration).SetEase(Ease.InBack)
-                    .OnComplete(() => inventoryPanel.SetActive(false));
-            }
-            else
-            {
-                inventoryPanel.SetActive(false);
-            }
+            inventoryPanel.SetActive(false);
         }
         
         // Clear selection
