@@ -98,7 +98,7 @@ MonoBehaviour:
     m_HSlider: 0
     m_VSlider: 0
     m_IgnoreScrollWheelUntilClicked: 0
-    m_EnableMouseInput: 0
+    m_EnableMouseInput: 1
     m_EnableSliderZoomHorizontal: 0
     m_EnableSliderZoomVertical: 0
     m_UniformScale: 1
@@ -790,9 +790,9 @@ MonoBehaviour:
   m_AudioPlay: 0
   m_DebugDrawModesUseInteractiveLightBakingData: 0
   m_Position:
-    m_Target: {x: 1078.8217, y: 392.25833, z: 1.4692144}
+    m_Target: {x: 682.04926, y: 721.3865, z: 0}
     speed: 2
-    m_Value: {x: 1078.8217, y: 392.25833, z: 1.4692144}
+    m_Value: {x: 682.0494, y: 721.38654, z: 0}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -842,9 +842,9 @@ MonoBehaviour:
     speed: 2
     m_Value: {x: 0, y: 0, z: 0, w: 1}
   m_Size:
-    m_Target: 93.97432
+    m_Target: 151.52063
     speed: 2
-    m_Value: 93.97432
+    m_Value: 151.5207
   m_Ortho:
     m_Target: 1
     speed: 2
@@ -897,8 +897,8 @@ MonoBehaviour:
     y: 368
     width: 725.6
     height: 348.8
-  m_MinSize: {x: 200, y: 200}
-  m_MaxSize: {x: 4000, y: 4000}
+  m_MinSize: {x: 201, y: 226}
+  m_MaxSize: {x: 4001, y: 4026}
   m_ActualView: {fileID: 2}
   m_Panes:
   - {fileID: 2}
@@ -969,24 +969,24 @@ MonoBehaviour:
     m_OverlaysVisible: 1
   m_SceneHierarchy:
     m_TreeViewState:
-      scrollPos: {x: 0, y: 114.20001}
-      m_SelectedIDs: 38a20000
-      m_LastClickedID: 41528
-      m_ExpandedIDs: e472ffffeefaffff0efbffff089f000028a3000048a30000caa30000
+      scrollPos: {x: 0, y: 82.20001}
+      m_SelectedIDs: f8f7ffff
+      m_LastClickedID: -2056
+      m_ExpandedIDs: 2ef0ffffbef5ffff10fbffff24a40000
       m_RenameOverlay:
         m_UserAcceptedRename: 0
-        m_Name: Image
-        m_OriginalName: Image
+        m_Name: 
+        m_OriginalName: 
         m_EditFieldRect:
           serializedVersion: 2
           x: 0
           y: 0
           width: 0
           height: 0
-        m_UserData: -55628
+        m_UserData: 0
         m_IsWaitingForDelay: 0
         m_IsRenaming: 0
-        m_OriginalEventType: 0
+        m_OriginalEventType: 11
         m_IsRenamingFilename: 0
         m_TrimLeadingAndTrailingWhitespace: 0
         m_ClientGUIView: {fileID: 7}
@@ -1070,7 +1070,8 @@ MonoBehaviour:
     m_ShowAllHits: 0
     m_SkipHidden: 0
     m_SearchArea: 1
-    m_Folders: []
+    m_Folders:
+    - Assets/UIInventory/DeckOfCards
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -1088,7 +1089,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: b0230000
     m_LastClickedID: 9136
-    m_ExpandedIDs: ffffffff00000000aca70000c8a70000d8a7000010ab000012ab000014ab000016ab000018ab00001aab0000c2ab0000d0ab0000d2fe0000
+    m_ExpandedIDs: ffffffff0000000046a8000066a8000078a8000086a80000b8ab0000baab0000bcab0000c0ab0000c2ab0000c4ab0000c6ab0000c8ab0000caab0000b0ac0000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1114,10 +1115,10 @@ MonoBehaviour:
       m_Icon: {fileID: 0}
       m_ResourceFile: 
   m_AssetTreeState:
-    scrollPos: {x: 0, y: 0}
-    m_SelectedIDs: 38a20000
+    scrollPos: {x: 0, y: 1200}
+    m_SelectedIDs: f8f7ffff
     m_LastClickedID: 0
-    m_ExpandedIDs: ffffffff00000000aca70000c8a70000d8a7000010ab000012ab000014ab000016ab000018ab00001aab0000c2ab0000d0ab0000d2fe0000
+    m_ExpandedIDs: ffffffff0000000046a8000066a8000078a8000086a80000b8ab0000baab0000bcab0000c0ab0000c2ab0000c4ab0000c6ab0000c8ab0000caab0000b0ac0000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1134,7 +1135,7 @@ MonoBehaviour:
       m_OriginalEventType: 11
       m_IsRenamingFilename: 1
       m_TrimLeadingAndTrailingWhitespace: 0
-      m_ClientGUIView: {fileID: 0}
+      m_ClientGUIView: {fileID: 9}
     m_SearchString: 
     m_CreateAssetUtility:
       m_EndAction: {fileID: 0}
@@ -1143,8 +1144,8 @@ MonoBehaviour:
       m_Icon: {fileID: 0}
       m_ResourceFile: 
   m_ListAreaState:
-    m_SelectedInstanceIDs: 38a20000
-    m_LastClickedInstanceID: 41528
+    m_SelectedInstanceIDs: f8f7ffff
+    m_LastClickedInstanceID: -2056
     m_HadKeyboardFocusLastEvent: 0
     m_ExpandedInstanceIDs: 
     m_CreateAssetUtility:
