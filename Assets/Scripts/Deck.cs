@@ -155,6 +155,15 @@ public class Deck : MonoBehaviour
     public bool _hasUsedFortuneTellerThisRound = false;
     public bool _hasUsedMadWriterThisRound = false;
     
+    // NEW: Track activation of passive cards (now made active)
+    public bool _hasActivatedBotanistThisRound = false;
+    public bool _hasActivatedAssassinThisRound = false;
+    public bool _hasActivatedSecretLoverThisRound = false;
+    public bool _hasActivatedJewelerThisRound = false;
+    public bool _hasActivatedHouseKeeperThisRound = false;
+    public bool _hasActivatedWitchDoctorThisRound = false;
+    public bool _hasActivatedArtificerThisRound = false;
+    
     // Boss system variables
     private BossState _currentBossState = BossState.Waiting;
 
@@ -866,7 +875,7 @@ private void EndHand(WinCode code)
             if (lossAmount <= _balance)
             {
                 Balance -= lossAmount;
-                if (PlayerStats.instance.PlayerHasEquippedCard(TarotCardType.WitchDoctor))
+                if (PlayerActuallyHasCard(TarotCardType.WitchDoctor) && PlayerHasActivatedCard(TarotCardType.WitchDoctor))
                 {
                     int refund = Mathf.RoundToInt(_bet * 0.1f);
                     Balance += (uint)refund;
@@ -1051,6 +1060,15 @@ private void EndHand(WinCode code)
         _hasUsedHitmanThisRound = false;
         _hasUsedFortuneTellerThisRound = false;
         _hasUsedMadWriterThisRound = false;
+        
+        // Reset passive card activation tracking
+        _hasActivatedBotanistThisRound = false;
+        _hasActivatedAssassinThisRound = false;
+        _hasActivatedSecretLoverThisRound = false;
+        _hasActivatedJewelerThisRound = false;
+        _hasActivatedHouseKeeperThisRound = false;
+        _hasActivatedWitchDoctorThisRound = false;
+        _hasActivatedArtificerThisRound = false;
         
         // Reset The Escapist tracking
         _lastHitCard = null;
@@ -1940,8 +1958,8 @@ private void EndHand(WinCode code)
     {
         float baseMultiplier = Constants.BaseWinMultiplier + (_streakMultiplier * Constants.StreakMultiplierStep);
 
-        // Apply Artificer bonus only if streak is active AND player has Artificer card
-        bool hasArtificer = PlayerActuallyHasCard(TarotCardType.Artificer);
+        // Apply Artificer bonus only if streak is active AND player has activated Artificer card
+        bool hasArtificer = PlayerActuallyHasCard(TarotCardType.Artificer) && PlayerHasActivatedCard(TarotCardType.Artificer);
         
         if (_streakMultiplier > 0 && hasArtificer)
         {
@@ -2172,6 +2190,30 @@ private void EndHand(WinCode code)
         
         return false;
     }
+    
+    // NEW HELPER FUNCTION - Check if player has activated a passive card this round
+    public bool PlayerHasActivatedCard(TarotCardType cardType)
+    {
+        switch (cardType)
+        {
+            case TarotCardType.Botanist:
+                return _hasActivatedBotanistThisRound;
+            case TarotCardType.Assassin:
+                return _hasActivatedAssassinThisRound;
+            case TarotCardType.SecretLover:
+                return _hasActivatedSecretLoverThisRound;
+            case TarotCardType.Jeweler:
+                return _hasActivatedJewelerThisRound;
+            case TarotCardType.HouseKeeper:
+                return _hasActivatedHouseKeeperThisRound;
+            case TarotCardType.WitchDoctor:
+                return _hasActivatedWitchDoctorThisRound;
+            case TarotCardType.Artificer:
+                return _hasActivatedArtificerThisRound;
+            default:
+                return false;
+        }
+    }
 
 
 
@@ -2184,7 +2226,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateBotanistBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.Botanist))
+        if (!PlayerActuallyHasCard(TarotCardType.Botanist) || !PlayerHasActivatedCard(TarotCardType.Botanist))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2205,7 +2247,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateAssassinBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.Assassin))
+        if (!PlayerActuallyHasCard(TarotCardType.Assassin) || !PlayerHasActivatedCard(TarotCardType.Assassin))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2226,7 +2268,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateSecretLoverBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.SecretLover))
+        if (!PlayerActuallyHasCard(TarotCardType.SecretLover) || !PlayerHasActivatedCard(TarotCardType.SecretLover))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2247,7 +2289,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateJewelerBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.Jeweler))
+        if (!PlayerActuallyHasCard(TarotCardType.Jeweler) || !PlayerHasActivatedCard(TarotCardType.Jeweler))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2268,7 +2310,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateHouseKeeperBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.HouseKeeper))
+        if (!PlayerActuallyHasCard(TarotCardType.HouseKeeper) || !PlayerHasActivatedCard(TarotCardType.HouseKeeper))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2613,6 +2655,15 @@ private void EndHand(WinCode code)
         _hasUsedHitmanThisRound = false;
         _hasUsedFortuneTellerThisRound = false;
         _hasUsedMadWriterThisRound = false;
+        
+        // Reset passive card activation for new round
+        _hasActivatedBotanistThisRound = false;
+        _hasActivatedAssassinThisRound = false;
+        _hasActivatedSecretLoverThisRound = false;
+        _hasActivatedJewelerThisRound = false;
+        _hasActivatedHouseKeeperThisRound = false;
+        _hasActivatedWitchDoctorThisRound = false;
+        _hasActivatedArtificerThisRound = false;
         
         // Don't reset _lastHitCard here - it should persist until The Escapist is used
         // or until a new game starts (PlayAgain)

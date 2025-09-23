@@ -31,6 +31,18 @@ public class TarotCardData : ScriptableObject
     public TarotCardType cardType;
     public bool isReusable = false; // If true, can be used multiple times per round
     
+    // Check if this card type should be reusable (passive cards that activate once per round)
+    public bool IsPassiveCard()
+    {
+        return cardType == TarotCardType.Botanist ||
+               cardType == TarotCardType.Assassin ||
+               cardType == TarotCardType.SecretLover ||
+               cardType == TarotCardType.Jeweler ||
+               cardType == TarotCardType.HouseKeeper ||
+               cardType == TarotCardType.WitchDoctor ||
+               cardType == TarotCardType.Artificer;
+    }
+    
     // Animation settings (optional)
     [Header("Animation")]
     public float animationDuration = 0.5f;
