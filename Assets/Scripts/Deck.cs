@@ -1004,13 +1004,31 @@ private void EndHand(WinCode code)
     UpdateBalanceDisplay();
     UpdateScoreDisplays();
 
-    if (Balance == 0)
+    // Check for game over conditions - balance or hands exhausted
+    bool isGameOver = (Balance == 0) || (bossManager != null && bossManager.IsGameOver());
+    
+    if (isGameOver)
     {
-        finalMessage.text += "\n - GAME OVER -";
+        if (Balance == 0)
+        {
+            finalMessage.text += "\n - GAME OVER (No Money) -";
+        }
+        else if (bossManager != null && bossManager.IsGameOver())
+        {
+            if (bossManager.GetRemainingHands() <= 0 && bossManager.GetCurrentBossHealth() > 0)
+            {
+                finalMessage.text += "\n - GAME OVER (No Hands Left) -";
+            }
+            else if (bossManager.GetCurrentBossHealth() <= 0)
+            {
+                finalMessage.text += "\n - BOSS DEFEATED! -";
+            }
+        }
+        
         Text buttonText = playAgainButton.GetComponentInChildren<Text>();
         if (buttonText != null)
         {
-            buttonText.text = "Play Again";
+            buttonText.text = "Restart Game";
         }
     }
     
@@ -1023,14 +1041,38 @@ private void EndHand(WinCode code)
 
     public void PlayAgain()
     {   
-        // Check if this is a game over scenario (balance is 0 or button text is "Play Again")
+        // Check if this is a game over scenario
         Text buttonText = playAgainButton.GetComponentInChildren<Text>();
-        bool isGameOver = (Balance == 0 || (buttonText != null && buttonText.text == "Play Again"));
+        bool isGameOver = (Balance == 0) || 
+                         (bossManager != null && bossManager.IsGameOver()) ||
+                         (buttonText != null && (buttonText.text == "Play Again" || buttonText.text == "Restart Game"));
+        
+        bool isNextBoss = (buttonText != null && buttonText.text == "Next Boss");
         
         if (isGameOver)
         {
-            // Instant restart - reload the scene immediately
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            // Full game restart - reset everything except inventory
+            RestartGame();
+            return;
+        }
+        else if (isNextBoss)
+        {
+            // Transitioning to next boss - don't restart, just prepare for next boss
+            Debug.Log("Transitioning to next boss...");
+            
+            // Clear final message
+            finalMessage.text = "";
+            finalMessage.gameObject.SetActive(false);
+            
+            // Reset button text
+            if (buttonText != null)
+            {
+                buttonText.text = "Next Hand";
+            }
+            
+            // The boss initialization will be handled by BossManager's DelayedBossInitialization
+            // Just wait for it to complete and then initialize betting state
+            StartCoroutine(WaitForBossInitialization());
             return;
         }
         
@@ -1086,6 +1128,238 @@ private void EndHand(WinCode code)
         
         // Go back to betting state instead of immediately starting game
         InitializeBettingState();  
+    }
+    
+    /// <summary>
+    /// Called by BossManager when game over conditions are met
+    /// </summary>
+    public void OnGameOver(bool playerWon, bool bossDefeated)
+    {
+        Debug.Log($"OnGameOver called - Player won: {playerWon}, Boss defeated: {bossDefeated}");
+        
+        // Disable all game buttons
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        discardButton.interactable = false;
+        peekButton.interactable = false;
+        transformButton.interactable = false;
+        raiseBetButton.interactable = false;
+        lowerBetButton.interactable = false;
+        placeBetButton.interactable = false;
+        
+        // Enable restart button
+        playAgainButton.interactable = true;
+        
+        // Update button text
+        Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = "Restart Game";
+        }
+        
+        // Show appropriate game over message
+        if (bossDefeated)
+        {
+            finalMessage.text = "Boss Defeated! Well done!";
+        }
+        else if (bossManager != null && bossManager.GetRemainingHands() <= 0)
+        {
+            finalMessage.text = "No hands remaining! Game Over!";
+        }
+        else
+        {
+            finalMessage.text = "Game Over!";
+        }
+        
+        finalMessage.gameObject.SetActive(true);
+    }
+    
+    /// <summary>
+    /// Called by BossManager when transitioning to next boss (not game over)
+    /// </summary>
+    public void OnBossTransition()
+    {
+        Debug.Log("OnBossTransition called - preparing for next boss");
+        
+        // Enable next hand button (not restart)
+        playAgainButton.interactable = true;
+        
+        // Update button text to show next round
+        Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = "Next Boss";
+        }
+        
+        // Show transition message
+        finalMessage.text = "Boss Defeated! Preparing for next boss...";
+        finalMessage.gameObject.SetActive(true);
+        
+        // Disable game action buttons until next boss starts
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        discardButton.interactable = false;
+        peekButton.interactable = false;
+        transformButton.interactable = false;
+        raiseBetButton.interactable = false;
+        lowerBetButton.interactable = false;
+        placeBetButton.interactable = false;
+    }
+    
+    /// <summary>
+    /// Restart the entire game while preserving inventory
+    /// </summary>
+    private void RestartGame()
+    {
+        Debug.Log("Restarting game - preserving inventory");
+        
+        // Reset balance to initial amount
+        Balance = Constants.InitialBalance;
+        
+        // Reset boss system
+        if (bossManager != null)
+        {
+            bossManager.ResetGameState();
+        }
+        
+        // Reset streak
+        _currentStreak = 0;
+        _streakMultiplier = 0;
+        
+        // Reset bet
+        _bet = 0;
+        bet.text = _bet.ToString() + " $";
+        
+        // Clear hands
+        if (player != null && player.GetComponent<CardHand>() != null)
+        {
+            player.GetComponent<CardHand>().Clear();
+        }
+        if (dealer != null && dealer.GetComponent<CardHand>() != null)
+        {
+            dealer.GetComponent<CardHand>().Clear();
+        }
+        
+        // Reset deck
+        cardIndex = 0;
+        ShuffleCards();
+        
+        // Reset all round-based tracking
+        _hasUsedPeekThisRound = false;
+        _hasUsedTransformThisRound = false;
+        _hasUsedSpyThisRound = false;
+        _hasUsedBlindSeerThisRound = false;
+        _hasUsedCorruptJudgeThisRound = false;
+        _hasUsedHitmanThisRound = false;
+        _hasUsedFortuneTellerThisRound = false;
+        _hasUsedMadWriterThisRound = false;
+        _hasActivatedBotanistThisRound = false;
+        _hasActivatedAssassinThisRound = false;
+        _hasActivatedSecretLoverThisRound = false;
+        _hasActivatedJewelerThisRound = false;
+        _hasActivatedHouseKeeperThisRound = false;
+        _hasActivatedWitchDoctorThisRound = false;
+        _hasActivatedArtificerThisRound = false;
+        _lastHitCard = null;
+        
+        // Reset tarot cards for new game
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager != null)
+        {
+            shopManager.ResetTarotCardsForNewRound();
+        }
+        
+        // Update UI
+        UpdateStreakUI();
+        UpdateBalanceDisplay();
+        
+        // Clear final message and reset button text
+        finalMessage.text = "";
+        finalMessage.gameObject.SetActive(false);
+        
+        Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = "Next Hand";
+        }
+        
+        // Initialize betting state
+        InitializeBettingState();
+        
+        Debug.Log("Game restarted successfully");
+    }
+    
+    /// <summary>
+    /// Public method to restart game from menu (preserves inventory)
+    /// </summary>
+    public void RestartGameFromMenu()
+    {
+        Debug.Log("RestartGameFromMenu called from pause menu");
+        
+        // Call the private restart method
+        RestartGame();
+    }
+    
+    /// <summary>
+    /// Wait for boss initialization to complete before starting betting
+    /// </summary>
+    private IEnumerator WaitForBossInitialization()
+    {
+        Debug.Log("Waiting for boss initialization...");
+        
+        // Wait a moment for boss initialization to complete
+        yield return new WaitForSeconds(1f);
+        
+        // Reset bet for new boss
+        _bet = 0;
+        bet.text = _bet.ToString() + " $";
+        
+        // Clear hands
+        if (player != null && player.GetComponent<CardHand>() != null)
+        {
+            player.GetComponent<CardHand>().Clear();
+        }
+        if (dealer != null && dealer.GetComponent<CardHand>() != null)
+        {
+            dealer.GetComponent<CardHand>().Clear();
+        }
+        
+        // Reset deck
+        cardIndex = 0;
+        ShuffleCards();
+        
+        // Reset round-based tracking for new boss
+        _hasUsedPeekThisRound = false;
+        _hasUsedTransformThisRound = false;
+        _hasUsedSpyThisRound = false;
+        _hasUsedBlindSeerThisRound = false;
+        _hasUsedCorruptJudgeThisRound = false;
+        _hasUsedHitmanThisRound = false;
+        _hasUsedFortuneTellerThisRound = false;
+        _hasUsedMadWriterThisRound = false;
+        _hasActivatedBotanistThisRound = false;
+        _hasActivatedAssassinThisRound = false;
+        _hasActivatedSecretLoverThisRound = false;
+        _hasActivatedJewelerThisRound = false;
+        _hasActivatedHouseKeeperThisRound = false;
+        _hasActivatedWitchDoctorThisRound = false;
+        _hasActivatedArtificerThisRound = false;
+        _lastHitCard = null;
+        
+        // Reset tarot cards for new boss
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager != null)
+        {
+            shopManager.ResetTarotCardsForNewRound();
+        }
+        
+        // Update UI
+        UpdateStreakUI();
+        
+        // Initialize betting state for new boss
+        InitializeBettingState();
+        
+        Debug.Log("Boss transition complete - ready for new boss");
     }
     
     /// <summary>

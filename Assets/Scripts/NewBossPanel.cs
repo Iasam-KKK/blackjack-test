@@ -227,11 +227,11 @@ public class NewBossPanel : MonoBehaviour
             healthText.text = $"{currentHealth}/{maxHealth}";
         }
         
-        // Update hands remaining
+        // Update hands remaining - use the actual handsRemaining from BossManager
         if (handsRemainingText != null)
         {
-            int handsRemaining = handsPerRound - currentHand;
-            handsRemainingText.text = $"Level Hands: {handsRemaining}/{handsPerRound}";
+            int remainingHands = bossManager.GetRemainingHands();
+            handsRemainingText.text = $"Hands Left: {remainingHands}/{handsPerRound}";
         }
         
         // Update current hand

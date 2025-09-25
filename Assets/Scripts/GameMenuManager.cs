@@ -183,18 +183,39 @@ public class GameMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Restart the game
+    /// Restart the game using proper restart functionality (preserves inventory)
     /// </summary>
     public void RestartGame()
     {
-        Time.timeScale = 1f;
-        if (GameSceneManager.Instance != null)
+        Time.timeScale = 1f; // Resume time in case game was paused
+        
+        // Find the Deck component and use its proper restart functionality
+        Deck deck = FindObjectOfType<Deck>();
+        if (deck != null)
         {
-            GameSceneManager.Instance.RestartCurrentScene();
+            Debug.Log("GameMenuManager: Using Deck's proper restart functionality");
+            
+            // Hide the pause menu first if it's open
+            if (isPaused)
+            {
+                HidePauseMenu();
+            }
+            
+            // Use the deck's restart game method which preserves inventory
+            deck.RestartGameFromMenu();
         }
         else
         {
-            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            Debug.LogWarning("GameMenuManager: Deck not found, falling back to scene reload");
+            // Fallback to scene reload if Deck is not found
+            if (GameSceneManager.Instance != null)
+            {
+                GameSceneManager.Instance.RestartCurrentScene();
+            }
+            else
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            }
         }
     }
 
