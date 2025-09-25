@@ -180,6 +180,13 @@ public class Deck : MonoBehaviour
     
     // Track the last card hit by player for The Escapist
     public GameObject _lastHitCard = null;
+    
+    // Turn-based system variables
+    public enum GameTurn { Player, Dealer, GameOver }
+    private GameTurn _currentTurn = GameTurn.Player;
+    private bool _playerStood = false;
+    private bool _dealerStood = false;
+    private bool _gameInProgress = false;
 
 
 
@@ -694,9 +701,17 @@ public class Deck : MonoBehaviour
 
     public void Hit()
     { 
+        Debug.Log($"=== HIT CALLED === Current turn: {_currentTurn}, Game in progress: {_gameInProgress}, Bet placed: {_isBetPlaced}");
+        
         if (!_isBetPlaced)
         {
             Debug.LogWarning("Cannot hit: No bet placed");
+            return;
+        }
+        
+        if (_currentTurn != GameTurn.Player || !_gameInProgress)
+        {
+            Debug.LogWarning($"Cannot hit: Not player's turn (Current: {_currentTurn}, InProgress: {_gameInProgress})");
             return;
         }
         
@@ -707,21 +722,54 @@ public class Deck : MonoBehaviour
             return;
         }
 
+        Debug.Log("Hit conditions passed - starting turn-based hit");
+
         // Notify boss system about player action
         if (bossManager != null)
         {
             bossManager.OnPlayerAction();
         }
 
-        // Start animated hit
-        StartCoroutine(HitAnimated());
+        // Start turn-based animated hit
+        StartCoroutine(TurnBasedHitAnimated());
     }
 
-    private IEnumerator HitAnimated()
+
+    public void Stand()
     {
-        // Disable buttons during animation
-        hitButton.interactable = false;
-        stickButton.interactable = false;
+        if (!_isBetPlaced)
+        {
+            Debug.LogWarning("Cannot stand: No bet placed");
+            return;
+        }
+        
+        if (_currentTurn != GameTurn.Player || !_gameInProgress)
+        {
+            Debug.LogWarning("Cannot stand: Not player's turn");
+            return;
+        }
+        
+        // Notify boss system about player action
+        if (bossManager != null)
+        {
+            bossManager.OnPlayerAction();
+        }
+        
+        // Player chooses to stand - mark it and switch turns
+        _playerStood = true;
+        Debug.Log("Player stands");
+        
+        // Check if both players have stood or game should end
+        CheckTurnBasedGameEnd();
+    }
+    
+    /// <summary>
+    /// Turn-based hit animation and logic
+    /// </summary>
+    private IEnumerator TurnBasedHitAnimated()
+    {
+        // Disable controls during animation
+        DisablePlayerControls();
         
         // Deal card with animation
         yield return StartCoroutine(PushPlayerAnimated());
@@ -734,68 +782,172 @@ public class Deck : MonoBehaviour
             Debug.Log("Tracking last hit card for The Escapist: " + (_lastHitCard?.name ?? "null"));
         }
         
-        // Re-enable buttons
-        hitButton.interactable = true;
-        stickButton.interactable = true;
+        // Check for bust or blackjack
+        if (Blackjack(player, true)) 
+        { 
+            EndHand(WinCode.PlayerWins); 
+            yield break;
+        }
+        else if (GetPlayerPoints() > Constants.Blackjack) 
+        { 
+            EndHand(WinCode.DealerWins); 
+            yield break;
+        }
         
-        UpdateDiscardButtonState();  
- 
-        if (Blackjack(player, true)) { EndHand(WinCode.PlayerWins); }
-        else if (GetPlayerPoints() > Constants.Blackjack) { EndHand(WinCode.DealerWins); }
+        // Switch to dealer's turn
+        SwitchToDealerTurn();
     }
-
-    public void Stand()
+    
+    /// <summary>
+    /// Switch to dealer's turn
+    /// </summary>
+    private void SwitchToDealerTurn()
     {
-        if (!_isBetPlaced)
+        if (!_gameInProgress) return;
+        
+        _currentTurn = GameTurn.Dealer;
+        UpdateTurnUI();
+        DisablePlayerControls();
+        
+        // Start dealer's turn with a small delay
+        StartCoroutine(DealerTurnCoroutine());
+    }
+    
+    /// <summary>
+    /// Handle dealer's turn
+    /// </summary>
+    private IEnumerator DealerTurnCoroutine()
+    {
+        yield return new WaitForSeconds(1f); // Small delay for dramatic effect
+        
+        if (!_gameInProgress) yield break;
+        
+        // Flip dealer's first card if not already flipped
+        AnimateFlipDealerCard();
+        yield return new WaitForSeconds(0.5f);
+        
+        // Dealer AI decision
+        int dealerPoints = GetDealerPoints();
+        bool dealerShouldHit = DealerShouldHit(dealerPoints);
+        
+        if (dealerShouldHit && !_dealerStood)
         {
-            Debug.LogWarning("Cannot stand: No bet placed");
+            Debug.Log("Dealer hits");
+            yield return StartCoroutine(PushDealerAnimated());
+            
+            // Check for dealer bust or blackjack
+            dealerPoints = GetDealerPoints();
+            if (dealerPoints > Constants.Blackjack)
+            {
+                Debug.Log("Dealer busts!");
+                EndHand(WinCode.PlayerWins);
+                yield break;
+            }
+            else if (Blackjack(dealer, false))
+            {
+                Debug.Log("Dealer gets blackjack!");
+                EndHand(WinCode.DealerWins);
+                yield break;
+            }
+        }
+        else
+        {
+            Debug.Log("Dealer stands");
+            _dealerStood = true;
+        }
+        
+        // Check if game should end or switch back to player
+        CheckTurnBasedGameEnd();
+    }
+    
+    /// <summary>
+    /// Dealer AI logic - decides whether dealer should hit
+    /// </summary>
+    private bool DealerShouldHit(int dealerPoints)
+    {
+        // Standard dealer rules: hit on 16 or less, stand on 17 or more
+        return dealerPoints < Constants.DealerStand;
+    }
+    
+    /// <summary>
+    /// Check if the turn-based game should end
+    /// </summary>
+    private void CheckTurnBasedGameEnd()
+    {
+        if (!_gameInProgress) return;
+        
+        // If both players have stood, determine winner
+        if (_playerStood && _dealerStood)
+        {
+            DetermineWinner();
             return;
         }
         
-        // Notify boss system about player action
-        if (bossManager != null)
+        // If only player stood, continue with dealer turns until dealer stands or busts
+        if (_playerStood && !_dealerStood)
         {
-            bossManager.OnPlayerAction();
+            SwitchToDealerTurn();
+            return;
         }
         
-        // Start animated stand sequence
-        StartCoroutine(StandAnimated());
+        // If only dealer stood, switch back to player
+        if (_dealerStood && !_playerStood)
+        {
+            SwitchToPlayerTurn();
+            return;
+        }
+        
+        // If neither has stood, switch back to player
+        if (!_playerStood && !_dealerStood)
+        {
+            SwitchToPlayerTurn();
+        }
     }
-
-    private IEnumerator StandAnimated()
+    
+    /// <summary>
+    /// Switch back to player's turn
+    /// </summary>
+    private void SwitchToPlayerTurn()
     {
-        // Disable buttons during animation
-        hitButton.interactable = false;
-        stickButton.interactable = false;
+        if (!_gameInProgress) return;
         
-        int playerPoints = player.GetComponent<CardHand>().points;
-        int dealerPoints = dealer.GetComponent<CardHand>().points;  
-
-        AnimateFlipDealerCard();
-        
-        // Wait a moment for the flip animation
-        yield return new WaitForSeconds(0.25f);
-        
-        // Dealer draws cards with animation until reaching 17 or more
-        while (dealerPoints < Constants.DealerStand)
-        {
-            yield return StartCoroutine(PushDealerAnimated());
-            dealerPoints = dealer.GetComponent<CardHand>().points;
-            UpdateScoreDisplays();
-            
-            // Small delay between dealer cards for dramatic effect
-            yield return new WaitForSeconds(Constants.CardDealDelay);
-        }
-        
-        UpdateScoreDisplays();  
-
-        if (dealerPoints > Constants.Blackjack || dealerPoints < playerPoints) 
-        { 
-            EndHand(WinCode.PlayerWins); 
-        }
-        else if (playerPoints < dealerPoints) { EndHand(WinCode.DealerWins); }
-        else { EndHand(WinCode.Draw); }
+        _currentTurn = GameTurn.Player;
+        UpdateTurnUI();
+        EnablePlayerControls();
     }
+    
+    /// <summary>
+    /// Determine winner when both players have finished
+    /// </summary>
+    private void DetermineWinner()
+    {
+        int playerPoints = GetPlayerPoints();
+        int dealerPoints = GetDealerPoints();
+        
+        Debug.Log($"Determining winner: Player={playerPoints}, Dealer={dealerPoints}");
+        
+        if (playerPoints > Constants.Blackjack)
+        {
+            EndHand(WinCode.DealerWins); // Player bust
+        }
+        else if (dealerPoints > Constants.Blackjack)
+        {
+            EndHand(WinCode.PlayerWins); // Dealer bust
+        }
+        else if (playerPoints > dealerPoints)
+        {
+            EndHand(WinCode.PlayerWins); // Player higher
+        }
+        else if (dealerPoints > playerPoints)
+        {
+            EndHand(WinCode.DealerWins); // Dealer higher
+        }
+        else
+        {
+            EndHand(WinCode.Draw); // Tie
+        }
+    }
+
 
     public void FlipDealerCard()
     {
@@ -834,6 +986,10 @@ public class Deck : MonoBehaviour
 
 private void EndHand(WinCode code)
 {
+    // End turn-based game
+    _gameInProgress = false;
+    _currentTurn = GameTurn.GameOver;
+    
     FlipDealerCard();
     uint oldBalance = _balance;
 
@@ -2889,6 +3045,12 @@ private void EndHand(WinCode code)
         // Reset bet placement state
         _isBetPlaced = false;
         
+        // Reset turn-based variables
+        _currentTurn = GameTurn.Player;
+        _playerStood = false;
+        _dealerStood = false;
+        _gameInProgress = false;
+        
         // Clear any existing cards
         if (player != null && player.GetComponent<CardHand>() != null)
         {
@@ -2978,9 +3140,15 @@ private void EndHand(WinCode code)
             yield break; // Stop here — cards are already redealt in the effect
         }*/
 
-        // Enable game action buttons after dealing is complete
-        hitButton.interactable = true;
-        stickButton.interactable = true;
+        Debug.Log("DealInitialCardsAnimated: Initializing turn-based system");
+        
+        // Initialize turn-based system
+        _currentTurn = GameTurn.Player;
+        _playerStood = false;
+        _dealerStood = false;
+        _gameInProgress = true;
+        
+        Debug.Log($"DealInitialCardsAnimated: Turn variables set - Current: {_currentTurn}, InProgress: {_gameInProgress}");
 
         // Update UI and states
         UpdateScoreDisplays();
@@ -2999,12 +3167,98 @@ private void EndHand(WinCode code)
             {
                 EndHand(WinCode.PlayerWins);
             }
+            yield break;
         }
         else if (Blackjack(dealer, false))
         {
             EndHand(WinCode.DealerWins);
+            yield break;
+        }
+
+        // Start turn-based gameplay
+        StartTurnBasedGameplay();
+    }
+    
+    /// <summary>
+    /// Initialize turn-based gameplay
+    /// </summary>
+    private void StartTurnBasedGameplay()
+    {
+        Debug.Log("=== STARTING TURN-BASED GAMEPLAY ===");
+        Debug.Log($"Game in progress: {_gameInProgress}");
+        _currentTurn = GameTurn.Player;
+        Debug.Log($"Current turn set to: {_currentTurn}");
+        UpdateTurnUI();
+        EnablePlayerControls();
+        Debug.Log($"Hit button interactable: {hitButton.interactable}");
+        Debug.Log($"Stand button interactable: {stickButton.interactable}");
+        Debug.Log("=== TURN-BASED GAMEPLAY STARTED ===");
+    }
+    
+    /// <summary>
+    /// Update UI to show whose turn it is
+    /// </summary>
+    private void UpdateTurnUI()
+    {
+        if (!_gameInProgress)
+        {
+            finalMessage.text = "";
+            return;
+        }
+        
+        switch (_currentTurn)
+        {
+            case GameTurn.Player:
+                finalMessage.text = "Your Turn - Hit or Stand";
+                finalMessage.gameObject.SetActive(true);
+                break;
+            case GameTurn.Dealer:
+                finalMessage.text = "Dealer's Turn";
+                finalMessage.gameObject.SetActive(true);
+                break;
+            case GameTurn.GameOver:
+                // Game over message will be set by EndHand
+                break;
         }
     }
+    
+    /// <summary>
+    /// Enable player controls for their turn
+    /// </summary>
+    private void EnablePlayerControls()
+    {
+        Debug.Log($"EnablePlayerControls called - Current turn: {_currentTurn}, Game in progress: {_gameInProgress}");
+        
+        if (_currentTurn != GameTurn.Player || !_gameInProgress)
+        {
+            Debug.Log("Disabling controls - not player turn or game not in progress");
+            hitButton.interactable = false;
+            stickButton.interactable = false;
+            return;
+        }
+        
+        Debug.Log("Enabling player controls");
+        hitButton.interactable = true;
+        stickButton.interactable = true;
+        UpdateDiscardButtonState();
+        UpdatePeekButtonState();
+        UpdateTransformButtonState();
+        
+        Debug.Log($"After enabling - Hit: {hitButton.interactable}, Stand: {stickButton.interactable}");
+    }
+    
+    /// <summary>
+    /// Disable all player controls
+    /// </summary>
+    private void DisablePlayerControls()
+    {
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        discardButton.interactable = false;
+        peekButton.interactable = false;
+        transformButton.interactable = false;
+    }
+    
     private IEnumerator ReplaceCardWithInitialAnimation(CardModel clickedCard)
     {
         CardHand hand = player.GetComponent<CardHand>();
