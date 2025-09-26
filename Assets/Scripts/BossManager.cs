@@ -17,8 +17,13 @@ public class BossManager : MonoBehaviour
     [Header("Boss Progression")]
     public int currentBossHealth;
     public int currentHand = 0;
+    public int handsRemaining = 0; // Track remaining hands for current boss
     public int totalBossesDefeated = 0;
     public BossType currentBossType = BossType.TheDrunkard;
+    
+    // Game state tracking
+    private bool isGameOver = false;
+    private bool isBossDefeated = false;
     
     [Header("UI References")]
     public NewBossPanel newBossPanel;
@@ -251,7 +256,10 @@ public class BossManager : MonoBehaviour
         currentBossType = bossType;
         currentBossHealth = currentBoss.maxHealth;
         currentHand = 0;
+        handsRemaining = currentBoss.handsPerRound; // Initialize hands remaining
         isBossActive = true;
+        isGameOver = false;
+        isBossDefeated = false;
     
         // Clear any previous boss-specific tracking
         ClearTraitorTracking();
@@ -386,12 +394,13 @@ public class BossManager : MonoBehaviour
     /// </summary>
     public void OnPlayerWin()
     {
-        if (!isBossActive) return;
+        if (!isBossActive || isGameOver) return;
         
         currentBossHealth--;
         currentHand++;
+        handsRemaining--;
         
-        Debug.Log($"Boss takes damage! Health: {currentBossHealth}/{currentBoss.maxHealth}");
+        Debug.Log($"Boss takes damage! Health: {currentBossHealth}/{currentBoss.maxHealth}, Hands remaining: {handsRemaining}");
         
         // Update the health bar display
         if (newBossPanel != null)
@@ -415,7 +424,11 @@ public class BossManager : MonoBehaviour
         {
             DefeatBoss();
         }
-        // Removed the BossHeals() call - no more rounds, just a single level
+        else if (handsRemaining <= 0)
+        {
+            // Player ran out of hands - game over
+            TriggerGameOver(false);
+        }
     }
     
     /// <summary>
@@ -423,9 +436,12 @@ public class BossManager : MonoBehaviour
     /// </summary>
     public void OnPlayerLose()
     {
-        if (!isBossActive) return;
+        if (!isBossActive || isGameOver) return;
         
         currentHand++;
+        handsRemaining--;
+        
+        Debug.Log($"Player loses hand! Hands remaining: {handsRemaining}");
         
         // Trigger mechanics that activate on round end
         TriggerMechanicsOnRoundEnd(false);
@@ -467,11 +483,15 @@ public class BossManager : MonoBehaviour
             }
         }
         
-        // Removed the BossHeals() call - no more rounds, just a single level
-        
         if (newBossPanel != null)
         {
             newBossPanel.ShakePanel();
+        }
+        
+        // Check if player ran out of hands
+        if (handsRemaining <= 0)
+        {
+            TriggerGameOver(false);
         }
     }
     
@@ -568,6 +588,7 @@ public class BossManager : MonoBehaviour
         Debug.Log($"Boss {currentBoss.bossName} defeated!");
         
         isBossActive = false;
+        isBossDefeated = true;
         totalBossesDefeated++;
         
         // Grant rewards
@@ -586,8 +607,101 @@ public class BossManager : MonoBehaviour
         }
         StartCoroutine(ShowBossDefeatEffect());
         
-        // Show boss transition to next boss
-        StartCoroutine(ShowBossTransition());
+        // Check if there are more bosses to fight
+        var nextBoss = allBosses.Find(b => b.unlockOrder == totalBossesDefeated);
+        
+        if (nextBoss != null)
+        {
+            // There's a next boss - transition to it
+            Debug.Log($"Next boss available: {nextBoss.bossName}. Preparing transition...");
+            UnlockNextBoss();
+        }
+        else
+        {
+            // All bosses defeated - trigger complete victory game over
+            Debug.Log("All bosses defeated! Game completed!");
+            TriggerGameOver(true);
+        }
+    }
+    
+    /// <summary>
+    /// Trigger game over when hands are exhausted or all bosses defeated
+    /// </summary>
+    private void TriggerGameOver(bool playerWon)
+    {
+        if (isGameOver) return; // Prevent multiple triggers
+        
+        isGameOver = true;
+        isBossActive = false;
+        
+        Debug.Log($"Game Over triggered! Player won: {playerWon}, All bosses defeated: {playerWon && isBossDefeated}, Hands remaining: {handsRemaining}");
+        
+        // Notify the deck about game over
+        if (deck != null)
+        {
+            deck.OnGameOver(playerWon, playerWon && isBossDefeated); // Only true if all bosses defeated
+        }
+    }
+    
+    /// <summary>
+    /// Check if the game is over
+    /// </summary>
+    public bool IsGameOver()
+    {
+        return isGameOver;
+    }
+    
+    /// <summary>
+    /// Get remaining hands for current boss
+    /// </summary>
+    public int GetRemainingHands()
+    {
+        return handsRemaining;
+    }
+    
+    /// <summary>
+    /// Reset game state for new game (keeps inventory)
+    /// </summary>
+    public void ResetGameState()
+    {
+        isGameOver = false;
+        isBossDefeated = false;
+        isBossActive = false;
+        currentHand = 0;
+        handsRemaining = 0;
+        currentBossHealth = 0;
+        totalBossesDefeated = 0;
+        
+        // Clear boss-specific tracking
+        ClearTraitorTracking();
+        ClearNaughtyChildTracking();
+        
+        // Reset to first boss
+        var firstBoss = allBosses.Find(b => b.unlockOrder == 0);
+        if (firstBoss != null)
+        {
+            InitializeBoss(firstBoss.bossType);
+        }
+        
+        Debug.Log("Game state reset - starting from first boss");
+    }
+    
+    /// <summary>
+    /// Handle boss transition after defeat (for next boss)
+    /// </summary>
+    public void OnBossTransition()
+    {
+        Debug.Log("Boss transition - preparing for next boss");
+        
+        // Reset state for next boss but don't trigger game over
+        isGameOver = false;
+        isBossDefeated = false;
+        
+        // Notify the deck about boss transition (not game over)
+        if (deck != null)
+        {
+            deck.OnBossTransition();
+        }
     }
     
     /// <summary>
@@ -665,13 +779,16 @@ public class BossManager : MonoBehaviour
         
         if (nextBoss != null)
         {
+            // Notify about boss transition first
+            OnBossTransition();
+            
             // Wait a moment then initialize next boss
             StartCoroutine(DelayedBossInitialization(nextBoss.bossType));
         }
         else
         {
             Debug.Log("All bosses defeated! Game completed!");
-            // Handle game completion
+            // Handle game completion - this should not happen here as it's handled in DefeatBoss
         }
     }
     

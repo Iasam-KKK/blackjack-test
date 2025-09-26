@@ -176,8 +176,9 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             
             // Visual state for used cards or cards that can't be used
             bool canBeUsed = cardData.CanBeUsed() && (!hasBeenUsedThisRound || cardData.isReusable);
+            bool isActivatedThisRound = IsCardActivatedThisRound();
             
-            if (!canBeUsed)
+            if (!canBeUsed || isActivatedThisRound)
             {
                 cardImage.color = new Color(0.5f, 0.5f, 0.5f, 0.8f); // Grayed out
             }
@@ -210,22 +211,22 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                         description = "Transformation: Replace the first selected card with a duplicate of the second selected card. Can only be used once per round.";
                         break;
                     case TarotCardType.WitchDoctor:
-                        description = "Witch Doctor: Automatically refunds 10% of your bet when you lose a hand. Passive ability.";
+                        description = "Witch Doctor: Click to activate! Refunds 10% of your bet when you lose a hand for this round. Must be activated each round.";
                         break;
                     case TarotCardType.Artificer:
-                        description = "Artificer: Boosts win multiplier by 10% when you have an active streak. Passive ability.";
+                        description = "Artificer: Click to activate! Boosts win multiplier by 10% when you have an active streak for this round. Must be activated each round.";
                         break;
                     case TarotCardType.Botanist:
-                        description = "The Botanist: Adds a +50 bonus for each club (clover) card in your winning hand. Passive ability.";
+                        description = "The Botanist: Click to activate! Adds a +50 bonus for each club (clover) card in your winning hand for this round. Must be activated each round.";
                         break;
                     case TarotCardType.Assassin:
-                        description = "The Assassin: Adds a +50 bonus for each spade card in your winning hand. Passive ability.";
+                        description = "The Assassin: Click to activate! Adds a +50 bonus for each spade card in your winning hand for this round. Must be activated each round.";
                         break;
                     case TarotCardType.SecretLover:
-                        description = "The Secret Lover: Adds a +50 bonus for each heart card in your winning hand. Passive ability.";
+                        description = "The Secret Lover: Click to activate! Adds a +50 bonus for each heart card in your winning hand for this round. Must be activated each round.";
                         break;
                     case TarotCardType.Jeweler:
-                        description = "The Jeweler: Adds a +50 bonus for each diamond card in your winning hand. Passive ability.";
+                        description = "The Jeweler: Click to activate! Adds a +50 bonus for each diamond card in your winning hand for this round. Must be activated each round.";
                         break;
                     case TarotCardType.Scavenger:
                         description = "The Scavenger: Removes all cards with value less than 7 from your hand. Can only be used once per round.";
@@ -243,7 +244,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                         description = "The Tax Collector: Removes all diamond cards from both your hand and the dealer's hand. Can only be used once per round.";
                         break;
                     case TarotCardType.HouseKeeper:
-                        description = "The House Keeper: Adds a +10 bonus for each Jack, Queen, or King card in your winning hand. Passive ability.";
+                        description = "The House Keeper: Click to activate! Adds a +10 bonus for each Jack, Queen, or King card in your winning hand for this round. Must be activated each round.";
                         break;
                     case TarotCardType.Spy:
                         description = "The Spy: Allows you to peek at the next card that would be dealt to the dealer. Can only be used once per round.";
@@ -314,7 +315,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         {
             TryPurchaseCard();
         }
-        else if (cardData.CanBeUsed() && (!hasBeenUsedThisRound || cardData.isReusable))
+        else if (cardData.CanBeUsed() && (!hasBeenUsedThisRound || cardData.isReusable) && !IsCardActivatedThisRound())
         {
             TryUseCard();
         }
@@ -536,6 +537,13 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             return;
         }
         
+        // Check if passive card is already activated this round
+        if (cardData.IsPassiveCard() && IsCardActivatedThisRound())
+        {
+            Debug.Log("Card has already been activated this round");
+            return;
+        }
+        
         // Check material durability
         if (!cardData.CanBeUsed())
         {
@@ -590,28 +598,82 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     }
                     break;
                 case TarotCardType.WitchDoctor:
-                    Debug.Log("Witch Doctor card is active and will provide 10% refund on losses");
-                    // Don't mark as used - it's a passive effect
+                    if (!deck._hasActivatedWitchDoctorThisRound)
+                    {
+                        deck._hasActivatedWitchDoctorThisRound = true;
+                        Debug.Log("Witch Doctor activated! Will provide 10% refund on losses for this round");
+                        PlaySimpleActivationEffect();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("Witch Doctor already activated this round");
+                    }
                     break;
                 case TarotCardType.Artificer:
-                    Debug.Log("Artificer card is active and will boost win multiplier by 10% when you have a streak");
-                    // Don't mark as used - it's a passive effect
+                    if (!deck._hasActivatedArtificerThisRound)
+                    {
+                        deck._hasActivatedArtificerThisRound = true;
+                        Debug.Log("Artificer activated! Will boost win multiplier by 10% when you have a streak for this round");
+                        PlaySimpleActivationEffect();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("Artificer already activated this round");
+                    }
                     break;
                 case TarotCardType.Botanist:
-                    Debug.Log("The Botanist card is active and will provide +50 bonus per club in winning hands");
-                    // Don't mark as used - it's a passive effect
+                    if (!deck._hasActivatedBotanistThisRound)
+                    {
+                        deck._hasActivatedBotanistThisRound = true;
+                        Debug.Log("The Botanist activated! Will provide +50 bonus per club in winning hands for this round");
+                        PlaySimpleActivationEffect();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("The Botanist already activated this round");
+                    }
                     break;
                 case TarotCardType.Assassin:
-                    Debug.Log("The Assassin card is active and will provide +50 bonus per spade in winning hands");
-                    // Don't mark as used - it's a passive effect
+                    if (!deck._hasActivatedAssassinThisRound)
+                    {
+                        deck._hasActivatedAssassinThisRound = true;
+                        Debug.Log("The Assassin activated! Will provide +50 bonus per spade in winning hands for this round");
+                        PlaySimpleActivationEffect();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("The Assassin already activated this round");
+                    }
                     break;
                 case TarotCardType.SecretLover:
-                    Debug.Log("The Secret Lover card is active and will provide +50 bonus per heart in winning hands");
-                    // Don't mark as used - it's a passive effect
+                    if (!deck._hasActivatedSecretLoverThisRound)
+                    {
+                        deck._hasActivatedSecretLoverThisRound = true;
+                        Debug.Log("The Secret Lover activated! Will provide +50 bonus per heart in winning hands for this round");
+                        PlaySimpleActivationEffect();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("The Secret Lover already activated this round");
+                    }
                     break;
                 case TarotCardType.Jeweler:
-                    Debug.Log("The Jeweler card is active and will provide +50 bonus per diamond in winning hands");
-                    // Don't mark as used - it's a passive effect
+                    if (!deck._hasActivatedJewelerThisRound)
+                    {
+                        deck._hasActivatedJewelerThisRound = true;
+                        Debug.Log("The Jeweler activated! Will provide +50 bonus per diamond in winning hands for this round");
+                        PlaySimpleActivationEffect();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("The Jeweler already activated this round");
+                    }
                     break;
                 case TarotCardType.CursedHourglass:
                     if (!hasBeenUsedThisRound)
@@ -817,8 +879,17 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     effectApplied = true;
                     break;
                 case TarotCardType.HouseKeeper:
-                    Debug.Log("The House Keeper card is active and will provide +10 bonus per Jack/Queen/King in winning hands");
-                    // Don't mark as used - it's a passive effect
+                    if (!deck._hasActivatedHouseKeeperThisRound)
+                    {
+                        deck._hasActivatedHouseKeeperThisRound = true;
+                        Debug.Log("The House Keeper activated! Will provide +10 bonus per Jack/Queen/King in winning hands for this round");
+                        PlaySimpleActivationEffect();
+                        effectApplied = true;
+                    }
+                    else
+                    {
+                        Debug.Log("The House Keeper already activated this round");
+                    }
                     break;
                     
                 // NEW PREVIEW CARDS
@@ -931,8 +1002,8 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             // Handle card usage and durability
             if (effectApplied)
             {
-                // Mark as used this round if not reusable
-                if (!cardData.isReusable)
+                // Mark as used this round if not reusable and not a passive card
+                if (!cardData.isReusable && !cardData.IsPassiveCard())
                 {
                     hasBeenUsedThisRound = true;
                 }
@@ -1118,11 +1189,53 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         }
     }
     
+    // Check if this passive card has been activated this round
+    private bool IsCardActivatedThisRound()
+    {
+        if (deck == null || cardData == null) return false;
+        
+        switch (cardData.cardType)
+        {
+            case TarotCardType.Botanist:
+                return deck._hasActivatedBotanistThisRound;
+            case TarotCardType.Assassin:
+                return deck._hasActivatedAssassinThisRound;
+            case TarotCardType.SecretLover:
+                return deck._hasActivatedSecretLoverThisRound;
+            case TarotCardType.Jeweler:
+                return deck._hasActivatedJewelerThisRound;
+            case TarotCardType.HouseKeeper:
+                return deck._hasActivatedHouseKeeperThisRound;
+            case TarotCardType.WitchDoctor:
+                return deck._hasActivatedWitchDoctorThisRound;
+            case TarotCardType.Artificer:
+                return deck._hasActivatedArtificerThisRound;
+            default:
+                return false;
+        }
+    }
+    
     // Reset the card for a new round
     public void ResetForNewRound()
     {
         hasBeenUsedThisRound = false;
         cardImage.color = Color.white;
+    }
+    
+    // Play simple activation effect for passive cards
+    private void PlaySimpleActivationEffect()
+    {
+        // Simple immediate feedback - flash green then gray out
+        if (cardImage != null)
+        {
+            // Quick green flash using DOTween
+            cardImage.DOColor(Color.green, 0.1f).OnComplete(() => {
+                cardImage.DOColor(new Color(0.5f, 0.5f, 0.5f, 0.8f), 0.2f);
+            });
+            
+            // Quick scale bounce
+            transform.DOPunchScale(Vector3.one * 0.1f, 0.3f, 1, 0.5f);
+        }
     }
     
     // Animate the destruction of the tarot card after use

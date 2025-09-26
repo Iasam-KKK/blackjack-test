@@ -155,6 +155,15 @@ public class Deck : MonoBehaviour
     public bool _hasUsedFortuneTellerThisRound = false;
     public bool _hasUsedMadWriterThisRound = false;
     
+    // NEW: Track activation of passive cards (now made active)
+    public bool _hasActivatedBotanistThisRound = false;
+    public bool _hasActivatedAssassinThisRound = false;
+    public bool _hasActivatedSecretLoverThisRound = false;
+    public bool _hasActivatedJewelerThisRound = false;
+    public bool _hasActivatedHouseKeeperThisRound = false;
+    public bool _hasActivatedWitchDoctorThisRound = false;
+    public bool _hasActivatedArtificerThisRound = false;
+    
     // Boss system variables
     private BossState _currentBossState = BossState.Waiting;
 
@@ -171,6 +180,13 @@ public class Deck : MonoBehaviour
     
     // Track the last card hit by player for The Escapist
     public GameObject _lastHitCard = null;
+    
+    // Turn-based system variables
+    public enum GameTurn { Player, Dealer, GameOver }
+    private GameTurn _currentTurn = GameTurn.Player;
+    private bool _playerStood = false;
+    private bool _dealerStood = false;
+    private bool _gameInProgress = false;
 
 
 
@@ -872,9 +888,17 @@ public void RefreshAllActiveCardFrames()
 
     public void Hit()
     { 
+        Debug.Log($"=== HIT CALLED === Current turn: {_currentTurn}, Game in progress: {_gameInProgress}, Bet placed: {_isBetPlaced}");
+        
         if (!_isBetPlaced)
         {
             Debug.LogWarning("Cannot hit: No bet placed");
+            return;
+        }
+        
+        if (_currentTurn != GameTurn.Player || !_gameInProgress)
+        {
+            Debug.LogWarning($"Cannot hit: Not player's turn (Current: {_currentTurn}, InProgress: {_gameInProgress})");
             return;
         }
         
@@ -885,21 +909,54 @@ public void RefreshAllActiveCardFrames()
             return;
         }
 
+        Debug.Log("Hit conditions passed - starting turn-based hit");
+
         // Notify boss system about player action
         if (bossManager != null)
         {
             bossManager.OnPlayerAction();
         }
 
-        // Start animated hit
-        StartCoroutine(HitAnimated());
+        // Start turn-based animated hit
+        StartCoroutine(TurnBasedHitAnimated());
     }
 
-    private IEnumerator HitAnimated()
+
+    public void Stand()
     {
-        // Disable buttons during animation
-        hitButton.interactable = false;
-        stickButton.interactable = false;
+        if (!_isBetPlaced)
+        {
+            Debug.LogWarning("Cannot stand: No bet placed");
+            return;
+        }
+        
+        if (_currentTurn != GameTurn.Player || !_gameInProgress)
+        {
+            Debug.LogWarning("Cannot stand: Not player's turn");
+            return;
+        }
+        
+        // Notify boss system about player action
+        if (bossManager != null)
+        {
+            bossManager.OnPlayerAction();
+        }
+        
+        // Player chooses to stand - mark it and switch turns
+        _playerStood = true;
+        Debug.Log("Player stands");
+        
+        // Check if both players have stood or game should end
+        CheckTurnBasedGameEnd();
+    }
+    
+    /// <summary>
+    /// Turn-based hit animation and logic
+    /// </summary>
+    private IEnumerator TurnBasedHitAnimated()
+    {
+        // Disable controls during animation
+        DisablePlayerControls();
         
         // Deal card with animation
         yield return StartCoroutine(PushPlayerAnimated());
@@ -912,68 +969,172 @@ public void RefreshAllActiveCardFrames()
             Debug.Log("Tracking last hit card for The Escapist: " + (_lastHitCard?.name ?? "null"));
         }
         
-        // Re-enable buttons
-        hitButton.interactable = true;
-        stickButton.interactable = true;
+        // Check for bust or blackjack
+        if (Blackjack(player, true)) 
+        { 
+            EndHand(WinCode.PlayerWins); 
+            yield break;
+        }
+        else if (GetPlayerPoints() > Constants.Blackjack) 
+        { 
+            EndHand(WinCode.DealerWins); 
+            yield break;
+        }
         
-        UpdateDiscardButtonState();  
- 
-        if (Blackjack(player, true)) { EndHand(WinCode.PlayerWins); }
-        else if (GetPlayerPoints() > Constants.Blackjack) { EndHand(WinCode.DealerWins); }
+        // Switch to dealer's turn
+        SwitchToDealerTurn();
     }
-
-    public void Stand()
+    
+    /// <summary>
+    /// Switch to dealer's turn
+    /// </summary>
+    private void SwitchToDealerTurn()
     {
-        if (!_isBetPlaced)
+        if (!_gameInProgress) return;
+        
+        _currentTurn = GameTurn.Dealer;
+        UpdateTurnUI();
+        DisablePlayerControls();
+        
+        // Start dealer's turn with a small delay
+        StartCoroutine(DealerTurnCoroutine());
+    }
+    
+    /// <summary>
+    /// Handle dealer's turn
+    /// </summary>
+    private IEnumerator DealerTurnCoroutine()
+    {
+        yield return new WaitForSeconds(1f); // Small delay for dramatic effect
+        
+        if (!_gameInProgress) yield break;
+        
+        // Flip dealer's first card if not already flipped
+        AnimateFlipDealerCard();
+        yield return new WaitForSeconds(0.5f);
+        
+        // Dealer AI decision
+        int dealerPoints = GetDealerPoints();
+        bool dealerShouldHit = DealerShouldHit(dealerPoints);
+        
+        if (dealerShouldHit && !_dealerStood)
         {
-            Debug.LogWarning("Cannot stand: No bet placed");
+            Debug.Log("Dealer hits");
+            yield return StartCoroutine(PushDealerAnimated());
+            
+            // Check for dealer bust or blackjack
+            dealerPoints = GetDealerPoints();
+            if (dealerPoints > Constants.Blackjack)
+            {
+                Debug.Log("Dealer busts!");
+                EndHand(WinCode.PlayerWins);
+                yield break;
+            }
+            else if (Blackjack(dealer, false))
+            {
+                Debug.Log("Dealer gets blackjack!");
+                EndHand(WinCode.DealerWins);
+                yield break;
+            }
+        }
+        else
+        {
+            Debug.Log("Dealer stands");
+            _dealerStood = true;
+        }
+        
+        // Check if game should end or switch back to player
+        CheckTurnBasedGameEnd();
+    }
+    
+    /// <summary>
+    /// Dealer AI logic - decides whether dealer should hit
+    /// </summary>
+    private bool DealerShouldHit(int dealerPoints)
+    {
+        // Standard dealer rules: hit on 16 or less, stand on 17 or more
+        return dealerPoints < Constants.DealerStand;
+    }
+    
+    /// <summary>
+    /// Check if the turn-based game should end
+    /// </summary>
+    private void CheckTurnBasedGameEnd()
+    {
+        if (!_gameInProgress) return;
+        
+        // If both players have stood, determine winner
+        if (_playerStood && _dealerStood)
+        {
+            DetermineWinner();
             return;
         }
         
-        // Notify boss system about player action
-        if (bossManager != null)
+        // If only player stood, continue with dealer turns until dealer stands or busts
+        if (_playerStood && !_dealerStood)
         {
-            bossManager.OnPlayerAction();
+            SwitchToDealerTurn();
+            return;
         }
         
-        // Start animated stand sequence
-        StartCoroutine(StandAnimated());
+        // If only dealer stood, switch back to player
+        if (_dealerStood && !_playerStood)
+        {
+            SwitchToPlayerTurn();
+            return;
+        }
+        
+        // If neither has stood, switch back to player
+        if (!_playerStood && !_dealerStood)
+        {
+            SwitchToPlayerTurn();
+        }
     }
-
-    private IEnumerator StandAnimated()
+    
+    /// <summary>
+    /// Switch back to player's turn
+    /// </summary>
+    private void SwitchToPlayerTurn()
     {
-        // Disable buttons during animation
-        hitButton.interactable = false;
-        stickButton.interactable = false;
+        if (!_gameInProgress) return;
         
-        int playerPoints = player.GetComponent<CardHand>().points;
-        int dealerPoints = dealer.GetComponent<CardHand>().points;  
-
-        AnimateFlipDealerCard();
-        
-        // Wait a moment for the flip animation
-        yield return new WaitForSeconds(0.25f);
-        
-        // Dealer draws cards with animation until reaching 17 or more
-        while (dealerPoints < Constants.DealerStand)
-        {
-            yield return StartCoroutine(PushDealerAnimated());
-            dealerPoints = dealer.GetComponent<CardHand>().points;
-            UpdateScoreDisplays();
-            
-            // Small delay between dealer cards for dramatic effect
-            yield return new WaitForSeconds(Constants.CardDealDelay);
-        }
-        
-        UpdateScoreDisplays();  
-
-        if (dealerPoints > Constants.Blackjack || dealerPoints < playerPoints) 
-        { 
-            EndHand(WinCode.PlayerWins); 
-        }
-        else if (playerPoints < dealerPoints) { EndHand(WinCode.DealerWins); }
-        else { EndHand(WinCode.Draw); }
+        _currentTurn = GameTurn.Player;
+        UpdateTurnUI();
+        EnablePlayerControls();
     }
+    
+    /// <summary>
+    /// Determine winner when both players have finished
+    /// </summary>
+    private void DetermineWinner()
+    {
+        int playerPoints = GetPlayerPoints();
+        int dealerPoints = GetDealerPoints();
+        
+        Debug.Log($"Determining winner: Player={playerPoints}, Dealer={dealerPoints}");
+        
+        if (playerPoints > Constants.Blackjack)
+        {
+            EndHand(WinCode.DealerWins); // Player bust
+        }
+        else if (dealerPoints > Constants.Blackjack)
+        {
+            EndHand(WinCode.PlayerWins); // Dealer bust
+        }
+        else if (playerPoints > dealerPoints)
+        {
+            EndHand(WinCode.PlayerWins); // Player higher
+        }
+        else if (dealerPoints > playerPoints)
+        {
+            EndHand(WinCode.DealerWins); // Dealer higher
+        }
+        else
+        {
+            EndHand(WinCode.Draw); // Tie
+        }
+    }
+
 
     public void FlipDealerCard()
     {
@@ -1012,6 +1173,10 @@ public void RefreshAllActiveCardFrames()
 
 private void EndHand(WinCode code)
 {
+    // End turn-based game
+    _gameInProgress = false;
+    _currentTurn = GameTurn.GameOver;
+    
     FlipDealerCard();
     uint oldBalance = _balance;
 
@@ -1053,7 +1218,7 @@ private void EndHand(WinCode code)
             if (lossAmount <= _balance)
             {
                 Balance -= lossAmount;
-                if (PlayerStats.instance.PlayerHasEquippedCard(TarotCardType.WitchDoctor))
+                if (PlayerActuallyHasCard(TarotCardType.WitchDoctor) && PlayerHasActivatedCard(TarotCardType.WitchDoctor))
                 {
                     int refund = Mathf.RoundToInt(_bet * 0.1f);
                     Balance += (uint)refund;
@@ -1182,13 +1347,31 @@ private void EndHand(WinCode code)
     UpdateBalanceDisplay();
     UpdateScoreDisplays();
 
-    if (Balance == 0)
+    // Check for game over conditions - balance or hands exhausted
+    bool isGameOver = (Balance == 0) || (bossManager != null && bossManager.IsGameOver());
+    
+    if (isGameOver)
     {
-        finalMessage.text += "\n - GAME OVER -";
+        if (Balance == 0)
+        {
+            finalMessage.text += "\n - GAME OVER (No Money) -";
+        }
+        else if (bossManager != null && bossManager.IsGameOver())
+        {
+            if (bossManager.GetRemainingHands() <= 0 && bossManager.GetCurrentBossHealth() > 0)
+            {
+                finalMessage.text += "\n - GAME OVER (No Hands Left) -";
+            }
+            else if (bossManager.GetCurrentBossHealth() <= 0)
+            {
+                finalMessage.text += "\n - BOSS DEFEATED! -";
+            }
+        }
+        
         Text buttonText = playAgainButton.GetComponentInChildren<Text>();
         if (buttonText != null)
         {
-            buttonText.text = "Play Again";
+            buttonText.text = "Restart Game";
         }
     }
     
@@ -1201,14 +1384,38 @@ private void EndHand(WinCode code)
 
     public void PlayAgain()
     {   
-        // Check if this is a game over scenario (balance is 0 or button text is "Play Again")
+        // Check if this is a game over scenario
         Text buttonText = playAgainButton.GetComponentInChildren<Text>();
-        bool isGameOver = (Balance == 0 || (buttonText != null && buttonText.text == "Play Again"));
+        bool isGameOver = (Balance == 0) || 
+                         (bossManager != null && bossManager.IsGameOver()) ||
+                         (buttonText != null && (buttonText.text == "Play Again" || buttonText.text == "Restart Game"));
+        
+        bool isNextBoss = (buttonText != null && buttonText.text == "Next Boss");
         
         if (isGameOver)
         {
-            // Instant restart - reload the scene immediately
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            // Full game restart - reset everything except inventory
+            RestartGame();
+            return;
+        }
+        else if (isNextBoss)
+        {
+            // Transitioning to next boss - don't restart, just prepare for next boss
+            Debug.Log("Transitioning to next boss...");
+            
+            // Clear final message
+            finalMessage.text = "";
+            finalMessage.gameObject.SetActive(false);
+            
+            // Reset button text
+            if (buttonText != null)
+            {
+                buttonText.text = "Next Hand";
+            }
+            
+            // The boss initialization will be handled by BossManager's DelayedBossInitialization
+            // Just wait for it to complete and then initialize betting state
+            StartCoroutine(WaitForBossInitialization());
             return;
         }
         
@@ -1239,6 +1446,15 @@ private void EndHand(WinCode code)
         _hasUsedFortuneTellerThisRound = false;
         _hasUsedMadWriterThisRound = false;
         
+        // Reset passive card activation tracking
+        _hasActivatedBotanistThisRound = false;
+        _hasActivatedAssassinThisRound = false;
+        _hasActivatedSecretLoverThisRound = false;
+        _hasActivatedJewelerThisRound = false;
+        _hasActivatedHouseKeeperThisRound = false;
+        _hasActivatedWitchDoctorThisRound = false;
+        _hasActivatedArtificerThisRound = false;
+        
         // Reset The Escapist tracking
         _lastHitCard = null;
         
@@ -1255,6 +1471,238 @@ private void EndHand(WinCode code)
         
         // Go back to betting state instead of immediately starting game
         InitializeBettingState();  
+    }
+    
+    /// <summary>
+    /// Called by BossManager when game over conditions are met
+    /// </summary>
+    public void OnGameOver(bool playerWon, bool bossDefeated)
+    {
+        Debug.Log($"OnGameOver called - Player won: {playerWon}, Boss defeated: {bossDefeated}");
+        
+        // Disable all game buttons
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        discardButton.interactable = false;
+        peekButton.interactable = false;
+        transformButton.interactable = false;
+        raiseBetButton.interactable = false;
+        lowerBetButton.interactable = false;
+        placeBetButton.interactable = false;
+        
+        // Enable restart button
+        playAgainButton.interactable = true;
+        
+        // Update button text
+        Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = "Restart Game";
+        }
+        
+        // Show appropriate game over message
+        if (bossDefeated)
+        {
+            finalMessage.text = "Boss Defeated! Well done!";
+        }
+        else if (bossManager != null && bossManager.GetRemainingHands() <= 0)
+        {
+            finalMessage.text = "No hands remaining! Game Over!";
+        }
+        else
+        {
+            finalMessage.text = "Game Over!";
+        }
+        
+        finalMessage.gameObject.SetActive(true);
+    }
+    
+    /// <summary>
+    /// Called by BossManager when transitioning to next boss (not game over)
+    /// </summary>
+    public void OnBossTransition()
+    {
+        Debug.Log("OnBossTransition called - preparing for next boss");
+        
+        // Enable next hand button (not restart)
+        playAgainButton.interactable = true;
+        
+        // Update button text to show next round
+        Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = "Next Boss";
+        }
+        
+        // Show transition message
+        finalMessage.text = "Boss Defeated! Preparing for next boss...";
+        finalMessage.gameObject.SetActive(true);
+        
+        // Disable game action buttons until next boss starts
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        discardButton.interactable = false;
+        peekButton.interactable = false;
+        transformButton.interactable = false;
+        raiseBetButton.interactable = false;
+        lowerBetButton.interactable = false;
+        placeBetButton.interactable = false;
+    }
+    
+    /// <summary>
+    /// Restart the entire game while preserving inventory
+    /// </summary>
+    private void RestartGame()
+    {
+        Debug.Log("Restarting game - preserving inventory");
+        
+        // Reset balance to initial amount
+        Balance = Constants.InitialBalance;
+        
+        // Reset boss system
+        if (bossManager != null)
+        {
+            bossManager.ResetGameState();
+        }
+        
+        // Reset streak
+        _currentStreak = 0;
+        _streakMultiplier = 0;
+        
+        // Reset bet
+        _bet = 0;
+        bet.text = _bet.ToString() + " $";
+        
+        // Clear hands
+        if (player != null && player.GetComponent<CardHand>() != null)
+        {
+            player.GetComponent<CardHand>().Clear();
+        }
+        if (dealer != null && dealer.GetComponent<CardHand>() != null)
+        {
+            dealer.GetComponent<CardHand>().Clear();
+        }
+        
+        // Reset deck
+        cardIndex = 0;
+        ShuffleCards();
+        
+        // Reset all round-based tracking
+        _hasUsedPeekThisRound = false;
+        _hasUsedTransformThisRound = false;
+        _hasUsedSpyThisRound = false;
+        _hasUsedBlindSeerThisRound = false;
+        _hasUsedCorruptJudgeThisRound = false;
+        _hasUsedHitmanThisRound = false;
+        _hasUsedFortuneTellerThisRound = false;
+        _hasUsedMadWriterThisRound = false;
+        _hasActivatedBotanistThisRound = false;
+        _hasActivatedAssassinThisRound = false;
+        _hasActivatedSecretLoverThisRound = false;
+        _hasActivatedJewelerThisRound = false;
+        _hasActivatedHouseKeeperThisRound = false;
+        _hasActivatedWitchDoctorThisRound = false;
+        _hasActivatedArtificerThisRound = false;
+        _lastHitCard = null;
+        
+        // Reset tarot cards for new game
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager != null)
+        {
+            shopManager.ResetTarotCardsForNewRound();
+        }
+        
+        // Update UI
+        UpdateStreakUI();
+        UpdateBalanceDisplay();
+        
+        // Clear final message and reset button text
+        finalMessage.text = "";
+        finalMessage.gameObject.SetActive(false);
+        
+        Text buttonText = playAgainButton.GetComponentInChildren<Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = "Next Hand";
+        }
+        
+        // Initialize betting state
+        InitializeBettingState();
+        
+        Debug.Log("Game restarted successfully");
+    }
+    
+    /// <summary>
+    /// Public method to restart game from menu (preserves inventory)
+    /// </summary>
+    public void RestartGameFromMenu()
+    {
+        Debug.Log("RestartGameFromMenu called from pause menu");
+        
+        // Call the private restart method
+        RestartGame();
+    }
+    
+    /// <summary>
+    /// Wait for boss initialization to complete before starting betting
+    /// </summary>
+    private IEnumerator WaitForBossInitialization()
+    {
+        Debug.Log("Waiting for boss initialization...");
+        
+        // Wait a moment for boss initialization to complete
+        yield return new WaitForSeconds(1f);
+        
+        // Reset bet for new boss
+        _bet = 0;
+        bet.text = _bet.ToString() + " $";
+        
+        // Clear hands
+        if (player != null && player.GetComponent<CardHand>() != null)
+        {
+            player.GetComponent<CardHand>().Clear();
+        }
+        if (dealer != null && dealer.GetComponent<CardHand>() != null)
+        {
+            dealer.GetComponent<CardHand>().Clear();
+        }
+        
+        // Reset deck
+        cardIndex = 0;
+        ShuffleCards();
+        
+        // Reset round-based tracking for new boss
+        _hasUsedPeekThisRound = false;
+        _hasUsedTransformThisRound = false;
+        _hasUsedSpyThisRound = false;
+        _hasUsedBlindSeerThisRound = false;
+        _hasUsedCorruptJudgeThisRound = false;
+        _hasUsedHitmanThisRound = false;
+        _hasUsedFortuneTellerThisRound = false;
+        _hasUsedMadWriterThisRound = false;
+        _hasActivatedBotanistThisRound = false;
+        _hasActivatedAssassinThisRound = false;
+        _hasActivatedSecretLoverThisRound = false;
+        _hasActivatedJewelerThisRound = false;
+        _hasActivatedHouseKeeperThisRound = false;
+        _hasActivatedWitchDoctorThisRound = false;
+        _hasActivatedArtificerThisRound = false;
+        _lastHitCard = null;
+        
+        // Reset tarot cards for new boss
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager != null)
+        {
+            shopManager.ResetTarotCardsForNewRound();
+        }
+        
+        // Update UI
+        UpdateStreakUI();
+        
+        // Initialize betting state for new boss
+        InitializeBettingState();
+        
+        Debug.Log("Boss transition complete - ready for new boss");
     }
     
     /// <summary>
@@ -2127,8 +2575,8 @@ private void EndHand(WinCode code)
     {
         float baseMultiplier = Constants.BaseWinMultiplier + (_streakMultiplier * Constants.StreakMultiplierStep);
 
-        // Apply Artificer bonus only if streak is active AND player has Artificer card
-        bool hasArtificer = PlayerActuallyHasCard(TarotCardType.Artificer);
+        // Apply Artificer bonus only if streak is active AND player has activated Artificer card
+        bool hasArtificer = PlayerActuallyHasCard(TarotCardType.Artificer) && PlayerHasActivatedCard(TarotCardType.Artificer);
         
         if (_streakMultiplier > 0 && hasArtificer)
         {
@@ -2359,6 +2807,30 @@ private void EndHand(WinCode code)
         
         return false;
     }
+    
+    // NEW HELPER FUNCTION - Check if player has activated a passive card this round
+    public bool PlayerHasActivatedCard(TarotCardType cardType)
+    {
+        switch (cardType)
+        {
+            case TarotCardType.Botanist:
+                return _hasActivatedBotanistThisRound;
+            case TarotCardType.Assassin:
+                return _hasActivatedAssassinThisRound;
+            case TarotCardType.SecretLover:
+                return _hasActivatedSecretLoverThisRound;
+            case TarotCardType.Jeweler:
+                return _hasActivatedJewelerThisRound;
+            case TarotCardType.HouseKeeper:
+                return _hasActivatedHouseKeeperThisRound;
+            case TarotCardType.WitchDoctor:
+                return _hasActivatedWitchDoctorThisRound;
+            case TarotCardType.Artificer:
+                return _hasActivatedArtificerThisRound;
+            default:
+                return false;
+        }
+    }
 
 
 
@@ -2371,7 +2843,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateBotanistBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.Botanist))
+        if (!PlayerActuallyHasCard(TarotCardType.Botanist) || !PlayerHasActivatedCard(TarotCardType.Botanist))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2392,7 +2864,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateAssassinBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.Assassin))
+        if (!PlayerActuallyHasCard(TarotCardType.Assassin) || !PlayerHasActivatedCard(TarotCardType.Assassin))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2413,7 +2885,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateSecretLoverBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.SecretLover))
+        if (!PlayerActuallyHasCard(TarotCardType.SecretLover) || !PlayerHasActivatedCard(TarotCardType.SecretLover))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2434,7 +2906,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateJewelerBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.Jeweler))
+        if (!PlayerActuallyHasCard(TarotCardType.Jeweler) || !PlayerHasActivatedCard(TarotCardType.Jeweler))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2455,7 +2927,7 @@ private void EndHand(WinCode code)
     /// </summary>
     public uint CalculateHouseKeeperBonus(GameObject handOwner = null)
     {
-        if (!PlayerActuallyHasCard(TarotCardType.HouseKeeper))
+        if (!PlayerActuallyHasCard(TarotCardType.HouseKeeper) || !PlayerHasActivatedCard(TarotCardType.HouseKeeper))
             return 0;
             
         GameObject targetHand = handOwner ?? player;
@@ -2760,6 +3232,12 @@ private void EndHand(WinCode code)
         // Reset bet placement state
         _isBetPlaced = false;
         
+        // Reset turn-based variables
+        _currentTurn = GameTurn.Player;
+        _playerStood = false;
+        _dealerStood = false;
+        _gameInProgress = false;
+        
         // Clear any existing cards
         if (player != null && player.GetComponent<CardHand>() != null)
         {
@@ -2801,6 +3279,15 @@ private void EndHand(WinCode code)
         _hasUsedFortuneTellerThisRound = false;
         _hasUsedMadWriterThisRound = false;
         
+        // Reset passive card activation for new round
+        _hasActivatedBotanistThisRound = false;
+        _hasActivatedAssassinThisRound = false;
+        _hasActivatedSecretLoverThisRound = false;
+        _hasActivatedJewelerThisRound = false;
+        _hasActivatedHouseKeeperThisRound = false;
+        _hasActivatedWitchDoctorThisRound = false;
+        _hasActivatedArtificerThisRound = false;
+        
         // Don't reset _lastHitCard here - it should persist until The Escapist is used
         // or until a new game starts (PlayAgain)
         
@@ -2840,9 +3327,15 @@ private void EndHand(WinCode code)
             yield break; // Stop here — cards are already redealt in the effect
         }*/
 
-        // Enable game action buttons after dealing is complete
-        hitButton.interactable = true;
-        stickButton.interactable = true;
+        Debug.Log("DealInitialCardsAnimated: Initializing turn-based system");
+        
+        // Initialize turn-based system
+        _currentTurn = GameTurn.Player;
+        _playerStood = false;
+        _dealerStood = false;
+        _gameInProgress = true;
+        
+        Debug.Log($"DealInitialCardsAnimated: Turn variables set - Current: {_currentTurn}, InProgress: {_gameInProgress}");
 
         // Update UI and states
         UpdateScoreDisplays();
@@ -2861,12 +3354,98 @@ private void EndHand(WinCode code)
             {
                 EndHand(WinCode.PlayerWins);
             }
+            yield break;
         }
         else if (Blackjack(dealer, false))
         {
             EndHand(WinCode.DealerWins);
+            yield break;
+        }
+
+        // Start turn-based gameplay
+        StartTurnBasedGameplay();
+    }
+    
+    /// <summary>
+    /// Initialize turn-based gameplay
+    /// </summary>
+    private void StartTurnBasedGameplay()
+    {
+        Debug.Log("=== STARTING TURN-BASED GAMEPLAY ===");
+        Debug.Log($"Game in progress: {_gameInProgress}");
+        _currentTurn = GameTurn.Player;
+        Debug.Log($"Current turn set to: {_currentTurn}");
+        UpdateTurnUI();
+        EnablePlayerControls();
+        Debug.Log($"Hit button interactable: {hitButton.interactable}");
+        Debug.Log($"Stand button interactable: {stickButton.interactable}");
+        Debug.Log("=== TURN-BASED GAMEPLAY STARTED ===");
+    }
+    
+    /// <summary>
+    /// Update UI to show whose turn it is
+    /// </summary>
+    private void UpdateTurnUI()
+    {
+        if (!_gameInProgress)
+        {
+            finalMessage.text = "";
+            return;
+        }
+        
+        switch (_currentTurn)
+        {
+            case GameTurn.Player:
+                finalMessage.text = "Your Turn - Hit or Stand";
+                finalMessage.gameObject.SetActive(true);
+                break;
+            case GameTurn.Dealer:
+                finalMessage.text = "Dealer's Turn";
+                finalMessage.gameObject.SetActive(true);
+                break;
+            case GameTurn.GameOver:
+                // Game over message will be set by EndHand
+                break;
         }
     }
+    
+    /// <summary>
+    /// Enable player controls for their turn
+    /// </summary>
+    private void EnablePlayerControls()
+    {
+        Debug.Log($"EnablePlayerControls called - Current turn: {_currentTurn}, Game in progress: {_gameInProgress}");
+        
+        if (_currentTurn != GameTurn.Player || !_gameInProgress)
+        {
+            Debug.Log("Disabling controls - not player turn or game not in progress");
+            hitButton.interactable = false;
+            stickButton.interactable = false;
+            return;
+        }
+        
+        Debug.Log("Enabling player controls");
+        hitButton.interactable = true;
+        stickButton.interactable = true;
+        UpdateDiscardButtonState();
+        UpdatePeekButtonState();
+        UpdateTransformButtonState();
+        
+        Debug.Log($"After enabling - Hit: {hitButton.interactable}, Stand: {stickButton.interactable}");
+    }
+    
+    /// <summary>
+    /// Disable all player controls
+    /// </summary>
+    private void DisablePlayerControls()
+    {
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        discardButton.interactable = false;
+        peekButton.interactable = false;
+        transformButton.interactable = false;
+    }
+    
     private IEnumerator ReplaceCardWithInitialAnimation(CardModel clickedCard)
     {
         CardHand hand = player.GetComponent<CardHand>();
