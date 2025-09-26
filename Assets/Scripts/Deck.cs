@@ -317,7 +317,75 @@ public class Deck : MonoBehaviour
         // Initialize game in betting state (no cards dealt yet)
         InitializeBettingState();
     }
- 
+ // Helper: apply equipped frame to a spawned card GameObject (sprite-based prefab)
+private void ApplyEquippedFrame(GameObject card)
+{
+    if (card == null) return;
+    if (DeckMaterialManager.Instance == null) return;
+
+    Sprite frameSprite = DeckMaterialManager.Instance.GetCurrentFrame();
+    if (frameSprite == null) return;
+
+    // Preferred: CardUI component
+    var cardUI = card.GetComponent<CardUI>();
+    if (cardUI != null)
+    {
+        cardUI.ApplyEquippedFrame();
+        return;
+    }
+
+    // Fallback: look for a child named "Frame" or similar
+    Transform t = card.transform.Find("Frame") ?? card.transform.Find("frame") ?? card.transform.Find("Background") ?? card.transform.Find("background");
+    if (t != null)
+    {
+        var sr = t.GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.sprite = frameSprite;
+            sr.enabled = true;
+            return;
+        }
+    }
+
+    // Last fallback: search children for SpriteRenderer with "frame" or "background" in name
+    var fallback = card.GetComponentsInChildren<SpriteRenderer>(true)
+                       .FirstOrDefault(s => s.gameObject.name.ToLower().Contains("frame") || s.gameObject.name.ToLower().Contains("background"));
+    if (fallback != null)
+    {
+        fallback.sprite = frameSprite;
+        fallback.enabled = true;
+    }
+}
+
+// Re-apply frames to all currently dealt cards (player & dealer hands)
+public void RefreshAllActiveCardFrames()
+{
+    // Dealer hand
+    if (dealer != null)
+    {
+        var dealerHand = dealer.GetComponent<CardHand>();
+        if (dealerHand != null && dealerHand.cards != null)
+        {
+            foreach (var cardGO in dealerHand.cards)
+            {
+                ApplyEquippedFrame(cardGO);
+            }
+        }
+    }
+
+    // Player hand
+    if (player != null)
+    {
+        var playerHand = player.GetComponent<CardHand>();
+        if (playerHand != null && playerHand.cards != null)
+        {
+            foreach (var cardGO in playerHand.cards)
+            {
+                ApplyEquippedFrame(cardGO);
+            }
+        }
+    }
+}
     private void InitCardValues()
     {
         int count = 0;
@@ -577,7 +645,7 @@ public class Deck : MonoBehaviour
         return System.Math.Round((favorableCases / possibleCases) * 100, Constants.ProbPrecision);
     }
 
-    private void PushDealer()
+    /*private void PushDealer()
     {
         // Check if we're reaching the end of the deck and need to reshuffle
         if (cardIndex >= values.Length - 1)
@@ -600,9 +668,9 @@ public class Deck : MonoBehaviour
         {
             bossManager.OnCardDealt(newCard, false);
         }
-    }
+    }*/
 
-    private void PushPlayer()
+    /*private void PushPlayer()
     {
         // Check if we're reaching the end of the deck and need to reshuffle
         if (cardIndex >= values.Length - 1)
@@ -681,7 +749,126 @@ public class Deck : MonoBehaviour
         {
             ApplyCaptainJackNullification();
         }
+    }*/
+    private void PushDealer()
+    {
+        // Check if we're reaching the end of the deck and need to reshuffle
+        if (cardIndex >= values.Length - 1)
+        {
+            Debug.Log("Dealer drawing - Deck is almost empty, reshuffling...");
+            ShuffleCards();
+            cardIndex = 0;
+        }
+
+        GameObject newCard = dealer.GetComponent<CardHand>().Push(
+            faces[cardIndex], 
+            values[cardIndex], 
+            originalIndices[cardIndex]
+        );
+
+        // ✅ Apply frame
+        CardUI cardUI = newCard.GetComponent<CardUI>();
+        if (cardUI != null)
+        {
+            cardUI.ApplyEquippedFrame();
+        }
+
+        // Debug: Log what card was dealt to dealer
+        CardInfo cardInfo = new CardInfo(originalIndices[cardIndex], values[cardIndex], faces[cardIndex], faces);
+        Debug.Log($"Dealt to dealer: {cardInfo.cardName} (Index: {cardIndex})");
+
+        cardIndex++;
+
+        // Notify boss system about card dealt
+        if (bossManager != null && newCard != null)
+        {
+            bossManager.OnCardDealt(newCard, false);
+        }
     }
+    private void PushPlayer()
+{
+    // Check if we're reaching the end of the deck and need to reshuffle
+    if (cardIndex >= values.Length - 1)
+    {
+        Debug.Log("Player drawing - Deck is almost empty, reshuffling...");
+        ShuffleCards();
+        cardIndex = 0;
+    }
+
+    // Seductress interception logic
+    if (bossManager != null && bossManager.currentBoss != null && 
+        bossManager.currentBoss.bossType == BossType.TheSeductress)
+    {
+        CardInfo cardInfo = new CardInfo(originalIndices[cardIndex], values[cardIndex], faces[cardIndex], faces);
+        bool isKingOrJack = (cardInfo.suitIndex == 10 || cardInfo.suitIndex == 12);
+
+        if (isKingOrJack)
+        {
+            GameObject interceptedCard = dealer.GetComponent<CardHand>().Push(
+                faces[cardIndex], 
+                values[cardIndex], 
+                originalIndices[cardIndex]
+            );
+
+            // ✅ Apply frame to intercepted card
+            CardUI interceptedUI = interceptedCard.GetComponent<CardUI>();
+            if (interceptedUI != null)
+            {
+                interceptedUI.ApplyEquippedFrame();
+            }
+
+            cardIndex++;
+
+            if (bossManager != null && interceptedCard != null)
+            {
+                bossManager.OnCardDealt(interceptedCard, false);
+
+                var mechanic = bossManager.currentBoss.GetMechanic(BossMechanicType.SeductressIntercept);
+                if (mechanic != null)
+                    bossManager.StartCoroutine(bossManager.HandleSeductressInterception(interceptedCard, cardInfo, true));
+            }
+
+            UpdateScoreDisplays();
+            CalculateProbabilities();
+            return;
+        }
+    }
+
+    // Normal case → card goes to player
+    GameObject playerCard = player.GetComponent<CardHand>().Push(
+        faces[cardIndex], 
+        values[cardIndex], 
+        originalIndices[cardIndex]
+    );
+
+    // ✅ Apply frame to player's card
+    CardUI playerUI = playerCard.GetComponent<CardUI>();
+    if (playerUI != null)
+    {
+        playerUI.ApplyEquippedFrame();
+    }
+
+    // Debug log
+    CardInfo playerCardInfo = new CardInfo(originalIndices[cardIndex], values[cardIndex], faces[cardIndex], faces);
+    Debug.Log($"Dealt to player: {playerCardInfo.cardName} (Index: {cardIndex})");
+
+    cardIndex++;
+    UpdateScoreDisplays();
+    CalculateProbabilities();
+
+    if (bossManager != null && playerCard != null)
+    {
+        bossManager.OnCardDealt(playerCard, true);
+    }
+
+    // Captain mechanic
+    if (bossManager != null && bossManager.currentBoss != null && 
+        bossManager.currentBoss.bossType == BossType.TheCaptain)
+    {
+        ApplyCaptainJackNullification();
+    }
+}
+
 
     public void Hit()
     { 
