@@ -1,38 +1,68 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Transform))]
 public class CardUI : MonoBehaviour
 {
-    [Header("Assign in Prefab")]
-    public SpriteRenderer frameRenderer;  // card border/frame only
+    // We'll auto-find the child named "Frame" (SpriteRenderer)
+    private SpriteRenderer frameRenderer;
+
+    private void Awake()
+    {
+        // find "Frame" child (case-sensitive)
+        Transform t = transform.Find("Frame");
+        if (t != null)
+            frameRenderer = t.GetComponent<SpriteRenderer>();
+    }
+
+    private void OnEnable()
+    {
+        // Subscribe if manager already exists
+        if (DeckMaterialManager.Instance != null)
+        {
+            DeckMaterialManager.Instance.OnFrameChanged += ApplyEquippedFrame;
+        }
+
+        // Apply current frame immediately (in case Equip happened earlier)
+        ApplyEquippedFrame();
+    }
+
+    private void OnDisable()
+    {
+        if (DeckMaterialManager.Instance != null)
+        {
+            DeckMaterialManager.Instance.OnFrameChanged -= ApplyEquippedFrame;
+        }
+    }
 
     /// <summary>
-    /// Apply the currently equipped frame from DeckMaterialManager
+    /// Set frameRenderer.sprite to the currently equipped sprite.
     /// </summary>
     public void ApplyEquippedFrame()
     {
         if (frameRenderer == null)
         {
-            Debug.LogError("❌ CardUI: frameRenderer is not assigned in prefab!");
+            Debug.LogWarning($"CardUI: Frame child not found on '{gameObject.name}'. Expected child named 'Frame'.");
             return;
         }
 
-        if (DeckMaterialManager.Instance != null)
+        if (DeckMaterialManager.Instance == null)
         {
-            Sprite frame = DeckMaterialManager.Instance.GetCurrentFrame();
-            if (frame != null)
-            {
-                frameRenderer.sprite = frame;
-                frameRenderer.enabled = true;
-                Debug.Log($"✅ CardUI: Frame applied -> {frame.name}");
-            }
-            else
-            {
-                Debug.LogWarning("⚠️ CardUI: Frame sprite is NULL from DeckMaterialManager.");
-            }
+            Debug.LogError("CardUI: DeckMaterialManager.Instance is missing in scene!");
+            return;
+        }
+
+        Sprite frame = DeckMaterialManager.Instance.GetCurrentFrame();
+        if (frame != null)
+        {
+            frameRenderer.sprite = frame;
+            frameRenderer.enabled = true;
+            // optional: make sure rendering order is correct
         }
         else
         {
-            Debug.LogError("❌ CardUI: DeckMaterialManager.Instance is missing in scene!");
+            // No frame selected -> hide frame
+            frameRenderer.sprite = null;
+            frameRenderer.enabled = false;
         }
     }
 }

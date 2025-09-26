@@ -334,75 +334,65 @@ public class Deck : MonoBehaviour
         InitializeBettingState();
     }
  // Helper: apply equipped frame to a spawned card GameObject (sprite-based prefab)
-private void ApplyEquippedFrame(GameObject card)
-{
-    if (card == null) return;
-    if (DeckMaterialManager.Instance == null) return;
+ private void ApplyEquippedFrame(GameObject cardGO)
+ {
+     if (cardGO == null) return;
 
-    Sprite frameSprite = DeckMaterialManager.Instance.GetCurrentFrame();
-    if (frameSprite == null) return;
+     // Try CardUI first
+     CardUI cardUI = cardGO.GetComponent<CardUI>();
+     if (cardUI != null)
+     {
+         cardUI.ApplyEquippedFrame();
+         return;
+     }
 
-    // Preferred: CardUI component
-    var cardUI = card.GetComponent<CardUI>();
-    if (cardUI != null)
-    {
-        cardUI.ApplyEquippedFrame();
-        return;
-    }
-
-    // Fallback: look for a child named "Frame" or similar
-    Transform t = card.transform.Find("Frame") ?? card.transform.Find("frame") ?? card.transform.Find("Background") ?? card.transform.Find("background");
-    if (t != null)
-    {
-        var sr = t.GetComponent<SpriteRenderer>();
-        if (sr != null)
-        {
-            sr.sprite = frameSprite;
-            sr.enabled = true;
-            return;
-        }
-    }
-
-    // Last fallback: search children for SpriteRenderer with "frame" or "background" in name
-    var fallback = card.GetComponentsInChildren<SpriteRenderer>(true)
-                       .FirstOrDefault(s => s.gameObject.name.ToLower().Contains("frame") || s.gameObject.name.ToLower().Contains("background"));
-    if (fallback != null)
-    {
-        fallback.sprite = frameSprite;
-        fallback.enabled = true;
-    }
-}
+     // Fallback: find "Frame" child and set its SpriteRenderer sprite
+     Transform frameT = cardGO.transform.Find("Frame");
+     if (frameT != null)
+     {
+         SpriteRenderer sr = frameT.GetComponent<SpriteRenderer>();
+         if (sr != null && DeckMaterialManager.Instance != null)
+         {
+             Sprite frame = DeckMaterialManager.Instance.GetCurrentFrame();
+             sr.sprite = frame;
+             sr.enabled = frame != null;
+         }
+     }
+ }
 
 // Re-apply frames to all currently dealt cards (player & dealer hands)
-public void RefreshAllActiveCardFrames()
-{
-    // Dealer hand
-    if (dealer != null)
+// Re-apply the equipped frame to all currently active dealt cards
+    public void RefreshAllActiveCardFrames()
     {
-        var dealerHand = dealer.GetComponent<CardHand>();
-        if (dealerHand != null && dealerHand.cards != null)
+        // First try to update via CardUI components (fast)
+        CardUI[] cardUIs = FindObjectsOfType<CardUI>();
+        foreach (var c in cardUIs)
         {
-            foreach (var cardGO in dealerHand.cards)
-            {
-                ApplyEquippedFrame(cardGO);
-            }
+            if (c != null)
+                c.ApplyEquippedFrame();
         }
-    }
 
-    // Player hand
-    if (player != null)
-    {
-        var playerHand = player.GetComponent<CardHand>();
-        if (playerHand != null && playerHand.cards != null)
+        // If your CardHand keeps references, you can also iterate them (optional)
+        if (dealer != null)
         {
-            foreach (var cardGO in playerHand.cards)
+            var dealerHand = dealer.GetComponent<CardHand>();
+            if (dealerHand != null && dealerHand.cards != null)
             {
-                ApplyEquippedFrame(cardGO);
+                foreach (var go in dealerHand.cards)
+                    ApplyEquippedFrame(go);
             }
         }
-    }
-}
-    private void InitCardValues()
+
+        if (player != null)
+        {
+            var playerHand = player.GetComponent<CardHand>();
+            if (playerHand != null && playerHand.cards != null)
+            {
+                foreach (var go in playerHand.cards)
+                    ApplyEquippedFrame(go);
+            }
+        }
+    }    private void InitCardValues()
     {
         int count = 0;
         for (int i = 0; i < values.Length; ++i) 
