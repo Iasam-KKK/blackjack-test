@@ -6,9 +6,9 @@ public class DeckMaterialManager : MonoBehaviour
     public static DeckMaterialManager Instance;
 
     [Header("Available Frames (assign in Inspector)")]
-    public Sprite[] materialFrames; // drag all your frame sprites here
+    public Sprite[] materialFrames; // drag your frame sprites here
 
-    private int selectedIndex = 0;
+    private int selectedIndex = -1; // -1 = no frame equipped
     private const string PREF_KEY = "DeckMaterialIndex";
 
     // Event fired whenever the equipped frame changes
@@ -27,23 +27,32 @@ public class DeckMaterialManager : MonoBehaviour
             return;
         }
 
-        // Load saved selection safely
-        selectedIndex = PlayerPrefs.GetInt(PREF_KEY, 0);
-        if (materialFrames == null || materialFrames.Length == 0) selectedIndex = 0;
-        if (selectedIndex < 0 || (materialFrames != null && selectedIndex >= materialFrames.Length)) selectedIndex = 0;
+        // Load saved value
+        selectedIndex = PlayerPrefs.GetInt(PREF_KEY, -1);
 
-        // Notify listeners about current selection so existing cards update on scene start
+        // Validate index
+        if (materialFrames == null || materialFrames.Length == 0) selectedIndex = -1;
+        if (selectedIndex >= materialFrames.Length) selectedIndex = -1;
+
+        // Notify cards so they set frame (or none)
         OnFrameChanged?.Invoke();
     }
 
-    // Equip and persist a material by index (0..N-1)
+    // Equip a frame (0..N-1). Call with -1 to remove frame.
     public void EquipMaterial(int index)
     {
-        if (materialFrames == null || materialFrames.Length == 0) 
+        if (index == -1)
         {
-            Debug.LogWarning("DeckMaterialManager: No materialFrames assigned in Inspector.");
+            selectedIndex = -1;
+            PlayerPrefs.SetInt(PREF_KEY, selectedIndex);
+            PlayerPrefs.Save();
+
+            Debug.Log("DeckMaterialManager: No frame equipped.");
+            OnFrameChanged?.Invoke();
             return;
         }
+
+        if (materialFrames == null || materialFrames.Length == 0) return;
         if (index < 0 || index >= materialFrames.Length) return;
 
         selectedIndex = index;
@@ -51,12 +60,12 @@ public class DeckMaterialManager : MonoBehaviour
         PlayerPrefs.Save();
 
         Debug.Log($"DeckMaterialManager: Equipped material index {index} -> {materialFrames[index].name}");
-        OnFrameChanged?.Invoke(); // notify all listeners (cards)
+        OnFrameChanged?.Invoke();
     }
 
-    // Safe getter for current frame sprite
     public Sprite GetCurrentFrame()
     {
+        if (selectedIndex == -1) return null; // no frame
         if (materialFrames == null || materialFrames.Length == 0) return null;
         if (selectedIndex < 0 || selectedIndex >= materialFrames.Length) return null;
         return materialFrames[selectedIndex];
