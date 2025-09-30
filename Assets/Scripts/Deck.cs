@@ -991,7 +991,7 @@ public class Deck : MonoBehaviour
     }
     
     /// <summary>
-    /// Handle dealer's turn
+    /// Handle dealer's turn - continues until dealer stands or busts
     /// </summary>
     private IEnumerator DealerTurnCoroutine()
     {
@@ -1003,37 +1003,44 @@ public class Deck : MonoBehaviour
         AnimateFlipDealerCard();
         yield return new WaitForSeconds(0.5f);
         
-        // Dealer AI decision
-        int dealerPoints = GetDealerPoints();
-        bool dealerShouldHit = DealerShouldHit(dealerPoints);
-        
-        if (dealerShouldHit && !_dealerStood)
+        // Dealer continues hitting until they reach 17 or bust
+        while (_gameInProgress && !_dealerStood)
         {
-            Debug.Log("Dealer hits");
-            yield return StartCoroutine(PushDealerAnimated());
+            int dealerPoints = GetDealerPoints();
+            bool dealerShouldHit = DealerShouldHit(dealerPoints);
             
-            // Check for dealer bust or blackjack
-            dealerPoints = GetDealerPoints();
-            if (dealerPoints > Constants.Blackjack)
+            if (dealerShouldHit)
             {
-                Debug.Log("Dealer busts!");
-                EndHand(WinCode.PlayerWins);
-                yield break;
+                Debug.Log($"Dealer has {dealerPoints} points, hitting...");
+                yield return StartCoroutine(PushDealerAnimated());
+                
+                // Check for dealer bust or blackjack
+                dealerPoints = GetDealerPoints();
+                if (dealerPoints > Constants.Blackjack)
+                {
+                    Debug.Log("Dealer busts!");
+                    EndHand(WinCode.PlayerWins);
+                    yield break;
+                }
+                else if (Blackjack(dealer, false))
+                {
+                    Debug.Log("Dealer gets blackjack!");
+                    EndHand(WinCode.DealerWins);
+                    yield break;
+                }
+                
+                // Small delay between dealer hits for better UX
+                yield return new WaitForSeconds(0.8f);
             }
-            else if (Blackjack(dealer, false))
+            else
             {
-                Debug.Log("Dealer gets blackjack!");
-                EndHand(WinCode.DealerWins);
-                yield break;
+                Debug.Log($"Dealer has {dealerPoints} points, standing");
+                _dealerStood = true;
+                break;
             }
-        }
-        else
-        {
-            Debug.Log("Dealer stands");
-            _dealerStood = true;
         }
         
-        // Check if game should end or switch back to player
+        // Check if game should end
         CheckTurnBasedGameEnd();
     }
     
@@ -1043,6 +1050,7 @@ public class Deck : MonoBehaviour
     private bool DealerShouldHit(int dealerPoints)
     {
         // Standard dealer rules: hit on 16 or less, stand on 17 or more
+        // This ensures fair play - dealer must follow the same rules as in real blackjack
         return dealerPoints < Constants.DealerStand;
     }
     
