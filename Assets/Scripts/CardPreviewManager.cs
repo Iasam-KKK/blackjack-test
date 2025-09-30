@@ -19,6 +19,22 @@ public class CardPreviewManager : MonoBehaviour
     public Button cancelButton;
     public Button shuffleButton; // For Mad Writer card
     
+    [Header("Panel-Specific Buttons")]
+    [Header("Blind Seer Buttons")]
+    public Button blindSeerConfirmButton;
+    public Button blindSeerCancelButton;
+    public Button blindSeerShuffleButton;
+    
+    [Header("Corrupt Judge Buttons")]
+    public Button corruptJudgeConfirmButton;
+    public Button corruptJudgeCancelButton;
+    public Button corruptJudgeShuffleButton;
+    
+    [Header("Hitman Buttons")]
+    public Button hitmanConfirmButton;
+    public Button hitmanCancelButton;
+    public Button hitmanShuffleButton;
+    
     [Header("Settings")]
     public float cardSpacing = 100f;
     public float animationDuration = 0.3f;
@@ -63,6 +79,10 @@ public class CardPreviewManager : MonoBehaviour
     [SerializeField] private GameObject playerPreviewPanel;
     [SerializeField] private Image[] playerPreviewImages;
     [SerializeField] private TextMeshProUGUI[] playerPreviewNames;
+    
+    // Hitman card selection variables
+    private int selectedCardIndex = -1;
+    private bool isCardSelected = false;
 
     private void Awake()
     {
@@ -84,7 +104,7 @@ public class CardPreviewManager : MonoBehaviour
             previewPanel.SetActive(false);
         }
         
-        // Set up button listeners
+        // Set up button listeners for main panel
         if (confirmButton != null)
         {
             confirmButton.onClick.AddListener(ConfirmPreview);
@@ -98,6 +118,54 @@ public class CardPreviewManager : MonoBehaviour
         if (shuffleButton != null)
         {
             shuffleButton.onClick.AddListener(TriggerShuffle);
+        }
+        
+        // Set up button listeners for Blind Seer panel
+        if (blindSeerConfirmButton != null)
+        {
+            blindSeerConfirmButton.onClick.AddListener(ConfirmPreview);
+        }
+        
+        if (blindSeerCancelButton != null)
+        {
+            blindSeerCancelButton.onClick.AddListener(CancelPreview);
+        }
+        
+        if (blindSeerShuffleButton != null)
+        {
+            blindSeerShuffleButton.onClick.AddListener(TriggerShuffle);
+        }
+        
+        // Set up button listeners for Corrupt Judge panel
+        if (corruptJudgeConfirmButton != null)
+        {
+            corruptJudgeConfirmButton.onClick.AddListener(ConfirmPreview);
+        }
+        
+        if (corruptJudgeCancelButton != null)
+        {
+            corruptJudgeCancelButton.onClick.AddListener(CancelPreview);
+        }
+        
+        if (corruptJudgeShuffleButton != null)
+        {
+            corruptJudgeShuffleButton.onClick.AddListener(TriggerShuffle);
+        }
+        
+        // Set up button listeners for Hitman panel
+        if (hitmanConfirmButton != null)
+        {
+            hitmanConfirmButton.onClick.AddListener(ConfirmPreview);
+        }
+        
+        if (hitmanCancelButton != null)
+        {
+            hitmanCancelButton.onClick.AddListener(CancelPreview);
+        }
+        
+        if (hitmanShuffleButton != null)
+        {
+            hitmanShuffleButton.onClick.AddListener(TriggerShuffle);
         }
     }
     
@@ -118,6 +186,29 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
     }
     else if (title.Contains("Blind Seer"))
     {
+        // Initialize Blind Seer variables
+        originalCardInfos = new List<CardInfo>(cardInfos);
+        onConfirmCallback = onConfirm;
+        onCancelCallback = onCancel;
+        allowRemoving = canRemove;
+        maxRemovable = maxRemove;
+        
+        // Show Blind Seer specific buttons
+        if (blindSeerConfirmButton != null)
+        {
+            blindSeerConfirmButton.gameObject.SetActive(true);
+        }
+
+        if (blindSeerCancelButton != null)
+        {
+            blindSeerCancelButton.gameObject.SetActive(true);
+        }
+
+        if (blindSeerShuffleButton != null)
+        {
+            blindSeerShuffleButton.gameObject.SetActive(false);
+        }
+        
         blindSeerPanel.SetActive(true);
 
         for (int i = 0; i < blindSeerImages.Length; i++)
@@ -142,6 +233,37 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
     }
     else if (title.Contains("Hitman"))
     {
+        // Initialize Hitman-specific variables
+        originalCardInfos = new List<CardInfo>(cardInfos);
+        onConfirmCallback = onConfirm;
+        onCancelCallback = onCancel;
+        allowRemoving = canRemove;
+        maxRemovable = maxRemove;
+        selectedCardIndex = -1;
+        isCardSelected = false;
+        
+        // Show Hitman specific buttons
+        if (hitmanConfirmButton != null)
+        {
+            hitmanConfirmButton.gameObject.SetActive(true);
+            Text buttonText = hitmanConfirmButton.GetComponentInChildren<Text>();
+            if (buttonText != null)
+            {
+                buttonText.text = "Confirm";
+            }
+            hitmanConfirmButton.interactable = false; // Disabled until card is selected
+        }
+
+        if (hitmanCancelButton != null)
+        {
+            hitmanCancelButton.gameObject.SetActive(true);
+        }
+
+        if (hitmanShuffleButton != null)
+        {
+            hitmanShuffleButton.gameObject.SetActive(false);
+        }
+        
         playerPreviewPanel.SetActive(true);
 
         for (int i = 0; i < playerPreviewImages.Length; i++)
@@ -152,8 +274,9 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
                 playerPreviewImages[i].gameObject.SetActive(true);
                 playerPreviewNames[i].text = cardInfos[i].cardName;
                 playerPreviewNames[i].gameObject.SetActive(true);
-                // Add drag functionality to all player preview cards
-            AddDragInteractionToImage(playerPreviewImages[i].gameObject, i);
+                
+                // Add click functionality for card selection
+                AddHitmanCardInteraction(playerPreviewImages[i].gameObject, i);
             }
             else
             {
@@ -164,7 +287,6 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
 
         playerPreviewPanel.transform.localScale = Vector3.zero;
         playerPreviewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
-        StartCoroutine(AutoClosePanel(playerPreviewPanel, 10f));
     }
     else
     {
@@ -190,25 +312,25 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
         maxRemovable = 0;
         removedCount = 0;
 
-        // Show confirm and cancel buttons
-        if (confirmButton != null)
+        // Show Corrupt Judge specific buttons
+        if (corruptJudgeConfirmButton != null)
         {
-            confirmButton.gameObject.SetActive(true);
-            Text buttonText = confirmButton.GetComponentInChildren<Text>();
+            corruptJudgeConfirmButton.gameObject.SetActive(true);
+            Text buttonText = corruptJudgeConfirmButton.GetComponentInChildren<Text>();
             if (buttonText != null)
             {
                 buttonText.text = "Confirm";
             }
         }
 
-        if (cancelButton != null)
+        if (corruptJudgeCancelButton != null)
         {
-            cancelButton.gameObject.SetActive(true);
+            corruptJudgeCancelButton.gameObject.SetActive(true);
         }
 
-        if (shuffleButton != null)
+        if (corruptJudgeShuffleButton != null)
         {
-            shuffleButton.gameObject.SetActive(false);
+            corruptJudgeShuffleButton.gameObject.SetActive(false);
         }
 
         // Show Corrupt Judge panel (not multiPreview)
@@ -268,7 +390,7 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
 
         blindSeerPanel.transform.localScale = Vector3.zero;
         blindSeerPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
-        StartCoroutine(AutoClosePanel(playerPreviewPanel, 10f));
+        StartCoroutine(AutoClosePanel(blindSeerPanel, 10f));
 
     }
 
@@ -307,6 +429,28 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
         trigger.triggers.Add(pointerClick);
     }
     
+    /// <summary>
+    /// Add click interaction for Hitman card selection
+    /// </summary>
+    private void AddHitmanCardInteraction(GameObject imageObj, int index)
+    {
+        // Add EventTrigger for click selection
+        EventTrigger trigger = imageObj.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = imageObj.AddComponent<EventTrigger>();
+        }
+        
+        // Clear existing triggers
+        trigger.triggers.Clear();
+        
+        // Add click functionality for card selection
+        EventTrigger.Entry pointerClick = new EventTrigger.Entry();
+        pointerClick.eventID = EventTriggerType.PointerClick;
+        pointerClick.callback.AddListener((data) => { OnHitmanCardClick(imageObj, index, (PointerEventData)data); });
+        trigger.triggers.Add(pointerClick);
+    }
+    
     private void OnCardClick(GameObject imageObj, int index, PointerEventData eventData)
     {
         if (isDragging) return;
@@ -327,6 +471,113 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
         {
             StartCoroutine(AnimateImageSwap(index, nextIndex));
         }
+    }
+    
+    /// <summary>
+    /// Handle card click for Hitman card selection
+    /// </summary>
+    private void OnHitmanCardClick(GameObject imageObj, int index, PointerEventData eventData)
+    {
+        // Safety checks
+        if (playerPreviewImages == null || playerPreviewImages.Length < 3)
+        {
+            Debug.LogWarning("Player preview images not properly assigned.");
+            return;
+        }
+
+        // Only allow valid indices
+        if (index < 0 || index >= playerPreviewImages.Length) return;
+        
+        // If clicking the same card, deselect it
+        if (selectedCardIndex == index)
+        {
+            DeselectCard();
+            return;
+        }
+        
+        // Deselect previous card if any
+        if (selectedCardIndex != -1)
+        {
+            DeselectCard();
+        }
+        
+        // Select new card
+        SelectCard(index);
+    }
+    
+    /// <summary>
+    /// Select a card with visual feedback and animation
+    /// </summary>
+    private void SelectCard(int index)
+    {
+        selectedCardIndex = index;
+        isCardSelected = true;
+        
+        GameObject cardObj = playerPreviewImages[index].gameObject;
+        
+        // Animate card pop-up effect
+        Vector3 originalScale = cardObj.transform.localScale;
+        Vector3 originalPosition = cardObj.transform.localPosition;
+        
+        // Pop up animation
+        cardObj.transform.DOScale(originalScale * 1.2f, 0.3f).SetEase(Ease.OutBack);
+        cardObj.transform.DOLocalMoveY(originalPosition.y + 30f, 0.3f).SetEase(Ease.OutQuad);
+        
+        // Add visual feedback - glow effect
+        Image cardImage = cardObj.GetComponent<Image>();
+        if (cardImage != null)
+        {
+            // Add a subtle glow by changing color
+            cardImage.color = new Color(1.2f, 1.2f, 1.0f, 1f); // Slightly yellow tint
+        }
+        
+        // Enable confirm button
+        if (hitmanConfirmButton != null)
+        {
+            hitmanConfirmButton.interactable = true;
+            Text buttonText = hitmanConfirmButton.GetComponentInChildren<Text>();
+            if (buttonText != null)
+            {
+                buttonText.text = $"Remove {originalCardInfos[index].cardName}";
+            }
+        }
+        
+        Debug.Log($"Selected card: {originalCardInfos[index].cardName}");
+    }
+    
+    /// <summary>
+    /// Deselect the currently selected card
+    /// </summary>
+    private void DeselectCard()
+    {
+        if (selectedCardIndex == -1) return;
+        
+        GameObject cardObj = playerPreviewImages[selectedCardIndex].gameObject;
+        
+        // Animate card back to original position
+        cardObj.transform.DOScale(Vector3.one, 0.3f).SetEase(Ease.OutQuad);
+        cardObj.transform.DOLocalMoveY(0f, 0.3f).SetEase(Ease.OutQuad);
+        
+        // Reset visual feedback
+        Image cardImage = cardObj.GetComponent<Image>();
+        if (cardImage != null)
+        {
+            cardImage.color = Color.white;
+        }
+        
+        // Disable confirm button
+        if (hitmanConfirmButton != null)
+        {
+            hitmanConfirmButton.interactable = false;
+            Text buttonText = hitmanConfirmButton.GetComponentInChildren<Text>();
+            if (buttonText != null)
+            {
+                buttonText.text = "Confirm";
+            }
+        }
+        
+        selectedCardIndex = -1;
+        isCardSelected = false;
     }
     
     private void StartDragImage(GameObject imageObj, int index, PointerEventData eventData)
@@ -840,14 +1091,25 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
         
         if (allowRemoving)
         {
-            // Only include non-removed cards
-            for (int i = 0; i < previewCards.Count; i++)
+            // For Hitman card, remove the selected card
+            if (isCardSelected && selectedCardIndex != -1)
             {
-                Button cardButton = previewCards[i].GetComponent<Button>();
-                if (cardButton != null && cardButton.interactable)
+                // Create a list with all cards except the selected one
+                for (int i = 0; i < originalCardInfos.Count; i++)
                 {
-                    resultCards.Add(originalCardInfos[i]);
+                    if (i != selectedCardIndex)
+                    {
+                        resultCards.Add(originalCardInfos[i]);
+                    }
                 }
+                
+                Debug.Log($"Hitman: Removing card {originalCardInfos[selectedCardIndex].cardName}");
+            }
+            else
+            {
+                // No card selected, return all cards (shouldn't happen as button should be disabled)
+                resultCards = new List<CardInfo>(originalCardInfos);
+                Debug.LogWarning("Hitman: No card selected for removal");
             }
         }
         else
@@ -862,6 +1124,14 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
         {
             HideMultiPreviewPanel();
         }
+        else if (blindSeerPanel != null && blindSeerPanel.activeInHierarchy)
+        {
+            HideBlindSeerPanel();
+        }
+        else if (corruptJudgePanel != null && corruptJudgePanel.activeInHierarchy)
+        {
+            HideCorruptJudgePanel();
+        }
         else
         {
             HidePreview();
@@ -875,6 +1145,43 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
             playerPreviewPanel.transform.DOScale(Vector3.zero, animationDuration).SetEase(Ease.InBack)
                 .OnComplete(() => {
                     playerPreviewPanel.SetActive(false);
+                    // Hide Hitman buttons
+                    if (hitmanConfirmButton != null) hitmanConfirmButton.gameObject.SetActive(false);
+                    if (hitmanCancelButton != null) hitmanCancelButton.gameObject.SetActive(false);
+                    if (hitmanShuffleButton != null) hitmanShuffleButton.gameObject.SetActive(false);
+                    // Reset Hitman card selection state
+                    selectedCardIndex = -1;
+                    isCardSelected = false;
+                });
+        }
+    }
+    
+    private void HideBlindSeerPanel()
+    {
+        if (blindSeerPanel != null)
+        {
+            blindSeerPanel.transform.DOScale(Vector3.zero, animationDuration).SetEase(Ease.InBack)
+                .OnComplete(() => {
+                    blindSeerPanel.SetActive(false);
+                    // Hide Blind Seer buttons
+                    if (blindSeerConfirmButton != null) blindSeerConfirmButton.gameObject.SetActive(false);
+                    if (blindSeerCancelButton != null) blindSeerCancelButton.gameObject.SetActive(false);
+                    if (blindSeerShuffleButton != null) blindSeerShuffleButton.gameObject.SetActive(false);
+                });
+        }
+    }
+    
+    private void HideCorruptJudgePanel()
+    {
+        if (corruptJudgePanel != null)
+        {
+            corruptJudgePanel.transform.DOScale(Vector3.zero, animationDuration).SetEase(Ease.InBack)
+                .OnComplete(() => {
+                    corruptJudgePanel.SetActive(false);
+                    // Hide Corrupt Judge buttons
+                    if (corruptJudgeConfirmButton != null) corruptJudgeConfirmButton.gameObject.SetActive(false);
+                    if (corruptJudgeCancelButton != null) corruptJudgeCancelButton.gameObject.SetActive(false);
+                    if (corruptJudgeShuffleButton != null) corruptJudgeShuffleButton.gameObject.SetActive(false);
                 });
         }
     }
@@ -887,6 +1194,14 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
         if (playerPreviewPanel != null && playerPreviewPanel.activeInHierarchy)
         {
             HideMultiPreviewPanel();
+        }
+        else if (blindSeerPanel != null && blindSeerPanel.activeInHierarchy)
+        {
+            HideBlindSeerPanel();
+        }
+        else if (corruptJudgePanel != null && corruptJudgePanel.activeInHierarchy)
+        {
+            HideCorruptJudgePanel();
         }
         else
         {
