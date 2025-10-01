@@ -192,105 +192,6 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     // Called when the mouse enters the card area
     public void OnPointerEnter(PointerEventData eventData)
     {
-        // Show tooltip with card description - ONLY for tarot cards (not shop items)
-        if (TooltipManager.Instance != null && cardData != null && !isInShop)
-        {
-            // Get default descriptions based on card type if description is empty
-            string description = cardData.description;
-            if (string.IsNullOrEmpty(description))
-            {
-                switch (cardData.cardType)
-                {
-                    case TarotCardType.Peek:
-                        description = "Eye of Providence: Peek at the dealer's hidden card for 2 seconds. Can only be used once per round.";
-                        break;
-                    case TarotCardType.Discard:
-                        description = "Discard: Remove the selected card from your hand. Can be used once per round.";
-                        break;
-                    case TarotCardType.Transform:
-                        description = "Transformation: Replace the first selected card with a duplicate of the second selected card. Can only be used once per round.";
-                        break;
-                    case TarotCardType.WitchDoctor:
-                        description = "Witch Doctor: Click to activate! Refunds 10% of your bet when you lose a hand for this round. Must be activated each round.";
-                        break;
-                    case TarotCardType.Artificer:
-                        description = "Artificer: Click to activate! Boosts win multiplier by 10% when you have an active streak for this round. Must be activated each round.";
-                        break;
-                    case TarotCardType.Botanist:
-                        description = "The Botanist: Click to activate! Adds a +50 bonus for each club (clover) card in your winning hand for this round. Must be activated each round.";
-                        break;
-                    case TarotCardType.Assassin:
-                        description = "The Assassin: Click to activate! Adds a +50 bonus for each spade card in your winning hand for this round. Must be activated each round.";
-                        break;
-                    case TarotCardType.SecretLover:
-                        description = "The Secret Lover: Click to activate! Adds a +50 bonus for each heart card in your winning hand for this round. Must be activated each round.";
-                        break;
-                    case TarotCardType.Jeweler:
-                        description = "The Jeweler: Click to activate! Adds a +50 bonus for each diamond card in your winning hand for this round. Must be activated each round.";
-                        break;
-                    case TarotCardType.Scavenger:
-                        description = "The Scavenger: Removes all cards with value less than 7 from your hand. Can only be used once per round.";
-                        break;
-                    case TarotCardType.Gardener:
-                        description = "The Gardener: Removes all club (clover) cards from both your hand and the dealer's hand. Can only be used once per round.";
-                        break;
-                    case TarotCardType.BetrayedCouple:
-                        description = "The Betrayed Couple: Removes all heart cards from both your hand and the dealer's hand. Can only be used once per round.";
-                        break;
-                    case TarotCardType.Blacksmith:
-                        description = "The Blacksmith: Removes all spade cards from both your hand and the dealer's hand. Can only be used once per round.";
-                        break;
-                    case TarotCardType.TaxCollector:
-                        description = "The Tax Collector: Removes all diamond cards from both your hand and the dealer's hand. Can only be used once per round.";
-                        break;
-                    case TarotCardType.HouseKeeper:
-                        description = "The House Keeper: Click to activate! Adds a +10 bonus for each Jack, Queen, or King card in your winning hand for this round. Must be activated each round.";
-                        break;
-                    case TarotCardType.Spy:
-                        description = "The Spy: Allows you to peek at the next card that would be dealt to the dealer. Can only be used once per round.";
-                        break;
-                    case TarotCardType.BlindSeer:
-                        description = "The Blind Seer: Reveals all cards currently in the dealer's hand, including hidden cards. Can only be used once per round.";
-                        break;
-                    case TarotCardType.CorruptJudge:
-                        description = "The Corrupt Judge: Peek at the next three cards in the deck and rearrange the first two if desired. Can only be used once per round.";
-                        break;
-                    case TarotCardType.Hitman:
-                        description = "The Hitman: Peek at the next three cards in the deck and remove one from play permanently. Can only be used once per round.";
-                        break;
-                    case TarotCardType.FortuneTeller:
-                        description = "The Fortune Teller: Take a peek at the next two cards that will be dealt from the deck. Can only be used once per round.";
-                        break;
-                    case TarotCardType.MadWriter:
-                        description = "The Mad Writer: Look at the next card in the deck and choose to shuffle the entire deck if desired. Can only be used once per round.";
-                        break;
-                                    case TarotCardType.TheEscapist:
-                    description = "The Escapist: Click to remove your last hit card and continue playing. Like an 'escape from jail' card - removes the problematic card but lets you keep playing. Destroys itself after use. Can only be used once per round.";
-                    break;
-                    default:
-                        description = "A mystical tarot card with special powers.";
-                        break;
-                }
-            }
-            
-            // Add material information to tooltip
-            string materialInfo = "";
-            if (cardData.assignedMaterial != null)
-            {
-                materialInfo = "\n\n<color=#FFD700>Material: " + cardData.GetMaterialDisplayName() + "</color>";
-                if (cardData.GetRemainingUses() == -1)
-                {
-                    materialInfo += "\n<color=#00FFFF>Durability: Unlimited</color>";
-                }
-                else
-                {
-                    materialInfo += "\n<color=#FFFF00>Durability: " + cardData.GetRemainingUses() + "/" + cardData.maxUses + "</color>";
-                }
-            }
-            
-            TooltipManager.Instance.ShowTooltip(cardData.cardName, description + materialInfo, transform.position, true);
-        }
-        
         // Visual feedback
         transform.DOScale(1.1f, 0.2f).SetEase(Ease.OutQuad);
     }
@@ -298,12 +199,6 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     // Called when the mouse exits the card area
     public void OnPointerExit(PointerEventData eventData)
     {
-        // Hide tooltip - only if it was shown (not for shop items)
-        if (TooltipManager.Instance != null && !isInShop)
-        {
-            TooltipManager.Instance.HideTooltip();
-        }
-        
         // Reset visual feedback
         transform.DOScale(1f, 0.2f).SetEase(Ease.OutQuad);
     }
