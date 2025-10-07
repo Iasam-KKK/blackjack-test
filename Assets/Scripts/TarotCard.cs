@@ -58,11 +58,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             }
         }
         
-        // Initialize material data if not already set
-        if (cardData != null && cardData.assignedMaterial != null)
-        {
-            cardData.InitializeMaterial();
-        }
+        // Just update display - don't reset material durability
         UpdateCardDisplay();
     }
     
@@ -983,15 +979,18 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     hasBeenUsedThisRound = true;
                 }
                 
-            // Consume material durability
-            cardData.UseCard();
-            UpdateCardDisplay();
-            
-            // Save durability immediately
+            // Update durability in the central inventory system
             if (InventoryManager.Instance != null)
             {
-                InventoryManager.Instance.ForceSaveInventory();
+                InventoryManager.Instance.UseEquippedCard(cardData);
             }
+            else
+            {
+                // Fallback if no inventory manager
+                cardData.UseCard();
+            }
+            
+            UpdateCardDisplay();
                 
                 // Check if card is completely used up (no durability left)
                 if (!cardData.CanBeUsed())

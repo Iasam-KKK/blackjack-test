@@ -362,6 +362,61 @@ public class InventoryManager : MonoBehaviour
         SaveInventoryToPlayerPrefs();
     }
     
+    [ContextMenu("Clear PlayerPrefs (Reset Save)")]
+    public void ClearPlayerPrefs()
+    {
+        PlayerPrefs.DeleteKey(INVENTORY_SAVE_KEY);
+        PlayerPrefs.Save();
+        Debug.Log("🗑️ PlayerPrefs cleared! Inventory save data deleted.");
+    }
+    
+    // Central method to use an equipped card - ensures single source of truth
+    public void UseEquippedCard(TarotCardData usedCard)
+    {
+        if (inventoryData == null || usedCard == null) return;
+        
+        Debug.Log($"🎯 UseEquippedCard called for: {usedCard.cardName} (current uses: {usedCard.currentUses}/{usedCard.maxUses})");
+        
+        // Find the matching card in equipment slots (the authoritative store)
+        foreach (var slot in inventoryData.equipmentSlots)
+        {
+            if (slot.isOccupied && slot.storedCard != null &&
+                slot.storedCard.cardType == usedCard.cardType &&
+                slot.storedCard.cardName == usedCard.cardName)
+            {
+                Debug.Log($"🎯 Found in slot {slot.slotIndex}, BEFORE UseCard: {slot.storedCard.currentUses}/{slot.storedCard.maxUses}");
+                
+                // Update durability in the authoritative instance
+                slot.storedCard.UseCard();
+                
+                Debug.Log($"🎯 AFTER UseCard: {slot.storedCard.currentUses}/{slot.storedCard.maxUses}");
+                
+                // Sync UI card reference to point to authoritative instance
+                if (shopManager != null && shopManager.tarotPanel != null)
+                {
+                    TarotCard[] allTarotCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
+                    foreach (var uiCard in allTarotCards)
+                    {
+                        if (uiCard != null && !uiCard.isInShop && 
+                            uiCard.cardData != null &&
+                            uiCard.cardData.cardType == slot.storedCard.cardType &&
+                            uiCard.cardData.cardName == slot.storedCard.cardName)
+                        {
+                            // Force UI card to reference the authoritative instance
+                            uiCard.cardData = slot.storedCard;
+                            uiCard.UpdateCardDisplay();
+                            break;
+                        }
+                    }
+                }
+                
+                // Save immediately
+                SaveInventoryToPlayerPrefs();
+                break;
+            }
+        }
+    }
+    
     [ContextMenu("Debug GetInventoryStats")]
     public void DebugGetInventoryStats()
     {
@@ -559,12 +614,9 @@ public class InventoryManager : MonoBehaviour
             
             if (alreadyInPanel && matchingCard != null)
             {
-                // Update reference to equipment slot's instance
-                if (matchingCard.cardData != equippedCard)
-                {
-                    matchingCard.cardData = equippedCard;
-                    matchingCard.UpdateCardDisplay();
-                }
+                // Always force UI card to reference the equipment slot's instance (single source of truth)
+                matchingCard.cardData = equippedCard;
+                matchingCard.UpdateCardDisplay();
             }
             else if (!alreadyInPanel)
             {
@@ -640,7 +692,9 @@ public class InventoryManager : MonoBehaviour
             {
                 if (slot.isOccupied && slot.storedCard != null)
                 {
-                    saveData.equippedCards.Add(CardSaveData.FromTarotCardData(slot.storedCard, slot.slotIndex));
+                    CardSaveData cardSave = CardSaveData.FromTarotCardData(slot.storedCard, slot.slotIndex);
+                    saveData.equippedCards.Add(cardSave);
+                    Debug.Log($"💾 SAVING: {cardSave.cardName} - Uses: {cardSave.currentUses}/{cardSave.maxUses}");
                 }
             }
             
@@ -648,7 +702,7 @@ public class InventoryManager : MonoBehaviour
             PlayerPrefs.SetString(INVENTORY_SAVE_KEY, jsonData);
             PlayerPrefs.Save();
             
-            Debug.Log("Inventory saved to PlayerPrefs");
+            Debug.Log($"💾 Inventory saved to PlayerPrefs: {saveData.equippedCards.Count} equipped cards");
         }
         catch (Exception e)
         {
@@ -665,9 +719,11 @@ public class InventoryManager : MonoBehaviour
             string jsonData = PlayerPrefs.GetString(INVENTORY_SAVE_KEY, "");
             if (string.IsNullOrEmpty(jsonData))
             {
+                Debug.Log("📭 No saved inventory found in PlayerPrefs");
                 return;
             }
             
+            Debug.Log($"📥 LOADING inventory from PlayerPrefs...");
             InventorySaveData saveData = JsonUtility.FromJson<InventorySaveData>(jsonData);
             
             // Clear existing slots first
@@ -693,12 +749,16 @@ public class InventoryManager : MonoBehaviour
             // Load equipped cards
             foreach (var cardSave in saveData.equippedCards)
             {
+                Debug.Log($"📥 LOADING: {cardSave.cardName} - Uses: {cardSave.currentUses}/{cardSave.maxUses}");
                 TarotCardData card = CreateCardFromSaveData(cardSave);
                 if (card != null && cardSave.slotIndex < inventoryData.equipmentSlots.Count)
                 {
                     inventoryData.equipmentSlots[cardSave.slotIndex].StoreCard(card);
+                    Debug.Log($"✅ Loaded into slot {cardSave.slotIndex}: {card.cardName} - Uses: {card.currentUses}/{card.maxUses}");
                 }
             }
+            
+            Debug.Log($"✅ Loaded {saveData.equippedCards.Count} equipped cards from PlayerPrefs");
             
             // Force a UI refresh after loading cards to ensure images display
             StartCoroutine(ForceUIRefreshAfterLoad());
@@ -1112,8 +1172,6 @@ public class CardSaveData
         TarotCardData card = ScriptableObject.CreateInstance<TarotCardData>();
         card.cardName = cardName;
         card.cardType = cardType;
-        card.currentUses = currentUses;
-        card.maxUses = maxUses;
         
         // Create runtime MaterialData
         MaterialData material = ScriptableObject.CreateInstance<MaterialData>();
@@ -1122,6 +1180,11 @@ public class CardSaveData
         material.maxUses = maxUses;
         
         card.AssignMaterial(material);
+        
+        // Restore durability AFTER AssignMaterial (which resets currentUses to 0)
+        card.currentUses = currentUses;
+        card.maxUses = maxUses;
+        
         return card;
     }
 }
