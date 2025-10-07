@@ -183,10 +183,10 @@ public class Deck : MonoBehaviour
     
     // Turn-based system variables
     public enum GameTurn { Player, Dealer, GameOver }
-    private GameTurn _currentTurn = GameTurn.Player;
-    private bool _playerStood = false;
-    private bool _dealerStood = false;
-    private bool _gameInProgress = false;
+    public GameTurn _currentTurn = GameTurn.Player;
+    public bool _playerStood = false;
+    public bool _dealerStood = false;
+    public bool _gameInProgress = false;
 
 
 
@@ -1994,7 +1994,7 @@ private void EndHand(WinCode code)
     }
     
     // Update peek button state
-    private void UpdatePeekButtonState()
+    public void UpdatePeekButtonState()
     {
         if (peekButton != null)
         {

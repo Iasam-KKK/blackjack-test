@@ -355,12 +355,11 @@ public class InventoryManager : MonoBehaviour
         Debug.Log("Forced synchronization with tarot panel");
     }
     
-    // Force save inventory (useful for debugging)
+    // Force save inventory
     [ContextMenu("Force Save Inventory")]
     public void ForceSaveInventory()
     {
         SaveInventoryToPlayerPrefs();
-        Debug.Log("Forced save inventory to PlayerPrefs");
     }
     
     [ContextMenu("Debug GetInventoryStats")]
@@ -493,8 +492,6 @@ public class InventoryManager : MonoBehaviour
             return;
         }
         
-        Debug.Log("🔄 SyncEquippedCardsToTarotPanel: Starting sync...");
-        
         // Get currently equipped cards
         List<TarotCardData> equippedCards = new List<TarotCardData>();
         foreach (var slot in inventoryData.equipmentSlots)
@@ -502,7 +499,6 @@ public class InventoryManager : MonoBehaviour
             if (slot.isOccupied && slot.storedCard != null && slot.storedCard.CanBeUsed())
             {
                 equippedCards.Add(slot.storedCard);
-                Debug.Log($"   📋 Found equipped card: {slot.storedCard.cardName}");
             }
         }
         
@@ -515,7 +511,6 @@ public class InventoryManager : MonoBehaviour
             if (card != null && !card.isInShop)
             {
                 nonShopCards.Add(card);
-                Debug.Log($"   🎯 Found existing tarot panel card: {card.cardData?.cardName ?? "null"}");
             }
         }
         
@@ -539,15 +534,16 @@ public class InventoryManager : MonoBehaviour
             
             if (!stillEquipped)
             {
-                Debug.Log($"   🗑️ Removing unequipped card from tarot panel: {tarotCard.cardData?.cardName ?? "null"}");
                 Destroy(tarotCard.gameObject);
             }
         }
         
-        // Add newly equipped cards that aren't in the tarot panel yet
+        // Add newly equipped cards that aren't in the tarot panel yet, or update existing references
         foreach (var equippedCard in equippedCards)
         {
             bool alreadyInPanel = false;
+            TarotCard matchingCard = null;
+            
             foreach (var tarotCard in nonShopCards)
             {
                 if (tarotCard != null && tarotCard.cardData != null &&
@@ -556,18 +552,25 @@ public class InventoryManager : MonoBehaviour
                       tarotCard.cardData.cardType == equippedCard.cardType)))
                 {
                     alreadyInPanel = true;
+                    matchingCard = tarotCard;
                     break;
                 }
             }
             
-            if (!alreadyInPanel)
+            if (alreadyInPanel && matchingCard != null)
             {
-                Debug.Log($"   ➕ Adding new equipped card to tarot panel: {equippedCard.cardName}");
+                // Update reference to equipment slot's instance
+                if (matchingCard.cardData != equippedCard)
+                {
+                    matchingCard.cardData = equippedCard;
+                    matchingCard.UpdateCardDisplay();
+                }
+            }
+            else if (!alreadyInPanel)
+            {
                 CreateTarotCardInPanel(equippedCard);
             }
         }
-        
-        Debug.Log($"✅ Sync complete: {equippedCards.Count} equipped cards should be in tarot panel");
     }
     
     private void CreateTarotCardInPanel(TarotCardData cardData)
@@ -584,8 +587,6 @@ public class InventoryManager : MonoBehaviour
             Debug.LogWarning($"No empty tarot slots available for {cardData.cardName}");
             return;
         }
-        
-        Debug.Log($"🃏 Creating tarot card {cardData.cardName} in empty slot {emptySlot.name}");
         
         GameObject cardObject = Instantiate(shopManager.tarotCardPrefab, emptySlot);
         TarotCard card = cardObject.GetComponent<TarotCard>();
@@ -607,8 +608,6 @@ public class InventoryManager : MonoBehaviour
                 cardRect.pivot = new Vector2(0.5f, 0.5f);
                 cardRect.sizeDelta = new Vector2(100, 150);
             }
-            
-            Debug.Log($"✅ Successfully created {cardData.cardName} in tarot panel slot {emptySlot.name}");
         }
         else
         {
@@ -666,15 +665,10 @@ public class InventoryManager : MonoBehaviour
             string jsonData = PlayerPrefs.GetString(INVENTORY_SAVE_KEY, "");
             if (string.IsNullOrEmpty(jsonData))
             {
-                Debug.Log("📭 No saved inventory data found in PlayerPrefs");
                 return;
             }
             
-            Debug.Log($"📥 Loading inventory data: {jsonData.Substring(0, Math.Min(100, jsonData.Length))}...");
-            
             InventorySaveData saveData = JsonUtility.FromJson<InventorySaveData>(jsonData);
-            
-            Debug.Log($"📊 Parsed save data: {saveData.storageCards.Count} storage cards, {saveData.equippedCards.Count} equipped cards");
             
             // Clear existing slots first
             foreach (var slot in inventoryData.storageSlots)
@@ -689,38 +683,22 @@ public class InventoryManager : MonoBehaviour
             // Load storage cards
             foreach (var cardSave in saveData.storageCards)
             {
-                Debug.Log($"🔄 Loading storage card: {cardSave.cardName} (Type: {cardSave.cardType}, Uses: {cardSave.currentUses}/{cardSave.maxUses}, Slot: {cardSave.slotIndex})");
-                
                 TarotCardData card = CreateCardFromSaveData(cardSave);
                 if (card != null && cardSave.slotIndex < inventoryData.storageSlots.Count)
                 {
                     inventoryData.storageSlots[cardSave.slotIndex].StoreCard(card);
-                    Debug.Log($"✅ Successfully loaded {card.cardName} into storage slot {cardSave.slotIndex}");
-                }
-                else
-                {
-                    Debug.LogError($"❌ Failed to load card {cardSave.cardName} - card is null or invalid slot index {cardSave.slotIndex}");
                 }
             }
             
             // Load equipped cards
             foreach (var cardSave in saveData.equippedCards)
             {
-                Debug.Log($"🔄 Loading equipped card: {cardSave.cardName} (Type: {cardSave.cardType}, Uses: {cardSave.currentUses}/{cardSave.maxUses}, Slot: {cardSave.slotIndex})");
-                
                 TarotCardData card = CreateCardFromSaveData(cardSave);
                 if (card != null && cardSave.slotIndex < inventoryData.equipmentSlots.Count)
                 {
                     inventoryData.equipmentSlots[cardSave.slotIndex].StoreCard(card);
-                    Debug.Log($"✅ Successfully loaded {card.cardName} into equipment slot {cardSave.slotIndex}");
-                }
-                else
-                {
-                    Debug.LogError($"❌ Failed to load card {cardSave.cardName} - card is null or invalid slot index {cardSave.slotIndex}");
                 }
             }
-            
-            Debug.Log($"✅ Inventory loaded from PlayerPrefs: {saveData.storageCards.Count} storage, {saveData.equippedCards.Count} equipped");
             
             // Force a UI refresh after loading cards to ensure images display
             StartCoroutine(ForceUIRefreshAfterLoad());
@@ -743,8 +721,6 @@ public class InventoryManager : MonoBehaviour
             card.cardImage = originalCard.cardImage;
             card.description = originalCard.description;
             card.price = originalCard.price;
-            
-            Debug.Log($"✅ Enhanced card with Resources sprite: {saveData.cardName}");
         }
         else
         {
@@ -757,8 +733,6 @@ public class InventoryManager : MonoBehaviour
                     card.cardImage = existingCard.cardData.cardImage;
                     card.description = existingCard.cardData.description;
                     card.price = existingCard.cardData.price;
-                    
-                    Debug.Log($"✅ Enhanced card with scene sprite: {saveData.cardName}");
                     break;
                 }
             }
@@ -770,7 +744,6 @@ public class InventoryManager : MonoBehaviour
             card.cardImage = CreatePlaceholderSprite();
             card.description = "Inventory card";
             card.price = 100;
-            Debug.Log($"⚠️ Using placeholder sprite for: {saveData.cardName}");
         }
         
         // Always use correct material based on saved material type
@@ -781,17 +754,14 @@ public class InventoryManager : MonoBehaviour
             if (originalMaterial != null && originalMaterial.backgroundSprite != null)
             {
                 card.assignedMaterial.backgroundSprite = originalMaterial.backgroundSprite;
-                Debug.Log($"🎨 Loaded original material background for {saveData.cardName}: {saveData.materialType}");
             }
             else
             {
                 // Fallback to creating a colored sprite
                 card.assignedMaterial.backgroundSprite = CreateMaterialBackgroundSprite(saveData.materialType);
-                Debug.Log($"🎨 Created fallback material background for {saveData.cardName}: {saveData.materialType}");
             }
         }
         
-        Debug.Log($"✅ Recreated card: {saveData.cardName} ({saveData.materialType}, {saveData.currentUses}/{saveData.maxUses} uses)");
         return card;
     }
     
@@ -803,7 +773,6 @@ public class InventoryManager : MonoBehaviour
         {
             if (card.cardType == cardType)
             {
-                Debug.Log($"✅ Found original card data for {cardType} from Resources root");
                 return card;
             }
         }
@@ -814,13 +783,11 @@ public class InventoryManager : MonoBehaviour
         {
             if (card.cardType == cardType)
             {
-                Debug.Log($"✅ Found original card data for {cardType} from Resources/Materials");
                 return card;
             }
         }
         
         // For now, since ScriptableObjects are not in Resources, we'll use UnityEditor to load them
-        // This is a workaround - ideally these should be moved to Resources folder
         #if UNITY_EDITOR
         string[] guids = UnityEditor.AssetDatabase.FindAssets("t:TarotCardData", new[] {"Assets/ScriptableObject"});
         foreach (string guid in guids)
@@ -829,13 +796,11 @@ public class InventoryManager : MonoBehaviour
             TarotCardData card = UnityEditor.AssetDatabase.LoadAssetAtPath<TarotCardData>(path);
             if (card != null && card.cardType == cardType)
             {
-                Debug.Log($"✅ Found original card data for {cardType} from ScriptableObject folder: {path}");
                 return card;
             }
         }
         #endif
         
-        Debug.Log($"⚠️ Could not find original card data for {cardType} anywhere");
         return null;
     }
     
@@ -847,7 +812,6 @@ public class InventoryManager : MonoBehaviour
         
         if (material != null)
         {
-            Debug.Log($"✅ Loaded MaterialData from Resources: {materialName}");
             return material;
         }
         
@@ -857,12 +821,10 @@ public class InventoryManager : MonoBehaviour
             material = Resources.Load<MaterialData>("Materials/CardBoard");
             if (material != null)
             {
-                Debug.Log($"✅ Loaded MaterialData from Resources: CardBoard (alt naming)");
                 return material;
             }
         }
         
-        Debug.Log($"⚠️ Could not load MaterialData for {materialType} from Resources");
         return null;
     }
     

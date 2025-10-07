@@ -67,7 +67,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     }
     
     // Update card visuals based on data
-    private void UpdateCardDisplay()
+    public void UpdateCardDisplay()
     {
         if (cardData != null)
         {
@@ -446,6 +446,30 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             return;
         }
         
+        // ✅ NEW: Allow card-removal cards to be used as "rescue" even after round ends
+        bool isRescueCard = cardData.cardType == TarotCardType.Scavenger ||
+                           cardData.cardType == TarotCardType.Gardener ||
+                           cardData.cardType == TarotCardType.BetrayedCouple ||
+                           cardData.cardType == TarotCardType.Blacksmith ||
+                           cardData.cardType == TarotCardType.TaxCollector;
+        
+        // If it's a rescue card and game is over but player lost, allow usage
+        if (isRescueCard && deck != null)
+        {
+            bool gameOver = !deck.hitButton.interactable && !deck.stickButton.interactable;
+            int playerPoints = deck.GetPlayerPoints();
+            int dealerPoints = deck.GetDealerPoints();
+            
+            if (gameOver && playerPoints > 21)
+            {
+                Debug.Log($"Rescue card {cardData.cardName} can be used - player is busted!");
+            }
+            else if (gameOver && playerPoints <= dealerPoints && dealerPoints <= 21)
+            {
+                Debug.Log($"Rescue card {cardData.cardName} can be used - dealer is winning!");
+            }
+        }
+        
         // Trigger the appropriate effect based on card type
         if (deck != null)
         {
@@ -729,6 +753,8 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                                     // When all animations are complete, update the hand
                                     if (animationsCompleted >= totalAnimations)
                                     {
+                                        Debug.Log("========== The Scavenger ALL ANIMATIONS COMPLETE ==========");
+                                        
                                         // Rearrange remaining cards and update points
                                         playerHand.ArrangeCardsInWindow();
                                         playerHand.UpdatePoints();
@@ -738,7 +764,61 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                                         deck.UpdateDiscardButtonState();
                                         deck.UpdateTransformButtonState();
                                         
-                                        Debug.Log("The Scavenger finished removing all low-value cards");
+                                        // ✅ FIX: Re-evaluate game state and re-enable controls FOR RESCUE
+                                        int playerPoints = deck.GetPlayerPoints();
+                                        int dealerPoints = deck.GetDealerPoints();
+                                        
+                                        Debug.Log("========== The Scavenger RESCUE CHECK ==========");
+                                        Debug.Log($"Player Points: {playerPoints}");
+                                        Debug.Log($"Dealer Points: {dealerPoints}");
+                                        Debug.Log($"Game In Progress: {deck._gameInProgress}");
+                                        Debug.Log($"Player Stood: {deck._playerStood}");
+                                        Debug.Log($"Dealer Stood: {deck._dealerStood}");
+                                        Debug.Log($"Hit Button Interactable: {deck.hitButton.interactable}");
+                                        Debug.Log($"Stick Button Interactable: {deck.stickButton.interactable}");
+                                        
+                                        // Always re-enable controls if player has valid hand
+                                        if (playerPoints > 0 && playerPoints <= 21)
+                                        {
+                                            Debug.Log("========== The Scavenger RESCUE ACTIVATED! ==========");
+                                            Debug.Log("Player has valid hand - forcing game to continue");
+                                            
+                                            // Force game state back to active
+                                            deck._gameInProgress = true;
+                                            deck._playerStood = false;
+                                            deck._dealerStood = false;
+                                            deck._currentTurn = Deck.GameTurn.Player;
+                                            
+                                            Debug.Log("Re-enabling all player controls...");
+                                            
+                                            // Re-enable all player action buttons
+                                            deck.hitButton.interactable = true;
+                                            deck.stickButton.interactable = true;
+                                            deck.UpdateDiscardButtonState();
+                                            deck.UpdatePeekButtonState();
+                                            deck.UpdateTransformButtonState();
+                                            
+                                            // Disable play again button (was enabled after loss)
+                                            if (deck.playAgainButton != null)
+                                            {
+                                                deck.playAgainButton.interactable = false;
+                                                Debug.Log("Disabled Play Again button");
+                                            }
+                                            
+                                            // Show rescue message
+                                            if (deck.finalMessage != null)
+                                            {
+                                                deck.finalMessage.text = "⚡ The Scavenger rescued you! ⚡\nContinue playing...";
+                                                deck.finalMessage.gameObject.SetActive(true);
+                                            }
+                                            
+                                            Debug.Log("========== The Scavenger RESCUE COMPLETE - GAME RESUMED! ==========");
+                                        }
+                                        else
+                                        {
+                                            Debug.Log("========== The Scavenger CANNOT RESCUE ==========");
+                                            Debug.Log($"Player points {playerPoints} is not valid (must be 1-21)");
+                                        }
                                     }
                                 });
                             }
@@ -903,11 +983,15 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     hasBeenUsedThisRound = true;
                 }
                 
-                // Consume material durability
-                cardData.UseCard();
-                
-                // Update visual display
-                UpdateCardDisplay();
+            // Consume material durability
+            cardData.UseCard();
+            UpdateCardDisplay();
+            
+            // Save durability immediately
+            if (InventoryManager.Instance != null)
+            {
+                InventoryManager.Instance.ForceSaveInventory();
+            }
                 
                 // Check if card is completely used up (no durability left)
                 if (!cardData.CanBeUsed())
@@ -1063,6 +1147,8 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     // When all animations are complete, update the hands
                     if (animationsCompleted >= totalAnimations)
                     {
+                        Debug.Log($"========== {cardName} ALL ANIMATIONS COMPLETE ==========");
+                        
                         playerHand.ArrangeCardsInWindow();
                         playerHand.UpdatePoints();
                         dealerHand.ArrangeCardsInWindow();
@@ -1073,7 +1159,61 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                         deck.UpdateDiscardButtonState();
                         deck.UpdateTransformButtonState();
                         
-                        Debug.Log($"{cardName} finished removing all {suitName} cards.");
+                        // ✅ FIX: Re-evaluate game state and re-enable controls FOR RESCUE
+                        int playerPoints = deck.GetPlayerPoints();
+                        int dealerPoints = deck.GetDealerPoints();
+                        
+                        Debug.Log($"========== {cardName} RESCUE CHECK ==========");
+                        Debug.Log($"Player Points: {playerPoints}");
+                        Debug.Log($"Dealer Points: {dealerPoints}");
+                        Debug.Log($"Game In Progress: {deck._gameInProgress}");
+                        Debug.Log($"Player Stood: {deck._playerStood}");
+                        Debug.Log($"Dealer Stood: {deck._dealerStood}");
+                        Debug.Log($"Hit Button Interactable: {deck.hitButton.interactable}");
+                        Debug.Log($"Stick Button Interactable: {deck.stickButton.interactable}");
+                        
+                        // Always re-enable controls if player has valid hand
+                        if (playerPoints > 0 && playerPoints <= 21)
+                        {
+                            Debug.Log($"========== {cardName} RESCUE ACTIVATED! ==========");
+                            Debug.Log("Player has valid hand - forcing game to continue");
+                            
+                            // Force game state back to active
+                            deck._gameInProgress = true;
+                            deck._playerStood = false;
+                            deck._dealerStood = false;
+                            deck._currentTurn = Deck.GameTurn.Player;
+                            
+                            Debug.Log("Re-enabling all player controls...");
+                            
+                            // Re-enable all player action buttons
+                            deck.hitButton.interactable = true;
+                            deck.stickButton.interactable = true;
+                            deck.UpdateDiscardButtonState();
+                            deck.UpdatePeekButtonState();
+                            deck.UpdateTransformButtonState();
+                            
+                            // Disable play again button (was enabled after loss)
+                            if (deck.playAgainButton != null)
+                            {
+                                deck.playAgainButton.interactable = false;
+                                Debug.Log("Disabled Play Again button");
+                            }
+                            
+                            // Show rescue message
+                            if (deck.finalMessage != null)
+                            {
+                                deck.finalMessage.text = $"⚡ {cardName} rescued you! ⚡\nContinue playing...";
+                                deck.finalMessage.gameObject.SetActive(true);
+                            }
+                            
+                            Debug.Log($"========== {cardName} RESCUE COMPLETE - GAME RESUMED! ==========");
+                        }
+                        else
+                        {
+                            Debug.Log($"========== {cardName} CANNOT RESCUE ==========");
+                            Debug.Log($"Player points {playerPoints} is not valid (must be 1-21)");
+                        }
                     }
                 });
             }
