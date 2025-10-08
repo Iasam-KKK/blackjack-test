@@ -1369,7 +1369,8 @@ private void EndHand(WinCode code)
         Text buttonText = playAgainButton.GetComponentInChildren<Text>();
         if (buttonText != null)
         {
-            buttonText.text = "Restart Game";
+            // NEW FLOW: Return to Boss Map instead of restarting
+            buttonText.text = "Return to Map";
         }
     }
     
@@ -1388,9 +1389,26 @@ private void EndHand(WinCode code)
                          (bossManager != null && bossManager.IsGameOver()) ||
                          (buttonText != null && (buttonText.text == "Play Again" || buttonText.text == "Restart Game"));
         
+        bool isReturnToMap = (buttonText != null && buttonText.text == "Return to Map");
         bool isNextBoss = (buttonText != null && buttonText.text == "Next Boss");
         
-        if (isGameOver)
+        if (isReturnToMap)
+        {
+            // NEW FLOW: Return to BossMap scene
+            Debug.Log("[Deck] Returning to Boss Map...");
+            
+            if (GameSceneManager.Instance != null)
+            {
+                GameSceneManager.Instance.LoadBossMapScene();
+            }
+            else
+            {
+                // Fallback
+                UnityEngine.SceneManagement.SceneManager.LoadScene("BossMap");
+            }
+            return;
+        }
+        else if (isGameOver)
         {
             // Full game restart - reset everything except inventory
             RestartGame();

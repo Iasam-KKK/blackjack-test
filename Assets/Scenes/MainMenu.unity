@@ -1208,6 +1208,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainMenuSceneName: MainMenu
   gameSceneName: Blackjack
+  bossMapSceneName: BossMap
 --- !u!4 &1722449088
 Transform:
   m_ObjectHideFlags: 0
@@ -1345,6 +1346,72 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1751683645}
   m_CullTransparentMesh: 1
+--- !u!1 &1849513127
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1849513129}
+  - component: {fileID: 1849513128}
+  m_Layer: 0
+  m_Name: BossProgressionManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1849513128
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1849513127}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8f7d3e9c4b2a5f4e9d8c7b6a5f4e9d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  allBosses:
+  - {fileID: 11400000, guid: 15fe2c3a399185c4f86ed822c4d056a2, type: 2}
+  - {fileID: 11400000, guid: 967ab479678fbeb4bbc4ed3297e38b95, type: 2}
+  - {fileID: 11400000, guid: f021d01f1ab394c4eb6e27185f9df345, type: 2}
+  - {fileID: 11400000, guid: 387919796449b8145bd6d18a535b5432, type: 2}
+  - {fileID: 11400000, guid: 5d1f3138e0eb5f2498e62aac72535133, type: 2}
+  - {fileID: 11400000, guid: e39bf47dc8832a145af92138e6414a48, type: 2}
+  - {fileID: 11400000, guid: 527e319ad82f7ab4da6cf485a76e09bb, type: 2}
+  - {fileID: 11400000, guid: bf873f44d0e06e24ebec95a52aaac9d6, type: 2}
+  - {fileID: 11400000, guid: 8413223a0f3d5434592ea428398e6790, type: 2}
+  - {fileID: 11400000, guid: 1c80eb7f3f7d0f447bfbc785c11fc2cf, type: 2}
+  - {fileID: 11400000, guid: 8e54edbf9caff5d43a199bb8f9b2afbc, type: 2}
+  - {fileID: 11400000, guid: 14f45e4210f02254391fffec58bbba73, type: 2}
+  - {fileID: 11400000, guid: de3ff98588874764ebe85674158543a3, type: 2}
+  - {fileID: 11400000, guid: 27344157a17b1eb4794ce9ab277077a2, type: 2}
+  enablePersistence: 1
+  progressionData:
+    unlockedBosses: []
+    defeatedBosses: []
+    rewardStates: []
+    selectedBossType: 
+    lastUpdated: 
+--- !u!4 &1849513129
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1849513127}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 146.73499, y: 539.1752, z: -0.51100403}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1354,3 +1421,4 @@ SceneRoots:
   - {fileID: 1685749024}
   - {fileID: 1359380692}
   - {fileID: 1722449088}
+  - {fileID: 1849513129}

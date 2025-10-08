@@ -66,44 +66,38 @@ public class ShopManager : MonoBehaviour
             return;
         }
         
-        // Check if there's an empty slot in the tarot panel
-        Transform emptySlot = GetEmptyTarotSlot();
-        if (emptySlot == null)
+        // 🔧 FIX: Add reward card to inventory system instead of directly to tarot panel
+        if (InventoryManager.Instance != null && InventoryManager.Instance.inventoryData != null)
         {
-            Debug.LogWarning("No empty slots available for free tarot card!");
-            return;
+            // Assign a material to the card
+            MaterialData randomMaterial = MaterialManager.GetRandomMaterial();
+            TarotCardData cardCopy = Instantiate(cardData);
+            cardCopy.AssignMaterial(randomMaterial);
+            
+            // Add to inventory storage
+            bool addedToInventory = InventoryManager.Instance.AddPurchasedCard(cardCopy);
+            
+            if (addedToInventory)
+            {
+                // Add to PlayerStats
+                if (PlayerStats.instance != null)
+                {
+                    PlayerStats.instance.ownedCards.Add(cardCopy);
+                    Debug.Log($"Boss reward: {cardCopy.cardName} ({cardCopy.assignedMaterial.materialType}) added to inventory");
+                }
+                
+                // Notify the player
+                ShowRewardNotification($"Boss Reward: {cardCopy.cardName} ({cardCopy.assignedMaterial.materialType})");
+            }
+            else
+            {
+                Debug.LogWarning("Inventory full - cannot add reward card!");
+                ShowRewardNotification("Inventory full!");
+            }
         }
-        
-        // Create new card instance
-        GameObject cardObject = Instantiate(tarotCardPrefab, emptySlot);
-        TarotCard card = cardObject.GetComponent<TarotCard>();
-        if (card != null)
+        else
         {
-            card.cardData = cardData;
-            card.isInShop = false;
-            card.deck = deck;
-            card.transform.localPosition = Vector3.zero;
-            card.transform.localScale = Vector3.one * 0.8f;
-            
-            // Set up the card's RectTransform
-            RectTransform cardRect = card.GetComponent<RectTransform>();
-            if (cardRect != null)
-            {
-                cardRect.anchorMin = new Vector2(0.5f, 0.5f);
-                cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-                cardRect.pivot = new Vector2(0.5f, 0.5f);
-                cardRect.sizeDelta = new Vector2(100, 150); // Smaller size
-            }
-            
-            // Add to PlayerStats
-            if (PlayerStats.instance != null)
-            {
-                PlayerStats.instance.ownedCards.Add(cardData);
-                Debug.Log("Added " + cardData.cardName + " to player's owned cards via reward");
-            }
-            
-            // Notify the player
-            ShowRewardNotification("Boss Reward: " + cardData.cardName);
+            Debug.LogError("InventoryManager not available - cannot give reward card!");
         }
     }
     

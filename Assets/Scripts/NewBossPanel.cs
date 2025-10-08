@@ -32,6 +32,7 @@ public class NewBossPanel : MonoBehaviour
     
     private BossManager bossManager;
     private bool isVisible = false;
+    private BossData cachedBoss;
     
     private void Start()
     {
@@ -48,10 +49,28 @@ public class NewBossPanel : MonoBehaviour
         
         // Don't hide initially - let the ShowBossPanel method control visibility
          gameObject.SetActive(true); // Removed this line
+         
+        // Initial update
+        UpdateBossDisplay();
+    }
+    
+    private void OnEnable()
+    {
+        // Update when panel is enabled (e.g., when returning to BossMap)
+        UpdateBossDisplay();
     }
     
     private void Update()
     {
+        // Update display when boss changes or when in any scene
+        BossData currentBoss = GetCurrentDisplayBoss();
+        if (currentBoss != null && currentBoss != cachedBoss)
+        {
+            cachedBoss = currentBoss;
+            UpdateBossDisplay();
+        }
+        
+        // Also update during battle to reflect health/hands changes
         if (bossManager != null && bossManager.IsBossActive())
         {
             UpdateBossDisplay();
@@ -200,24 +219,96 @@ public class NewBossPanel : MonoBehaviour
     }
     
     /// <summary>
+    /// Get the boss that should be displayed based on current game state
+    /// </summary>
+    private BossData GetCurrentDisplayBoss()
+    {
+        // Priority 1: If there's an active boss battle, show that
+        if (bossManager != null && bossManager.IsBossActive())
+        {
+            return bossManager.GetCurrentBoss();
+        }
+        
+        // Priority 2: If we're in BossMap, show the selected or next available boss
+        if (BossProgressionManager.Instance != null)
+        {
+            BossType? selectedBoss = BossProgressionManager.Instance.GetSelectedBoss();
+            if (selectedBoss.HasValue)
+            {
+                return BossProgressionManager.Instance.GetBossData(selectedBoss.Value);
+            }
+            
+            // Fallback: show first available (unlocked but not defeated) boss
+            var availableBosses = BossProgressionManager.Instance.GetAvailableBosses();
+            if (availableBosses.Count > 0)
+            {
+                return availableBosses[0];
+            }
+        }
+        
+        // Fallback: show current boss from BossManager if available
+        if (bossManager != null)
+        {
+            return bossManager.GetCurrentBoss();
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
     /// Update the boss display with current information
     /// </summary>
     private void UpdateBossDisplay()
     {
-        BossData currentBoss = bossManager?.GetCurrentBoss();
-        if (currentBoss == null) return;
+        BossData currentBoss = GetCurrentDisplayBoss();
+        if (currentBoss == null)
+        {
+            Debug.LogWarning("[NewBossPanel] No boss to display");
+            return;
+        }
         
-        int currentHealth = bossManager.GetCurrentBossHealth();
+        // Update portrait
+        if (bossPortrait != null && currentBoss.bossPortrait != null)
+        {
+            bossPortrait.sprite = currentBoss.bossPortrait;
+        }
+        
+        // Update name and description
+        if (bossNameText != null)
+        {
+            bossNameText.text = currentBoss.bossName;
+        }
+        
+        if (bossDescriptionText != null)
+        {
+            bossDescriptionText.text = currentBoss.bossDescription;
+        }
+        
+        // If boss is active in battle, show current battle stats
+        bool isInBattle = (bossManager != null && bossManager.IsBossActive() && bossManager.GetCurrentBoss() == currentBoss);
+        
+        int currentHealth;
         int maxHealth = currentBoss.maxHealth;
-        int currentHand = bossManager.currentHand;
+        int currentHand;
         int handsPerRound = currentBoss.handsPerRound;
+        
+        if (isInBattle)
+        {
+            currentHealth = bossManager.GetCurrentBossHealth();
+            currentHand = bossManager.currentHand;
+        }
+        else
+        {
+            // Not in battle - show default stats
+            currentHealth = maxHealth;
+            currentHand = 0;
+        }
         
         // Update health bar with smooth animation
         if (bossHealthBar != null)
         {
             // Calculate health percentage (full bar = full health, empty bar = no health)
             float targetValue = (float)currentHealth / maxHealth;
-            Debug.Log($"Updating health bar: {currentHealth}/{maxHealth} = {targetValue}");
             bossHealthBar.DOFillAmount(targetValue, healthBarAnimationDuration).SetEase(Ease.OutQuad);
         }
         
@@ -227,28 +318,24 @@ public class NewBossPanel : MonoBehaviour
             healthText.text = $"{currentHealth}/{maxHealth}";
         }
         
-        // Update hands remaining - use the actual handsRemaining from BossManager
+        // Update hands remaining
         if (handsRemainingText != null)
         {
-            int remainingHands = bossManager.GetRemainingHands();
-            handsRemainingText.text = $"Hands Left: {remainingHands}/{handsPerRound}";
+            if (isInBattle)
+            {
+                int remainingHands = bossManager.GetRemainingHands();
+                handsRemainingText.text = $"Hands Left: {remainingHands}/{handsPerRound}";
+            }
+            else
+            {
+                handsRemainingText.text = $"Hands: {handsPerRound}";
+            }
         }
         
         // Update current hand
         if (currentHandText != null)
         {
             currentHandText.text = $"Hand {currentHand + 1}";
-        }
-        
-        // Update boss name and description if they exist
-        if (bossNameText != null && currentBoss.bossName != null)
-        {
-            bossNameText.text = currentBoss.bossName;
-        }
-        
-        if (bossDescriptionText != null && currentBoss.bossDescription != null)
-        {
-            bossDescriptionText.text = currentBoss.bossDescription;
         }
     }
     

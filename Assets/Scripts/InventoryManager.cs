@@ -375,8 +375,6 @@ public class InventoryManager : MonoBehaviour
     {
         if (inventoryData == null || usedCard == null) return;
         
-        Debug.Log($"🎯 UseEquippedCard called for: {usedCard.cardName} (current uses: {usedCard.currentUses}/{usedCard.maxUses})");
-        
         // Find the matching card in equipment slots (the authoritative store)
         foreach (var slot in inventoryData.equipmentSlots)
         {
@@ -384,12 +382,8 @@ public class InventoryManager : MonoBehaviour
                 slot.storedCard.cardType == usedCard.cardType &&
                 slot.storedCard.cardName == usedCard.cardName)
             {
-                Debug.Log($"🎯 Found in slot {slot.slotIndex}, BEFORE UseCard: {slot.storedCard.currentUses}/{slot.storedCard.maxUses}");
-                
                 // Update durability in the authoritative instance
                 slot.storedCard.UseCard();
-                
-                Debug.Log($"🎯 AFTER UseCard: {slot.storedCard.currentUses}/{slot.storedCard.maxUses}");
                 
                 // Sync UI card reference to point to authoritative instance
                 if (shopManager != null && shopManager.tarotPanel != null)
@@ -547,6 +541,16 @@ public class InventoryManager : MonoBehaviour
             return;
         }
         
+        // 🔧 FIX: ALWAYS clear ALL existing non-shop cards first (prevents ghost cards)
+        TarotCard[] existingCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
+        foreach (var card in existingCards)
+        {
+            if (card != null && !card.isInShop)
+            {
+                Destroy(card.gameObject);
+            }
+        }
+        
         // Get currently equipped cards
         List<TarotCardData> equippedCards = new List<TarotCardData>();
         foreach (var slot in inventoryData.equipmentSlots)
@@ -557,71 +561,16 @@ public class InventoryManager : MonoBehaviour
             }
         }
         
-        // Get existing tarot panel cards (non-shop)
-        TarotCard[] existingCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
-        List<TarotCard> nonShopCards = new List<TarotCard>();
-        
-        foreach (var card in existingCards)
+        // If no equipped cards, we're done (already cleared above)
+        if (equippedCards.Count == 0)
         {
-            if (card != null && !card.isInShop)
-            {
-                nonShopCards.Add(card);
-            }
+            return;
         }
         
-        // Remove cards that are no longer equipped
-        foreach (var tarotCard in nonShopCards)
-        {
-            bool stillEquipped = false;
-            if (tarotCard.cardData != null)
-            {
-                foreach (var equippedCard in equippedCards)
-                {
-                    if (tarotCard.cardData == equippedCard || 
-                        (tarotCard.cardData.cardName == equippedCard.cardName && 
-                         tarotCard.cardData.cardType == equippedCard.cardType))
-                    {
-                        stillEquipped = true;
-                        break;
-                    }
-                }
-            }
-            
-            if (!stillEquipped)
-            {
-                Destroy(tarotCard.gameObject);
-            }
-        }
-        
-        // Add newly equipped cards that aren't in the tarot panel yet, or update existing references
+        // Re-create all equipped cards in the tarot panel
         foreach (var equippedCard in equippedCards)
         {
-            bool alreadyInPanel = false;
-            TarotCard matchingCard = null;
-            
-            foreach (var tarotCard in nonShopCards)
-            {
-                if (tarotCard != null && tarotCard.cardData != null &&
-                    (tarotCard.cardData == equippedCard || 
-                     (tarotCard.cardData.cardName == equippedCard.cardName && 
-                      tarotCard.cardData.cardType == equippedCard.cardType)))
-                {
-                    alreadyInPanel = true;
-                    matchingCard = tarotCard;
-                    break;
-                }
-            }
-            
-            if (alreadyInPanel && matchingCard != null)
-            {
-                // Always force UI card to reference the equipment slot's instance (single source of truth)
-                matchingCard.cardData = equippedCard;
-                matchingCard.UpdateCardDisplay();
-            }
-            else if (!alreadyInPanel)
-            {
-                CreateTarotCardInPanel(equippedCard);
-            }
+            CreateTarotCardInPanel(equippedCard);
         }
     }
     
@@ -692,17 +641,13 @@ public class InventoryManager : MonoBehaviour
             {
                 if (slot.isOccupied && slot.storedCard != null)
                 {
-                    CardSaveData cardSave = CardSaveData.FromTarotCardData(slot.storedCard, slot.slotIndex);
-                    saveData.equippedCards.Add(cardSave);
-                    Debug.Log($"💾 SAVING: {cardSave.cardName} - Uses: {cardSave.currentUses}/{cardSave.maxUses}");
+                    saveData.equippedCards.Add(CardSaveData.FromTarotCardData(slot.storedCard, slot.slotIndex));
                 }
             }
             
             string jsonData = JsonUtility.ToJson(saveData);
             PlayerPrefs.SetString(INVENTORY_SAVE_KEY, jsonData);
             PlayerPrefs.Save();
-            
-            Debug.Log($"💾 Inventory saved to PlayerPrefs: {saveData.equippedCards.Count} equipped cards");
         }
         catch (Exception e)
         {
@@ -719,11 +664,9 @@ public class InventoryManager : MonoBehaviour
             string jsonData = PlayerPrefs.GetString(INVENTORY_SAVE_KEY, "");
             if (string.IsNullOrEmpty(jsonData))
             {
-                Debug.Log("📭 No saved inventory found in PlayerPrefs");
                 return;
             }
             
-            Debug.Log($"📥 LOADING inventory from PlayerPrefs...");
             InventorySaveData saveData = JsonUtility.FromJson<InventorySaveData>(jsonData);
             
             // Clear existing slots first
@@ -749,16 +692,12 @@ public class InventoryManager : MonoBehaviour
             // Load equipped cards
             foreach (var cardSave in saveData.equippedCards)
             {
-                Debug.Log($"📥 LOADING: {cardSave.cardName} - Uses: {cardSave.currentUses}/{cardSave.maxUses}");
                 TarotCardData card = CreateCardFromSaveData(cardSave);
                 if (card != null && cardSave.slotIndex < inventoryData.equipmentSlots.Count)
                 {
                     inventoryData.equipmentSlots[cardSave.slotIndex].StoreCard(card);
-                    Debug.Log($"✅ Loaded into slot {cardSave.slotIndex}: {card.cardName} - Uses: {card.currentUses}/{card.maxUses}");
                 }
             }
-            
-            Debug.Log($"✅ Loaded {saveData.equippedCards.Count} equipped cards from PlayerPrefs");
             
             // Force a UI refresh after loading cards to ensure images display
             StartCoroutine(ForceUIRefreshAfterLoad());

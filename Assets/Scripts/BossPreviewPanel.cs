@@ -16,6 +16,7 @@ public class BossPreviewPanel : MonoBehaviour
     public float shakeDuration = 0.3f;
     
     private BossManager bossManager;
+    private BossData cachedBoss;
     
     private void Start()
     {
@@ -31,13 +32,58 @@ public class BossPreviewPanel : MonoBehaviour
         UpdateBossPreview();
     }
     
+    private void OnEnable()
+    {
+        // Update preview when panel is enabled (e.g., when returning to BossMap)
+        UpdateBossPreview();
+    }
+    
     private void Update()
     {
-        // Update preview when boss changes
-        if (bossManager != null && bossManager.IsBossActive())
+        // Update preview when boss changes or when in battle
+        BossData currentBoss = GetCurrentDisplayBoss();
+        if (currentBoss != null && currentBoss != cachedBoss)
         {
+            cachedBoss = currentBoss;
             UpdateBossPreview();
         }
+    }
+    
+    /// <summary>
+    /// Get the boss that should be displayed based on current game state
+    /// </summary>
+    private BossData GetCurrentDisplayBoss()
+    {
+        // Priority 1: If there's an active boss battle, show that
+        if (bossManager != null && bossManager.IsBossActive())
+        {
+            return bossManager.GetCurrentBoss();
+        }
+        
+        // Priority 2: If we're in BossMap, show the selected or next available boss
+        if (BossProgressionManager.Instance != null)
+        {
+            BossType? selectedBoss = BossProgressionManager.Instance.GetSelectedBoss();
+            if (selectedBoss.HasValue)
+            {
+                return BossProgressionManager.Instance.GetBossData(selectedBoss.Value);
+            }
+            
+            // Fallback: show first available (unlocked but not defeated) boss
+            var availableBosses = BossProgressionManager.Instance.GetAvailableBosses();
+            if (availableBosses.Count > 0)
+            {
+                return availableBosses[0];
+            }
+        }
+        
+        // Fallback: show current boss from BossManager if available
+        if (bossManager != null)
+        {
+            return bossManager.GetCurrentBoss();
+        }
+        
+        return null;
     }
     
     /// <summary>
@@ -45,10 +91,12 @@ public class BossPreviewPanel : MonoBehaviour
     /// </summary>
     public void UpdateBossPreview()
     {
-        if (bossManager == null) return;
-        
-        BossData currentBoss = bossManager.GetCurrentBoss();
-        if (currentBoss == null) return;
+        BossData currentBoss = GetCurrentDisplayBoss();
+        if (currentBoss == null)
+        {
+            Debug.LogWarning("[BossPreviewPanel] No boss to display");
+            return;
+        }
         
         // Update boss image
         if (bossPreviewImage != null && currentBoss.bossPortrait != null)
@@ -65,13 +113,24 @@ public class BossPreviewPanel : MonoBehaviour
         // Update boss status
         if (bossStatusText != null)
         {
-            int currentHealth = bossManager.GetCurrentBossHealth();
-            int maxHealth = currentBoss.maxHealth;
-            int currentHand = bossManager.currentHand;
-            int handsPerRound = currentBoss.handsPerRound;
-            
-            bossStatusText.text = $"{currentHealth} {currentHand + 1}";
+            // If boss is active, show current battle stats
+            if (bossManager != null && bossManager.IsBossActive() && bossManager.GetCurrentBoss() == currentBoss)
+            {
+                int currentHealth = bossManager.GetCurrentBossHealth();
+                int maxHealth = currentBoss.maxHealth;
+                int handsRemaining = bossManager.GetRemainingHands();
+                int totalHands = currentBoss.handsPerRound;
+                
+                bossStatusText.text = $"HP: {currentHealth}/{maxHealth} | Hands: {handsRemaining}/{totalHands}";
+            }
+            else
+            {
+                // Show default stats (not in battle)
+                bossStatusText.text = $"HP: {currentBoss.maxHealth} | Hands: {currentBoss.handsPerRound}";
+            }
         }
+        
+        Debug.Log($"[BossPreviewPanel] Updated to show: {currentBoss.bossName}");
     }
     
     /// <summary>

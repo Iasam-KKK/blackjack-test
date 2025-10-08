@@ -76,9 +76,6 @@ public class BossManager : MonoBehaviour
     
     private void Start()
     {
-        StartCoroutine(ShowBossIntroPanel());
-
-        bossIntroPreviewPanel.gameObject.SetActive(true);
         // Find references if not assigned
         if (deck == null) deck = FindObjectOfType<Deck>();
         if (shopManager == null) shopManager = FindObjectOfType<ShopManager>();
@@ -89,24 +86,87 @@ public class BossManager : MonoBehaviour
             LoadAllBossData();
         }
         
-        // Load saved progress
-        LoadBossProgress();
-        
-        // Initialize the appropriate boss based on saved progress
-        if (currentBoss == null)
+        // NEW FLOW: Read selected boss from BossProgressionManager
+        if (BossProgressionManager.Instance != null)
         {
-            // Find the boss that should be active based on totalBossesDefeated
-            var nextBoss = allBosses.Find(b => b.unlockOrder == totalBossesDefeated);
+            BossType? selectedBoss = BossProgressionManager.Instance.GetSelectedBoss();
             
-            if (nextBoss != null)
+            if (selectedBoss.HasValue)
             {
-                Debug.Log($"Initializing boss based on progress: {nextBoss.bossName} (unlockOrder: {nextBoss.unlockOrder}, totalDefeated: {totalBossesDefeated})");
-                InitializeBoss(nextBoss.bossType);
+                Debug.Log($"[BossManager] Loading selected boss from progression: {selectedBoss.Value}");
+                
+                // Check if we should show intro BEFORE initializing
+                bool shouldShowIntro = !BossProgressionManager.Instance.IsBossDefeated(selectedBoss.Value);
+                
+                if (shouldShowIntro)
+                {
+                    Debug.Log($"[BossManager] Will show intro for {selectedBoss.Value}");
+                    if (bossIntroPreviewPanel != null)
+                    {
+                        bossIntroPreviewPanel.gameObject.SetActive(true);
+                    }
+                }
+                else
+                {
+                    Debug.Log($"[BossManager] Skipping intro for {selectedBoss.Value} (already defeated)");
+                    if (bossIntroPreviewPanel != null)
+                    {
+                        bossIntroPreviewPanel.gameObject.SetActive(false);
+                    }
+                }
+                
+                InitializeBoss(selectedBoss.Value);
             }
             else
             {
-                Debug.LogWarning($"No boss found for unlockOrder {totalBossesDefeated}, falling back to TheDrunkard");
-                InitializeBoss(BossType.TheDrunkard);
+                Debug.LogWarning("[BossManager] No boss selected in BossProgressionManager, falling back to first unlocked boss");
+                
+                // Hide intro panel for fallback
+                if (bossIntroPreviewPanel != null)
+                {
+                    bossIntroPreviewPanel.gameObject.SetActive(false);
+                }
+                
+                // Fallback: load first unlocked boss
+                var unlockedBosses = BossProgressionManager.Instance.GetUnlockedBosses();
+                if (unlockedBosses.Count > 0)
+                {
+                    InitializeBoss(unlockedBosses[0].bossType);
+                }
+                else
+                {
+                    Debug.LogError("[BossManager] No unlocked bosses found! Falling back to TheDrunkard");
+                    InitializeBoss(BossType.TheDrunkard);
+                }
+            }
+        }
+        else
+        {
+            // OLD FLOW: Fallback to old system if BossProgressionManager not available
+            Debug.LogWarning("[BossManager] BossProgressionManager not found, using old progression system");
+            
+            // Hide intro panel when using old system
+            if (bossIntroPreviewPanel != null)
+            {
+                bossIntroPreviewPanel.gameObject.SetActive(false);
+            }
+            
+            LoadBossProgress();
+            
+            if (currentBoss == null)
+            {
+                var nextBoss = allBosses.Find(b => b.unlockOrder == totalBossesDefeated);
+                
+                if (nextBoss != null)
+                {
+                    Debug.Log($"Initializing boss based on progress: {nextBoss.bossName} (unlockOrder: {nextBoss.unlockOrder}, totalDefeated: {totalBossesDefeated})");
+                    InitializeBoss(nextBoss.bossType);
+                }
+                else
+                {
+                    Debug.LogWarning($"No boss found for unlockOrder {totalBossesDefeated}, falling back to TheDrunkard");
+                    InitializeBoss(BossType.TheDrunkard);
+                }
             }
         }
     }
@@ -178,9 +238,31 @@ public class BossManager : MonoBehaviour
     #endif
     IEnumerator ShowBossIntroPanel()
     {
-        bossIntroPreviewPanel.gameObject.SetActive(true);
-        yield return new WaitForSeconds(3f);
-        bossIntroPreviewPanel.gameObject.SetActive(false);
+        if (bossIntroPreviewPanel != null)
+        {
+            bossIntroPreviewPanel.gameObject.SetActive(true);
+            yield return new WaitForSeconds(3f);
+            bossIntroPreviewPanel.gameObject.SetActive(false);
+        }
+    }
+    
+    /// <summary>
+    /// Determine if boss intro should be shown
+    /// </summary>
+    private bool ShouldShowBossIntro()
+    {
+        // Don't show intro if boss is already defeated
+        if (BossProgressionManager.Instance != null && currentBoss != null)
+        {
+            if (BossProgressionManager.Instance.IsBossDefeated(currentBoss.bossType))
+            {
+                Debug.Log("[BossManager] Skipping intro - boss already defeated");
+                return false;
+            }
+        }
+        
+        // Show intro for new boss fights
+        return true;
     }
     /// <summary>
     /// Initialize a specific boss
@@ -271,26 +353,23 @@ public class BossManager : MonoBehaviour
         // Apply boss-specific rules
         ApplyBossRules();
     
-        // Show dramatic center-screen introduction for the first time
-        if (bossUI != null)
+        // Show dramatic center-screen introduction (controlled by Start() now)
+        // Only show BossUI animation if intro panel is active
+        if (bossIntroPreviewPanel != null && bossIntroPreviewPanel.gameObject.activeSelf)
         {
-            Debug.Log("BossUI found, starting introduction sequence");
-            StartCoroutine(ShowBossIntroductionSequence());
-        }
-        else
-        {
-            Debug.LogError("BossUI is null! Make sure to assign the BossUI component in the BossManager Inspector.");
-        }
-        
-        // Show boss intro preview panel
-        if (bossIntroPreviewPanel != null)
-        {
-            Debug.Log("BossIntroPreviewPanel found, showing boss intro");
+            if (bossUI != null)
+            {
+                Debug.Log("BossUI found, starting introduction sequence");
+                StartCoroutine(ShowBossIntroductionSequence());
+            }
+            
+            // Update the intro panel with current boss data
+            Debug.Log("BossIntroPreviewPanel active, updating with boss intro");
             bossIntroPreviewPanel.ShowBossIntro(currentBoss);
         }
         else
         {
-            Debug.LogWarning("BossIntroPreviewPanel is null! Make sure to assign it in the BossManager Inspector.");
+            Debug.Log("[BossManager] Skipping boss introduction (panel inactive or defeated boss)");
         }
         
         // Update UI
@@ -591,11 +670,19 @@ public class BossManager : MonoBehaviour
         isBossDefeated = true;
         totalBossesDefeated++;
         
-        // Grant rewards
-        GrantBossRewards();
-        
-        // Save progress
-        SaveBossProgress();
+        // NEW FLOW: Mark boss as defeated in BossProgressionManager
+        if (BossProgressionManager.Instance != null)
+        {
+            BossProgressionManager.Instance.MarkBossDefeated(currentBoss.bossType);
+            Debug.Log($"[BossManager] Boss {currentBoss.bossName} marked as defeated in progression system");
+        }
+        else
+        {
+            // OLD FLOW: Grant rewards directly and save progress
+            Debug.LogWarning("[BossManager] BossProgressionManager not found, using old reward system");
+            GrantBossRewards();
+            SaveBossProgress();
+        }
         
         // Trigger event
         OnBossDefeated?.Invoke(currentBoss);
@@ -607,20 +694,30 @@ public class BossManager : MonoBehaviour
         }
         StartCoroutine(ShowBossDefeatEffect());
         
-        // Check if there are more bosses to fight
-        var nextBoss = allBosses.Find(b => b.unlockOrder == totalBossesDefeated);
+        // NEW FLOW: Return to BossMap instead of auto-progressing
+        // The player will select the next boss from the map
+        StartCoroutine(ReturnToBossMapAfterDelay());
+    }
+    
+    /// <summary>
+    /// Return to BossMap scene after boss defeat
+    /// </summary>
+    private IEnumerator ReturnToBossMapAfterDelay()
+    {
+        // Wait for defeat animation and effects
+        yield return new WaitForSeconds(3f);
         
-        if (nextBoss != null)
+        Debug.Log("[BossManager] Returning to Boss Map after defeat");
+        
+        // Load BossMap scene
+        if (GameSceneManager.Instance != null)
         {
-            // There's a next boss - transition to it
-            Debug.Log($"Next boss available: {nextBoss.bossName}. Preparing transition...");
-            UnlockNextBoss();
+            GameSceneManager.Instance.LoadBossMapScene();
         }
         else
         {
-            // All bosses defeated - trigger complete victory game over
-            Debug.Log("All bosses defeated! Game completed!");
-            TriggerGameOver(true);
+            // Fallback
+            UnityEngine.SceneManagement.SceneManager.LoadScene("BossMap");
         }
     }
     
@@ -640,6 +737,18 @@ public class BossManager : MonoBehaviour
         if (deck != null)
         {
             deck.OnGameOver(playerWon, playerWon && isBossDefeated); // Only true if all bosses defeated
+        }
+        
+        // NEW FLOW: Check if all bosses are defeated
+        if (BossProgressionManager.Instance != null)
+        {
+            var stats = BossProgressionManager.Instance.GetProgressionStats();
+            if (stats.defeatedBosses >= stats.totalBosses)
+            {
+                Debug.Log("[BossManager] All bosses defeated! Game completed!");
+                // Stay on current scene to show victory screen
+                // Deck.cs will handle showing victory UI
+            }
         }
     }
     

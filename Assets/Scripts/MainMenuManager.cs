@@ -83,15 +83,15 @@ public class MainMenuManager : MonoBehaviour
     {
         PlayButtonSound();
         
-        // Load the game scene
+        // Load the boss map scene (new flow: MainMenu -> BossMap -> Blackjack)
         if (GameSceneManager.Instance != null)
         {
-            GameSceneManager.Instance.LoadGameScene();
+            GameSceneManager.Instance.LoadBossMapScene();
         }
         else
         {
             // Fallback if GameSceneManager instance is not available
-            UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
+            UnityEngine.SceneManagement.SceneManager.LoadScene("BossMap");
         }
     }
 
