@@ -20,6 +20,14 @@ public class BossDetailsPanel : MonoBehaviour
     public TextMeshProUGUI bossStatsText;
     public TextMeshProUGUI bossMechanicsText;
     
+    [Header("Minion Slots")]
+    public Button[] minionSlots = new Button[3]; // 3 minion portrait buttons
+    public Image[] minionPortraits = new Image[3]; // Portrait images
+    public GameObject[] minionDefeatedMarkers = new GameObject[3]; // Checkmarks
+    
+    [Header("Minion Panel")]
+    public MinionDetailsPanel minionDetailsPanel; // Panel that shows below
+    
     [Header("Buttons")]
     public Button playButton;
     public Button closeButton;
@@ -33,6 +41,7 @@ public class BossDetailsPanel : MonoBehaviour
     private Vector2 visiblePosition;
     private BossData currentBoss;
     private bool isVisible = false;
+    private MinionData selectedMinion;
     
     private void Awake()
     {
@@ -154,17 +163,139 @@ public class BossDetailsPanel : MonoBehaviour
             }
         }
         
-        // Check if boss is available to play
-        if (playButton != null)
+        // Update minion slots
+        UpdateMinionSlots(boss);
+        
+        // Update play button based on minion progress
+        UpdatePlayButton(boss);
+    }
+    
+    /// <summary>
+    /// Update the 3 minion portrait slots
+    /// </summary>
+    private void UpdateMinionSlots(BossData boss)
+    {
+        // Hide minion details panel when switching bosses
+        if (minionDetailsPanel != null)
         {
-            bool isUnlocked = BossProgressionManager.Instance != null && 
-                             BossProgressionManager.Instance.IsBossUnlocked(boss.bossType);
-            bool isDefeated = BossProgressionManager.Instance != null && 
-                             BossProgressionManager.Instance.IsBossDefeated(boss.bossType);
+            minionDetailsPanel.HidePanel();
+        }
+        selectedMinion = null;
+        
+        // Check if boss has minions
+        if (boss.minions == null || boss.minions.Count == 0)
+        {
+            // No minions - hide all slots
+            for (int i = 0; i < 3; i++)
+            {
+                if (minionSlots[i] != null)
+                    minionSlots[i].gameObject.SetActive(false);
+            }
+            return;
+        }
+        
+        // Update each minion slot
+        for (int i = 0; i < 3; i++)
+        {
+            if (i < boss.minions.Count && minionSlots[i] != null)
+            {
+                var minion = boss.minions[i];
+                bool isDefeated = BossProgressionManager.Instance != null && 
+                                BossProgressionManager.Instance.IsMinionDefeated(boss.bossType, minion.minionName);
+                
+                // Show slot
+                minionSlots[i].gameObject.SetActive(true);
+                
+                // Set portrait
+                if (minionPortraits[i] != null && minion.minionPortrait != null)
+                {
+                    minionPortraits[i].sprite = minion.minionPortrait;
+                    minionPortraits[i].enabled = true;
+                }
+                else if (minionPortraits[i] != null)
+                {
+                    minionPortraits[i].enabled = false;
+                }
+                
+                // Show/hide defeated marker
+                if (minionDefeatedMarkers[i] != null)
+                {
+                    minionDefeatedMarkers[i].SetActive(isDefeated);
+                }
+                
+                // Make slot non-interactable if defeated
+                minionSlots[i].interactable = !isDefeated;
+                
+                // Wire up click event
+                var minionData = minion;
+                var slotIndex = i;
+                minionSlots[i].onClick.RemoveAllListeners();
+                minionSlots[i].onClick.AddListener(() => OnMinionSlotClicked(minionData, slotIndex));
+            }
+            else if (minionSlots[i] != null)
+            {
+                // Hide unused slots
+                minionSlots[i].gameObject.SetActive(false);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Update play button text based on minion progression
+    /// </summary>
+    private void UpdatePlayButton(BossData boss)
+    {
+        if (playButton == null) return;
+        
+        bool isUnlocked = BossProgressionManager.Instance != null && 
+                         BossProgressionManager.Instance.IsBossUnlocked(boss.bossType);
+        bool isDefeated = BossProgressionManager.Instance != null && 
+                         BossProgressionManager.Instance.IsBossDefeated(boss.bossType);
+        
+        var playButtonText = playButton.GetComponentInChildren<TextMeshProUGUI>();
+        
+        // Check if boss has minions
+        if (boss.HasMinions() && boss.minions.Count >= 3)
+        {
+            int defeatedCount = BossProgressionManager.Instance != null ?
+                              BossProgressionManager.Instance.GetMinionDefeatedCount(boss.bossType) : 0;
             
+            bool bossUnlockedInAct = BossProgressionManager.Instance != null &&
+                                    BossProgressionManager.Instance.IsBossUnlockedInAct(boss.bossType);
+            
+            if (isDefeated)
+            {
+                playButton.interactable = false;
+                if (playButtonText != null)
+                    playButtonText.text = "DEFEATED";
+            }
+            else if (bossUnlockedInAct && selectedMinion == null)
+            {
+                // Boss unlocked (2+ minions defeated) and no minion selected
+                playButton.interactable = true;
+                if (playButtonText != null)
+                    playButtonText.text = "FIGHT BOSS";
+            }
+            else if (selectedMinion != null)
+            {
+                // Minion selected - play button starts minion battle
+                playButton.interactable = true;
+                if (playButtonText != null)
+                    playButtonText.text = "PLAY";
+            }
+            else
+            {
+                // Need to select a minion first
+                playButton.interactable = false;
+                if (playButtonText != null)
+                    playButtonText.text = $"DEFEAT MINIONS ({defeatedCount}/3)";
+            }
+        }
+        else
+        {
+            // No minions - standard boss play button
             playButton.interactable = isUnlocked && !isDefeated;
             
-            var playButtonText = playButton.GetComponentInChildren<TextMeshProUGUI>();
             if (playButtonText != null)
             {
                 if (isDefeated)
@@ -225,6 +356,15 @@ public class BossDetailsPanel : MonoBehaviour
         
         isVisible = false;
         
+        // Also hide minion panel when boss panel closes
+        if (minionDetailsPanel != null && minionDetailsPanel.IsVisible())
+        {
+            minionDetailsPanel.HidePanel();
+        }
+        
+        // Clear selected minion
+        selectedMinion = null;
+        
         // Kill any existing animations
         panelRect.DOKill();
         if (canvasGroup != null) canvasGroup.DOKill();
@@ -252,6 +392,38 @@ public class BossDetailsPanel : MonoBehaviour
     }
     
     /// <summary>
+    /// Handle minion slot click
+    /// </summary>
+    private void OnMinionSlotClicked(MinionData minion, int slotIndex)
+    {
+        if (minion == null || currentBoss == null) return;
+        
+        // Toggle minion selection
+        if (selectedMinion == minion && minionDetailsPanel != null && minionDetailsPanel.IsVisible())
+        {
+            // Clicking same minion - deselect and hide panel
+            selectedMinion = null;
+            minionDetailsPanel.HidePanel();
+        }
+        else
+        {
+            // Select new minion and show panel
+            selectedMinion = minion;
+            
+            Debug.Log($"[BossDetailsPanel] Minion selected: {minion.minionName}");
+            
+            // Show minion details panel
+            if (minionDetailsPanel != null)
+            {
+                minionDetailsPanel.ShowMinionDetails(minion, currentBoss.bossType);
+            }
+        }
+        
+        // Update play button
+        UpdatePlayButton(currentBoss);
+    }
+    
+    /// <summary>
     /// Handle play button click
     /// </summary>
     private void OnPlayButtonClicked()
@@ -262,22 +434,66 @@ public class BossDetailsPanel : MonoBehaviour
             return;
         }
         
-        Debug.Log($"[BossDetailsPanel] Starting battle with {currentBoss.bossName}");
-        
-        // Select boss in progression manager
-        if (BossProgressionManager.Instance != null)
+        // Check if we're starting a minion battle or boss battle
+        if (selectedMinion != null)
         {
-            BossProgressionManager.Instance.SelectBoss(currentBoss.bossType);
-        }
-        
-        // Load game scene
-        if (GameSceneManager.Instance != null)
-        {
-            GameSceneManager.Instance.LoadGameScene();
+            // Start minion battle
+            Debug.Log($"[BossDetailsPanel] Starting minion battle with {selectedMinion.minionName}");
+            
+            // Start act if not already started
+            if (BossProgressionManager.Instance != null)
+            {
+                BossProgressionManager.Instance.StartBossAct(currentBoss.bossType);
+            }
+            
+            // Initialize minion encounter
+            if (MinionEncounterManager.Instance != null)
+            {
+                MinionEncounterManager.Instance.InitializeMinion(selectedMinion, currentBoss.bossType);
+            }
+            
+            // Load game scene
+            if (GameSceneManager.Instance != null)
+            {
+                GameSceneManager.Instance.LoadGameScene();
+            }
+            else
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
+            }
         }
         else
         {
-            UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
+            // Start boss battle (no minion selected or boss unlocked)
+            Debug.Log($"[BossDetailsPanel] Starting boss battle with {currentBoss.bossName}");
+            
+            // Select boss in progression manager
+            if (BossProgressionManager.Instance != null)
+            {
+                BossProgressionManager.Instance.SelectBoss(currentBoss.bossType);
+            }
+            
+            // Load game scene
+            if (GameSceneManager.Instance != null)
+            {
+                GameSceneManager.Instance.LoadGameScene();
+            }
+            else
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Refresh the panel (call after minion defeated to update UI)
+    /// </summary>
+    public void RefreshPanel()
+    {
+        if (currentBoss != null && isVisible)
+        {
+            UpdateMinionSlots(currentBoss);
+            UpdatePlayButton(currentBoss);
         }
     }
     

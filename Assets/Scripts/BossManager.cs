@@ -86,6 +86,14 @@ public class BossManager : MonoBehaviour
             LoadAllBossData();
         }
         
+        // CHECK FOR MINION ENCOUNTER FIRST
+        if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
+        {
+            Debug.Log("[BossManager] Minion encounter detected, initializing minion battle");
+            InitializeMinion();
+            return;
+        }
+        
         // NEW FLOW: Read selected boss from BossProgressionManager
         if (BossProgressionManager.Instance != null)
         {
@@ -421,6 +429,171 @@ public class BossManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Initialize a minion encounter
+    /// </summary>
+    private void InitializeMinion()
+    {
+        if (MinionEncounterManager.Instance == null || MinionEncounterManager.Instance.currentMinion == null)
+        {
+            Debug.LogError("[BossManager] Cannot initialize minion - MinionEncounterManager or minion is null");
+            return;
+        }
+        
+        var minion = MinionEncounterManager.Instance.currentMinion;
+        Debug.Log($"[BossManager] Initializing minion encounter: {minion.minionName}");
+        
+        // Set hands remaining based on minion
+        handsRemaining = minion.handsPerRound;
+        currentHand = 0;
+        isBossActive = true; // Mark as active for game logic
+        
+        // Hide boss intro panel for minions
+        if (bossIntroPreviewPanel != null)
+        {
+            bossIntroPreviewPanel.gameObject.SetActive(false);
+        }
+        
+        // Update UI to show minion info (NewBossPanel will detect minion automatically)
+        if (newBossPanel != null)
+        {
+            newBossPanel.ShowBossPanel();
+        }
+        
+        // Disable tarot cards if minion requires it
+        if (shopManager != null && minion.disablesTarotCards)
+        {
+            Debug.Log($"[BossManager] Tarot cards disabled for minion: {minion.minionName}");
+        }
+        
+        Debug.Log($"[BossManager] Minion encounter ready: {minion.minionName} - {minion.handsPerRound} hands");
+    }
+    
+    /// <summary>
+    /// Handle minion defeat (player wins)
+    /// </summary>
+    private void HandleMinionDefeat()
+    {
+        if (MinionEncounterManager.Instance == null) return;
+        
+        var minion = MinionEncounterManager.Instance.currentMinion;
+        Debug.Log($"[BossManager] Minion defeated: {minion.minionName}");
+        
+        // Mark boss as inactive
+        isBossActive = false;
+        
+        // Show victory effect
+        StartCoroutine(ShowMinionDefeatEffect());
+    }
+    
+    /// <summary>
+    /// Handle minion victory (player loses)
+    /// </summary>
+    private void HandleMinionLoss()
+    {
+        if (MinionEncounterManager.Instance == null) return;
+        
+        var minion = MinionEncounterManager.Instance.currentMinion;
+        Debug.Log($"[BossManager] Player lost to minion: {minion.minionName}");
+        
+        // Mark boss as inactive
+        isBossActive = false;
+        
+        // Show loss effect
+        StartCoroutine(ShowMinionLossEffect());
+    }
+    
+    /// <summary>
+    /// Show minion defeat effect and return to boss map
+    /// </summary>
+    private IEnumerator ShowMinionDefeatEffect()
+    {
+        // Show victory message
+        Debug.Log("[BossManager] Showing minion defeat effect");
+        
+        if (newBossPanel != null)
+        {
+            newBossPanel.ShowDefeatEffect();
+        }
+        
+        // Wait for effect
+        yield return new WaitForSeconds(2f);
+        
+        // Reset minion encounter BEFORE returning to map
+        if (MinionEncounterManager.Instance != null)
+        {
+            Debug.Log("[BossManager] Resetting minion encounter state");
+            MinionEncounterManager.Instance.ResetEncounter();
+        }
+        
+        // Clear any boss selection to prevent auto-loading boss battle
+        if (BossProgressionManager.Instance != null)
+        {
+            BossProgressionManager.Instance.progressionData.selectedBossType = "";
+            Debug.Log("[BossManager] Cleared boss selection");
+        }
+        
+        // Reset boss manager state
+        isBossActive = false;
+        currentBoss = null;
+        
+        // Return to boss map
+        Debug.Log("[BossManager] Returning to Boss Map after minion defeat");
+        
+        if (GameSceneManager.Instance != null)
+        {
+            GameSceneManager.Instance.LoadBossMapScene();
+        }
+        else
+        {
+            // Fallback
+            UnityEngine.SceneManagement.SceneManager.LoadScene("BossMap");
+        }
+    }
+    
+    /// <summary>
+    /// Show minion loss effect and return to boss map
+    /// </summary>
+    private IEnumerator ShowMinionLossEffect()
+    {
+        // Show loss message
+        Debug.Log("[BossManager] Player ran out of hands against minion");
+        
+        // Wait for effect
+        yield return new WaitForSeconds(2f);
+        
+        // Reset minion encounter BEFORE returning to map
+        if (MinionEncounterManager.Instance != null)
+        {
+            Debug.Log("[BossManager] Resetting minion encounter state");
+            MinionEncounterManager.Instance.ResetEncounter();
+        }
+        
+        // Clear any boss selection to prevent auto-loading boss battle
+        if (BossProgressionManager.Instance != null)
+        {
+            BossProgressionManager.Instance.progressionData.selectedBossType = "";
+            Debug.Log("[BossManager] Cleared boss selection");
+        }
+        
+        // Reset boss manager state
+        isBossActive = false;
+        currentBoss = null;
+        
+        // Return to boss map
+        Debug.Log("[BossManager] Returning to Boss Map after minion loss");
+        
+        if (GameSceneManager.Instance != null)
+        {
+            GameSceneManager.Instance.LoadBossMapScene();
+        }
+        else
+        {
+            // Fallback
+            UnityEngine.SceneManagement.SceneManager.LoadScene("BossMap");
+        }
+    }
+    
+    /// <summary>
     /// Apply boss-specific rules to the game
     /// </summary>
     private void ApplyBossRules()
@@ -473,6 +646,32 @@ public class BossManager : MonoBehaviour
     /// </summary>
     public void OnPlayerWin()
     {
+        // Check if this is a minion encounter
+        if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
+        {
+            MinionEncounterManager.Instance.OnPlayerWinRound();
+            MinionEncounterManager.Instance.NextHand();
+            
+            // Update BossManager's hand tracking to sync with MinionEncounterManager
+            currentHand = MinionEncounterManager.Instance.currentHand;
+            handsRemaining = MinionEncounterManager.Instance.handsRemaining;
+            
+            Debug.Log($"[BossManager] Minion battle - Hand: {currentHand}, Remaining: {handsRemaining}");
+            
+            // Update UI
+            if (newBossPanel != null)
+            {
+                newBossPanel.UpdateHealthBar();
+            }
+            
+            // Check if minion was defeated
+            if (MinionEncounterManager.Instance.isMinionDefeated)
+            {
+                HandleMinionDefeat();
+            }
+            return;
+        }
+        
         if (!isBossActive || isGameOver) return;
         
         currentBossHealth--;
@@ -515,6 +714,32 @@ public class BossManager : MonoBehaviour
     /// </summary>
     public void OnPlayerLose()
     {
+        // Check if this is a minion encounter
+        if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
+        {
+            MinionEncounterManager.Instance.OnMinionWinRound();
+            MinionEncounterManager.Instance.NextHand();
+            
+            // Update BossManager's hand tracking to sync with MinionEncounterManager
+            currentHand = MinionEncounterManager.Instance.currentHand;
+            handsRemaining = MinionEncounterManager.Instance.handsRemaining;
+            
+            Debug.Log($"[BossManager] Minion battle - Hand: {currentHand}, Remaining: {handsRemaining}");
+            
+            // Update UI
+            if (newBossPanel != null)
+            {
+                newBossPanel.UpdateHealthBar();
+            }
+            
+            // Check if player ran out of hands
+            if (handsRemaining <= 0)
+            {
+                HandleMinionLoss();
+            }
+            return;
+        }
+        
         if (!isBossActive || isGameOver) return;
         
         currentHand++;
@@ -674,7 +899,11 @@ public class BossManager : MonoBehaviour
         if (BossProgressionManager.Instance != null)
         {
             BossProgressionManager.Instance.MarkBossDefeated(currentBoss.bossType);
-            Debug.Log($"[BossManager] Boss {currentBoss.bossName} marked as defeated in progression system");
+            
+            // Complete the act (reset minion progress)
+            BossProgressionManager.Instance.CompleteAct(currentBoss.bossType);
+            
+            Debug.Log($"[BossManager] Boss {currentBoss.bossName} marked as defeated and act completed");
         }
         else
         {

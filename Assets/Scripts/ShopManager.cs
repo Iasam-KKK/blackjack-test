@@ -202,6 +202,17 @@ public class ShopManager : MonoBehaviour
     }*/
     public void SetupShop()
 {
+    // 🔹 CHECK FOR MINION ENCOUNTER FIRST
+    if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
+    {
+        var minion = MinionEncounterManager.Instance.currentMinion;
+        if (minion != null && minion.disablesTarotCards)
+        {
+            Debug.Log($"[ShopManager] Tarot cards disabled for minion: {minion.minionName}");
+            return; // 🚫 Stop before spawning any tarot cards
+        }
+    }
+    
     // 🔹 Check if tarot cards are disabled for this boss
     BossManager bossManager = FindObjectOfType<BossManager>();
     if (bossManager != null && bossManager.GetCurrentBoss() != null)

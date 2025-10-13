@@ -1,6 +1,5 @@
 using UnityEngine;
-using System.Collections.Generic;
-
+using System.Collections.Generic; 
 // Define boss types based on your list
 public enum BossType
 {
@@ -124,6 +123,9 @@ public class BossData : ScriptableObject
     [Header("Boss Mechanics")]
     public List<BossMechanic> mechanics = new List<BossMechanic>();
     
+    [Header("Minions (3 per boss - defeat 2 to unlock boss)")]
+    public List<MinionData> minions = new List<MinionData>();
+    
     [Header("Boss Rewards")]
     public List<BossReward> rewards = new List<BossReward>();
     
@@ -168,5 +170,15 @@ public class BossData : ScriptableObject
     public string GetBossTitle()
     {
         return bossName + " - " + bossDescription;
+    }
+    
+    public bool HasMinions()
+    {
+        return minions != null && minions.Count > 0;
+    }
+    
+    public int GetMinionCount()
+    {
+        return minions != null ? minions.Count : 0;
     }
 }

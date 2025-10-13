@@ -260,6 +260,13 @@ public class NewBossPanel : MonoBehaviour
     /// </summary>
     private void UpdateBossDisplay()
     {
+        // CHECK FOR MINION ENCOUNTER FIRST
+        if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
+        {
+            UpdateMinionDisplay();
+            return;
+        }
+        
         BossData currentBoss = GetCurrentDisplayBoss();
         if (currentBoss == null)
         {
@@ -330,6 +337,76 @@ public class NewBossPanel : MonoBehaviour
             {
                 handsRemainingText.text = $"Hands: {handsPerRound}";
             }
+        }
+        
+        // Update current hand
+        if (currentHandText != null)
+        {
+            currentHandText.text = $"Hand {currentHand + 1}";
+        }
+    }
+    
+    /// <summary>
+    /// Update display for minion encounters
+    /// </summary>
+    private void UpdateMinionDisplay()
+    {
+        if (MinionEncounterManager.Instance == null || !MinionEncounterManager.Instance.isMinionActive)
+        {
+            Debug.LogWarning("[NewBossPanel] No active minion to display");
+            return;
+        }
+        
+        var minion = MinionEncounterManager.Instance.currentMinion;
+        if (minion == null)
+        {
+            Debug.LogWarning("[NewBossPanel] Minion data is null");
+            return;
+        }
+        
+        Debug.Log($"[NewBossPanel] Updating display for minion: {minion.minionName}");
+        
+        // Update portrait with minion portrait
+        if (bossPortrait != null && minion.minionPortrait != null)
+        {
+            bossPortrait.sprite = minion.minionPortrait;
+        }
+        
+        // Update name and description
+        if (bossNameText != null)
+        {
+            bossNameText.text = minion.minionName;
+        }
+        
+        if (bossDescriptionText != null)
+        {
+            bossDescriptionText.text = minion.minionDescription;
+        }
+        
+        // Get current stats from MinionEncounterManager
+        int currentHealth = MinionEncounterManager.Instance.currentMinionHealth;
+        int maxHealth = minion.maxHealth;
+        int currentHand = bossManager != null ? bossManager.currentHand : 0;
+        int handsPerRound = minion.handsPerRound;
+        
+        // Update health bar
+        if (bossHealthBar != null)
+        {
+            float targetValue = (float)currentHealth / maxHealth;
+            bossHealthBar.DOFillAmount(targetValue, healthBarAnimationDuration).SetEase(Ease.OutQuad);
+        }
+        
+        // Update health text
+        if (healthText != null)
+        {
+            healthText.text = $"{currentHealth}/{maxHealth}";
+        }
+        
+        // Update hands remaining
+        if (handsRemainingText != null)
+        {
+            int remainingHands = bossManager != null ? bossManager.GetRemainingHands() : handsPerRound;
+            handsRemainingText.text = $"Hands Left: {remainingHands}/{handsPerRound}";
         }
         
         // Update current hand

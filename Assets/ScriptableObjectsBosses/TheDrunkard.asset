@@ -23,6 +23,10 @@ MonoBehaviour:
   difficultyMultiplier: 1
   unlockOrder: 0
   mechanics: []
+  minions:
+  - {fileID: 11400000, guid: 4a7961a0929eea94dbe385e849271f70, type: 2}
+  - {fileID: 11400000, guid: 12c0cd9c992e79740965638dcc022768, type: 2}
+  - {fileID: 11400000, guid: dd7f6d9d81c0bc14b8021e5f645bd64d, type: 2}
   rewards:
   - rewardName: Basic Tarot Card
     rewardDescription: Unlocks your first tarot card - The Peek

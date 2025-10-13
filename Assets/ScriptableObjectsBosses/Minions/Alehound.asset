@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd987922d80333e49b258d865da8ade4, type: 3}
+  m_Name: Alehound
+  m_EditorClassIdentifier: 
+  minionName: Alehound
+  minionPortrait: {fileID: 5760202260919997367, guid: ea0733da16769d143be9ff000518997e,
+    type: 3}
+  minionDescription: A wild beast that corrupts cards with chaotic energy. Adds random
+    +1/-1 modifiers to drawn cards.
+  maxHealth: 3
+  handsPerRound: 5
+  difficultyMultiplier: 0.5
+  mechanics:
+  - mechanicType: 6
+    mechanicName: Random Modifier
+    mechanicDescription: Adds +1 or -1 to random cards when drawn
+    activationChance: 0.5
+    isPassive: 0
+    triggersOnPlayerAction: 1
+    triggersOnCardDealt: 1
+    triggersOnRoundEnd: 0
+    mechanicValue: 1
+    mechanicMultiplier: 1
+    mechanicTags: []
+  minionThemeColor: {r: 0.6, g: 0.4, b: 0.2, a: 1}
+  minionMusic: {fileID: 0}
+  minionDefeatSound: {fileID: 0}
+  disablesTarotCards: 1
+  usesSpecialDeck: 0

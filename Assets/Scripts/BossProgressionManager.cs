@@ -589,6 +589,161 @@ public class BossProgressionManager : MonoBehaviour
             unclaimedRewards = progressionData.rewardStates.Count(r => r.isUnlocked && !r.isClaimed)
         };
     }
+    
+    // ============================================================================
+    // MINION TRACKING
+    // ============================================================================
+    
+    /// <summary>
+    /// Start a new act for a boss (initialize minion progression)
+    /// </summary>
+    public void StartBossAct(BossType bossType)
+    {
+        string bossKey = bossType.ToString();
+        
+        // Check if act already exists
+        ActState existingAct = progressionData.actStates.Find(a => a.bossType == bossKey);
+        if (existingAct != null)
+        {
+            Debug.Log($"[BossProgressionManager] Act for {bossType} already exists, resuming");
+            progressionData.currentActBoss = bossKey;
+            return;
+        }
+        
+        // Create new act
+        ActState newAct = new ActState
+        {
+            bossType = bossKey,
+            defeatedMinions = new List<string>(),
+            bossUnlockedInAct = false,
+            actStartedAt = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            actCompletedAt = ""
+        };
+        
+        progressionData.actStates.Add(newAct);
+        progressionData.currentActBoss = bossKey;
+        
+        Debug.Log($"[BossProgressionManager] Started new act for {bossType}");
+        SaveProgression();
+    }
+    
+    /// <summary>
+    /// Mark a minion as defeated in the current act
+    /// </summary>
+    public void MarkMinionDefeated(BossType bossType, string minionName)
+    {
+        string bossKey = bossType.ToString();
+        ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
+        
+        if (act == null)
+        {
+            Debug.LogWarning($"[BossProgressionManager] No act found for {bossType}, creating one");
+            StartBossAct(bossType);
+            act = progressionData.actStates.Find(a => a.bossType == bossKey);
+        }
+        
+        // Add minion to defeated list if not already there
+        if (!act.defeatedMinions.Contains(minionName))
+        {
+            act.defeatedMinions.Add(minionName);
+            Debug.Log($"[BossProgressionManager] Minion {minionName} defeated ({act.defeatedMinions.Count}/3)");
+            
+            // Check if boss should be unlocked (2+ minions defeated)
+            if (act.defeatedMinions.Count >= 2 && !act.bossUnlockedInAct)
+            {
+                act.bossUnlockedInAct = true;
+                Debug.Log($"[BossProgressionManager] Boss {bossType} unlocked in act (2+ minions defeated)");
+            }
+            
+            SaveProgression();
+        }
+    }
+    
+    /// <summary>
+    /// Check if a minion has been defeated
+    /// </summary>
+    public bool IsMinionDefeated(BossType bossType, string minionName)
+    {
+        string bossKey = bossType.ToString();
+        ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
+        
+        if (act == null) return false;
+        
+        return act.defeatedMinions.Contains(minionName);
+    }
+    
+    /// <summary>
+    /// Check if boss is unlocked in current act (2+ minions defeated)
+    /// </summary>
+    public bool IsBossUnlockedInAct(BossType bossType)
+    {
+        string bossKey = bossType.ToString();
+        ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
+        
+        if (act == null) return false;
+        
+        return act.bossUnlockedInAct;
+    }
+    
+    /// <summary>
+    /// Get number of minions defeated for a boss
+    /// </summary>
+    public int GetMinionDefeatedCount(BossType bossType)
+    {
+        string bossKey = bossType.ToString();
+        ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
+        
+        if (act == null) return 0;
+        
+        return act.defeatedMinions.Count;
+    }
+    
+    /// <summary>
+    /// Get list of defeated minion names for a boss
+    /// </summary>
+    public List<string> GetDefeatedMinions(BossType bossType)
+    {
+        string bossKey = bossType.ToString();
+        ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
+        
+        if (act == null) return new List<string>();
+        
+        return new List<string>(act.defeatedMinions);
+    }
+    
+    /// <summary>
+    /// Complete the act (boss defeated, reset minion progress)
+    /// </summary>
+    public void CompleteAct(BossType bossType)
+    {
+        string bossKey = bossType.ToString();
+        ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
+        
+        if (act != null)
+        {
+            act.actCompletedAt = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            Debug.Log($"[BossProgressionManager] Act completed for {bossType}");
+        }
+        
+        progressionData.currentActBoss = "";
+        SaveProgression();
+    }
+    
+    /// <summary>
+    /// Get the current act boss
+    /// </summary>
+    public BossType? GetCurrentActBoss()
+    {
+        if (string.IsNullOrEmpty(progressionData.currentActBoss))
+            return null;
+            
+        if (System.Enum.TryParse<BossType>(progressionData.currentActBoss, out BossType bossType))
+        {
+            return bossType;
+        }
+        
+        return null;
+    }
 }
 
 // ============================================================================
@@ -606,6 +761,24 @@ public class BossProgressionData
     public List<BossRewardState> rewardStates = new List<BossRewardState>();
     public string selectedBossType = "";
     public string lastUpdated = "";
+    
+    // Minion progression tracking
+    public List<ActState> actStates = new List<ActState>();
+    public string currentActBoss = ""; // Which boss's minions are currently active
+}
+
+/// <summary>
+/// Act state tracking for minion progression (serializable)
+/// Tracks which minions have been defeated for each boss
+/// </summary>
+[Serializable]
+public class ActState
+{
+    public string bossType;
+    public List<string> defeatedMinions = new List<string>(); // Names of defeated minions
+    public bool bossUnlockedInAct = false; // True if 2+ minions defeated
+    public string actStartedAt;
+    public string actCompletedAt;
 }
 
 /// <summary>
