@@ -10,30 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd987922d80333e49b258d865da8ade4, type: 3}
-  m_Name: BrokenGlass
+  m_Name: LostOracle
   m_EditorClassIdentifier: 
-  minionName: Broken Glass
-  minionPortrait: {fileID: 21300000, guid: f57b0df4d3c6eb54e909c36a7750cd85, type: 3}
-  minionDescription: Shards of malice that cut through fragile cards. Has a chance
-    to destroy a low-durability card (2 remaining uses) after the round.
+  minionName: Lost Oracle
+  minionPortrait: {fileID: 0}
+  minionDescription: A prophet who forgot their gift. Randomly removes one card
+    from your hand each other turn.
   maxHealth: 3
   handsPerRound: 5
-  difficultyMultiplier: 0.6
+  difficultyMultiplier: 0.7
   mechanics:
-  - mechanicType: 26
-    mechanicName: Glass Shatter
-    mechanicDescription: Destroys low-durability cards after round ends
-    activationChance: 0.6
+  - mechanicType: 33
+    mechanicName: Memory Loss
+    mechanicDescription: Removes one card from player's hand each other turn
+    activationChance: 1
     isPassive: 0
     triggersOnPlayerAction: 0
     triggersOnCardDealt: 0
     triggersOnRoundEnd: 1
-    mechanicValue: 2
+    mechanicValue: 1
     mechanicMultiplier: 1
     mechanicTags:
-    - low_durability
-  minionThemeColor: {r: 0.7, g: 0.7, b: 0.8, a: 1}
+    - alternating_turn
+  minionThemeColor: {r: 0.6, g: 0.5, b: 0.7, a: 1}
   minionMusic: {fileID: 0}
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
+

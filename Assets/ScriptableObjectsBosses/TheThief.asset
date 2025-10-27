@@ -35,6 +35,10 @@ MonoBehaviour:
     mechanicValue: 1
     mechanicMultiplier: 1
     mechanicTags: []
+  minions:
+  - {fileID: 11400000, guid: 6f1e8d3c5b7a9e2d4f6c8a1e3d5b7c9a, type: 2}
+  - {fileID: 11400000, guid: 8d4b6c9f2e5a7d1f3b8c4a6e9d2b5c8f, type: 2}
+  - {fileID: 11400000, guid: 2a7f9e3c1d4b6f8e2a7c9e3d1f4b6a8c, type: 2}
   rewards:
   - rewardName: Thief's Loot
     rewardDescription: Unlocks the Hitman tarot card

@@ -10,30 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd987922d80333e49b258d865da8ade4, type: 3}
-  m_Name: BrokenGlass
+  m_Name: SilentCutpurse
   m_EditorClassIdentifier: 
-  minionName: Broken Glass
-  minionPortrait: {fileID: 21300000, guid: f57b0df4d3c6eb54e909c36a7750cd85, type: 3}
-  minionDescription: Shards of malice that cut through fragile cards. Has a chance
-    to destroy a low-durability card (2 remaining uses) after the round.
+  minionName: Silent Cutpurse
+  minionPortrait: {fileID: 0}
+  minionDescription: A stealthy saboteur who damages your cards. Reduces the durability
+    of a random card by 1 at the end of each hand.
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.6
   mechanics:
-  - mechanicType: 26
-    mechanicName: Glass Shatter
-    mechanicDescription: Destroys low-durability cards after round ends
-    activationChance: 0.6
+  - mechanicType: 32
+    mechanicName: Durability Drain
+    mechanicDescription: Reduces durability of a random card by 1 at hand end
+    activationChance: 0.65
     isPassive: 0
     triggersOnPlayerAction: 0
     triggersOnCardDealt: 0
     triggersOnRoundEnd: 1
-    mechanicValue: 2
+    mechanicValue: 1
     mechanicMultiplier: 1
     mechanicTags:
-    - low_durability
-  minionThemeColor: {r: 0.7, g: 0.7, b: 0.8, a: 1}
+    - durability_damage
+  minionThemeColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
   minionMusic: {fileID: 0}
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
+

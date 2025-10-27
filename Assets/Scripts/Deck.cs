@@ -258,11 +258,26 @@ public class Deck : MonoBehaviour
         UpdateBalanceDisplay();
         UpdateStreakUI(); // Initialize streak display with 1x flame
         
-        // Initialize boss system
+        // Initialize boss system - BUT NOT if minion encounter is active
+        // BossManager.Start() already handles minion initialization
         if (bossManager != null)
         {
-            bossManager.InitializeBoss(BossType.TheDrunkard); // Start with The Captain for testing
-            _currentBossState = BossState.Fighting;
+            // Check if this is a minion encounter - if so, BossManager already initialized it
+            if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
+            {
+                Debug.Log("[Deck] Minion encounter detected - skipping boss initialization");
+                _currentBossState = BossState.Fighting;
+            }
+            else
+            {
+                // Not a minion encounter - this shouldn't happen as BossManager.Start() handles boss selection
+                // Only initialize if BossManager didn't already set up a boss
+                if (!bossManager.IsBossActive())
+                {
+                    Debug.LogWarning("[Deck] No boss or minion active - BossManager should have initialized this");
+                }
+                _currentBossState = BossState.Fighting;
+            }
         }
         
         // Set the button text to "Next Hand" at the start

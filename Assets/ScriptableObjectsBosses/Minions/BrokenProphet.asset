@@ -10,29 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd987922d80333e49b258d865da8ade4, type: 3}
-  m_Name: TipsyFool
+  m_Name: BrokenProphet
   m_EditorClassIdentifier: 
-  minionName: Tipsy Fool
-  minionPortrait: {fileID: 21300000, guid: 9ca6f6aa2a120a141a28cac7b6d04ff0, type: 3}
-  minionDescription: A wobbling drunkard who can't keep his cards straight. Occasionally
-    swaps two random cards in your hand.
+  minionName: Broken Prophet
+  minionPortrait: {fileID: 0}
+  minionDescription: A shattered oracle with fractured visions. Shuffles your hand
+    after the first play of the round.
   maxHealth: 3
   handsPerRound: 5
-  difficultyMultiplier: 0.5
+  difficultyMultiplier: 0.7
   mechanics:
-  - mechanicType: 25
-    mechanicName: Card Swap
-    mechanicDescription: Swaps two random cards in player's hand after draw
-    activationChance: 0.6
+  - mechanicType: 35
+    mechanicName: Fractured Vision
+    mechanicDescription: Shuffles player's hand after first play of round
+    activationChance: 1
     isPassive: 0
     triggersOnPlayerAction: 1
-    triggersOnCardDealt: 1
+    triggersOnCardDealt: 0
     triggersOnRoundEnd: 0
-    mechanicValue: 2
+    mechanicValue: 1
     mechanicMultiplier: 1
-    mechanicTags: []
-  minionThemeColor: {r: 0.8, g: 0.6, b: 0.4, a: 1}
+    mechanicTags:
+    - first_play
+  minionThemeColor: {r: 0.7, g: 0.5, b: 0.6, a: 1}
   minionMusic: {fileID: 0}
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
+

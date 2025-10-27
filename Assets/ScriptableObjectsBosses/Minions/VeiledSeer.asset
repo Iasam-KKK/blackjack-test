@@ -10,30 +10,30 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd987922d80333e49b258d865da8ade4, type: 3}
-  m_Name: BrokenGlass
+  m_Name: VeiledSeer
   m_EditorClassIdentifier: 
-  minionName: Broken Glass
-  minionPortrait: {fileID: 21300000, guid: f57b0df4d3c6eb54e909c36a7750cd85, type: 3}
-  minionDescription: Shards of malice that cut through fragile cards. Has a chance
-    to destroy a low-durability card (2 remaining uses) after the round.
+  minionName: Veiled Seer
+  minionPortrait: {fileID: 0}
+  minionDescription: A shrouded oracle who warps reality itself. Replaces one drawn
+    card with a different, random one from the void.
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.6
   mechanics:
-  - mechanicType: 26
-    mechanicName: Glass Shatter
-    mechanicDescription: Destroys low-durability cards after round ends
+  - mechanicType: 29
+    mechanicName: Card Replacement
+    mechanicDescription: Replaces one drawn card with a random different card
     activationChance: 0.6
     isPassive: 0
     triggersOnPlayerAction: 0
-    triggersOnCardDealt: 0
-    triggersOnRoundEnd: 1
-    mechanicValue: 2
+    triggersOnCardDealt: 1
+    triggersOnRoundEnd: 0
+    mechanicValue: 1
     mechanicMultiplier: 1
-    mechanicTags:
-    - low_durability
-  minionThemeColor: {r: 0.7, g: 0.7, b: 0.8, a: 1}
+    mechanicTags: []
+  minionThemeColor: {r: 0.3, g: 0.2, b: 0.5, a: 1}
   minionMusic: {fileID: 0}
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
+

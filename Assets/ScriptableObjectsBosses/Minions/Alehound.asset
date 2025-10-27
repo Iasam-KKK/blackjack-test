@@ -21,7 +21,7 @@ MonoBehaviour:
   handsPerRound: 5
   difficultyMultiplier: 0.5
   mechanics:
-  - mechanicType: 6
+  - mechanicType: 24
     mechanicName: Random Modifier
     mechanicDescription: Adds +1 or -1 to random cards when drawn
     activationChance: 0.5

@@ -23,6 +23,10 @@ MonoBehaviour:
   difficultyMultiplier: 1
   unlockOrder: 1
   mechanics: []
+  minions:
+  - {fileID: 11400000, guid: 5c7f9e1d3a5b7c9e1d3a5b7c9e1d3a5b, type: 2}
+  - {fileID: 11400000, guid: 7e9d1c2f4b6a8e0c2f4b6a8e0c2f4b6a, type: 2}
+  - {fileID: 11400000, guid: 3f8a2b9e1c4d5f7a9e2b4c6d8f1a3e5b, type: 2}
   rewards:
   - rewardName: Fortune Teller's Gift
     rewardDescription: Unlocks the Fortune Teller tarot card

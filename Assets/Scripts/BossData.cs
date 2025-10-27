@@ -54,8 +54,22 @@ public enum BossMechanicType
     HideConsumables,       // Hide/disable all tarot cards (The Naughty Child)
     TemporaryCardTheft,    // Temporarily steal cards and return after round (The Naughty Child)
     EmpressIntercept,       // Intercept Kings and Jacks for The Empress
-    MutateCards  // The Alchemist - Mutates cards for benefit (boss) or damage (player)
-
+    MutateCards,  // The Alchemist - Mutates cards for benefit (boss) or damage (player)
+    RandomModifier,  // Adds random +1/-1 modifier to cards (Alehound minion)
+    SwapCards,  // Swaps two random cards in player's hand (Tipsy Fool minion)
+    DestroyLowDurability,  // Destroys low-durability cards (Broken Glass minion)
+    ShowNextCardModifySuit,  // Palm Reader - Shows next card but changes its suit or material temporarily
+    AlterDealerCard,  // Crystal Gazer - Predicts and alters dealer's hidden card
+    ReplaceDrawnCard,  // Veiled Seer - Replaces one drawn card with a different, random one
+    StealSoul,  // Pickpocket - Steals percentage of Soul each hand
+    StealCardFromHand,  // Card Snatcher - Steals a random card from player's hand
+    ReduceDurability,  // Silent Cutpurse - Reduces durability of a random card
+    RemoveCardFromHand,  // Lost Oracle - Removes one card from hand each other turn
+    RandomizePlayedCardValue,  // Wandering Mystic - Randomizes a played card's value after use
+    ShuffleHandAfterFirstPlay,  // Broken Prophet - Shuffles hand after first play of round
+    FlipAceValue,  // Palm Reader (Chiromancer) - Flips Ace value from 11 to 1
+    BindCardsTogether,  // Line Weaver - Binds two cards to be played together
+    CurseDurabilityReduction  // Knuckle Scribe - Reduces next play's durability by 1-3
 
 }
 

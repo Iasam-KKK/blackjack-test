@@ -10,29 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd987922d80333e49b258d865da8ade4, type: 3}
-  m_Name: TipsyFool
+  m_Name: CardSnatcher
   m_EditorClassIdentifier: 
-  minionName: Tipsy Fool
-  minionPortrait: {fileID: 21300000, guid: 9ca6f6aa2a120a141a28cac7b6d04ff0, type: 3}
-  minionDescription: A wobbling drunkard who can't keep his cards straight. Occasionally
-    swaps two random cards in your hand.
+  minionName: Card Snatcher
+  minionPortrait: {fileID: 0}
+  minionDescription: A brazen thief who snatches cards mid-game. Steals a random
+    card from your hand into the enemy pool.
   maxHealth: 3
   handsPerRound: 5
-  difficultyMultiplier: 0.5
+  difficultyMultiplier: 0.7
   mechanics:
-  - mechanicType: 25
-    mechanicName: Card Swap
-    mechanicDescription: Swaps two random cards in player's hand after draw
+  - mechanicType: 31
+    mechanicName: Card Theft
+    mechanicDescription: Steals a random card from player's hand to enemy pool
     activationChance: 0.6
     isPassive: 0
     triggersOnPlayerAction: 1
     triggersOnCardDealt: 1
     triggersOnRoundEnd: 0
-    mechanicValue: 2
+    mechanicValue: 1
     mechanicMultiplier: 1
-    mechanicTags: []
-  minionThemeColor: {r: 0.8, g: 0.6, b: 0.4, a: 1}
+    mechanicTags:
+    - card_steal
+  minionThemeColor: {r: 0.7, g: 0.3, b: 0.3, a: 1}
   minionMusic: {fileID: 0}
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
+

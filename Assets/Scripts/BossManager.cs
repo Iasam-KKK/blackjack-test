@@ -87,11 +87,23 @@ public class BossManager : MonoBehaviour
         }
         
         // CHECK FOR MINION ENCOUNTER FIRST
+        Debug.Log($"[BossManager.Start] Checking for minion encounter...");
+        Debug.Log($"[BossManager.Start] MinionEncounterManager.Instance: {(MinionEncounterManager.Instance != null ? "EXISTS" : "NULL")}");
+        if (MinionEncounterManager.Instance != null)
+        {
+            Debug.Log($"[BossManager.Start] MinionEncounterManager.Instance.isMinionActive: {MinionEncounterManager.Instance.isMinionActive}");
+            Debug.Log($"[BossManager.Start] MinionEncounterManager.Instance.currentMinion: {(MinionEncounterManager.Instance.currentMinion != null ? MinionEncounterManager.Instance.currentMinion.minionName : "NULL")}");
+        }
+        
         if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
         {
             Debug.Log("[BossManager] Minion encounter detected, initializing minion battle");
             InitializeMinion();
             return;
+        }
+        else
+        {
+            Debug.Log("[BossManager] No active minion encounter - proceeding with boss initialization");
         }
         
         // NEW FLOW: Read selected boss from BossProgressionManager
@@ -429,6 +441,45 @@ public class BossManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Load minion mechanics and set up their states
+    /// </summary>
+    private void LoadMinionMechanics()
+    {
+        activeMechanics.Clear();
+        mechanicStates.Clear();
+        
+        if (MinionEncounterManager.Instance == null || MinionEncounterManager.Instance.currentMinion == null)
+        {
+            Debug.LogError("[BossManager] Cannot load minion mechanics - no active minion");
+            return;
+        }
+        
+        var minion = MinionEncounterManager.Instance.currentMinion;
+        
+        Debug.Log($"[BossManager] Loading mechanics for minion: {minion.minionName}, Total mechanics: {minion.mechanics.Count}");
+        
+        foreach (var mechanic in minion.mechanics)
+        {
+            Debug.Log($"[BossManager] Minion mechanic found - Type: {mechanic.mechanicType}, Name: {mechanic.mechanicName}, TriggersOnCardDealt: {mechanic.triggersOnCardDealt}, Chance: {mechanic.activationChance}");
+            
+            if (mechanic.mechanicType != BossMechanicType.None)
+            {
+                activeMechanics.Add(mechanic);
+                mechanicStates[mechanic.mechanicType] = mechanic.isPassive;
+                Debug.Log($"[BossManager] Added mechanic to activeMechanics: {mechanic.mechanicName}");
+            }
+        }
+        
+        Debug.Log($"[BossManager] Loaded {activeMechanics.Count} mechanics for minion: {minion.minionName}");
+        
+        // Extra verification
+        foreach (var am in activeMechanics)
+        {
+            Debug.Log($"[BossManager] Active mechanic: {am.mechanicName} (Type: {am.mechanicType}, TriggersOnCardDealt: {am.triggersOnCardDealt})");
+        }
+    }
+    
+    /// <summary>
     /// Initialize a minion encounter
     /// </summary>
     private void InitializeMinion()
@@ -446,6 +497,9 @@ public class BossManager : MonoBehaviour
         handsRemaining = minion.handsPerRound;
         currentHand = 0;
         isBossActive = true; // Mark as active for game logic
+        
+        // Load minion mechanics into activeMechanics list
+        LoadMinionMechanics();
         
         // Hide boss intro panel for minions
         if (bossIntroPreviewPanel != null)
@@ -804,17 +858,25 @@ public class BossManager : MonoBehaviour
     /// </summary>
     public void OnCardDealt(GameObject card, bool isPlayer)
     {
-        if (!isBossActive) return;
+        if (!isBossActive)
+        {
+            Debug.LogWarning($"[BossManager] OnCardDealt called but isBossActive is FALSE");
+            return;
+        }
         
         // Debug: Log current boss and card being dealt
         string playerType = isPlayer ? "player" : "dealer";
-        Debug.Log($"OnCardDealt: {playerType} card dealt, Current boss: {currentBoss?.bossName ?? "None"}");
+        string encounterType = currentBoss != null ? $"Boss: {currentBoss.bossName}" : 
+                               (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.currentMinion != null) ? 
+                               $"Minion: {MinionEncounterManager.Instance.currentMinion.minionName}" : "Unknown";
+        
+        Debug.Log($"[BossManager] OnCardDealt: {playerType} card dealt, Encounter: {encounterType}");
         
         // Debug: Log active mechanics count
-        Debug.Log($"Active mechanics count: {activeMechanics.Count}");
+        Debug.Log($"[BossManager] Active mechanics count: {activeMechanics.Count}");
         foreach (var mechanic in activeMechanics)
         {
-            Debug.Log($"Active mechanic: {mechanic.mechanicName} (type: {mechanic.mechanicType}, triggers on card dealt: {mechanic.triggersOnCardDealt})");
+            Debug.Log($"[BossManager] Active mechanic: {mechanic.mechanicName} (type: {mechanic.mechanicType}, triggers on card dealt: {mechanic.triggersOnCardDealt})");
         }
         
         // Special handling for The Captain - nullify Jacks in player's hand
@@ -1304,9 +1366,12 @@ public class BossManager : MonoBehaviour
             case BossMechanicType.MutateCards:
                 MutateCards(mechanic);
                 break;
-
-            
-
+            case BossMechanicType.SwapCards:
+                SwapRandomCards(mechanic);
+                break;
+            case BossMechanicType.DestroyLowDurability:
+                DestroyLowDurabilityCards(mechanic);
+                break;
 
         }
         
@@ -1432,6 +1497,9 @@ public class BossManager : MonoBehaviour
                 break;
             case BossMechanicType.CorruptCard:
                 ApplyCorruptCard(card, mechanic);
+                break;
+            case BossMechanicType.RandomModifier:
+                ApplyRandomModifier(card, mechanic);
                 break;
         }
     }
@@ -2377,6 +2445,157 @@ public class BossManager : MonoBehaviour
             }
             
             Debug.Log($"The Corruptor corrupted card: {originalValue} → {newValue} (change: {corruptionAmount})");
+        }
+    }
+    
+    /// <summary>
+    /// Alehound's mechanic - Adds random +1/-1 modifier to cards when drawn
+    /// </summary>
+    private void ApplyRandomModifier(GameObject card, BossMechanic mechanic)
+    {
+        if (card == null) 
+        {
+            Debug.LogWarning("[Alehound] Card is null!");
+            return;
+        }
+        
+        CardModel cardModel = card.GetComponent<CardModel>();
+        if (cardModel == null) 
+        {
+            Debug.LogWarning("[Alehound] CardModel component not found!");
+            return;
+        }
+        
+        // Apply random +1 or -1 modifier
+        int modifier = Random.Range(0, 2) == 0 ? -1 : 1;
+        int originalValue = cardModel.value;
+        int newValue = Mathf.Clamp(originalValue + modifier, 1, 11);
+        
+        if (newValue != originalValue)
+        {
+            cardModel.value = newValue;
+            
+            // Visual effect
+            StartCoroutine(AnimateCardCorruption(card, originalValue, newValue));
+            
+            // Show message
+            if (newBossPanel != null)
+            {
+                string minionName = MinionEncounterManager.Instance?.currentMinion?.minionName ?? "Alehound";
+                newBossPanel.ShowBossMessage($"{minionName} corrupted a card: {originalValue} → {newValue}!");
+                StartCoroutine(HideBossMessageAfterDelay(2f));
+            }
+            
+            Debug.Log($"[Alehound] Random modifier applied: {originalValue} → {newValue}");
+        }
+    }
+    
+    /// <summary>
+    /// Tipsy Fool's mechanic - Swaps two random cards in player's hand
+    /// </summary>
+    private void SwapRandomCards(BossMechanic mechanic)
+    {
+        if (deck == null || deck.player == null)
+        {
+            Debug.LogWarning("[TipsyFool] Deck or player is null!");
+            return;
+        }
+        
+        CardHand playerHand = deck.player.GetComponent<CardHand>();
+        if (playerHand == null || playerHand.cards.Count < 2)
+        {
+            Debug.LogWarning("[TipsyFool] Not enough cards to swap!");
+            return;
+        }
+        
+        // Pick two random cards
+        int index1 = Random.Range(0, playerHand.cards.Count);
+        int index2 = Random.Range(0, playerHand.cards.Count);
+        
+        // Make sure they're different
+        while (index2 == index1 && playerHand.cards.Count > 1)
+        {
+            index2 = Random.Range(0, playerHand.cards.Count);
+        }
+        
+        if (index1 != index2)
+        {
+            // Swap the cards in the list
+            GameObject temp = playerHand.cards[index1];
+            playerHand.cards[index1] = playerHand.cards[index2];
+            playerHand.cards[index2] = temp;
+            
+            // Rearrange visually
+            playerHand.ArrangeCardsInWindow();
+            
+            // Show message
+            if (newBossPanel != null)
+            {
+                string minionName = MinionEncounterManager.Instance?.currentMinion?.minionName ?? "Tipsy Fool";
+                newBossPanel.ShowBossMessage($"{minionName} swapped two cards in your hand!");
+                StartCoroutine(HideBossMessageAfterDelay(2f));
+            }
+            
+            Debug.Log($"[TipsyFool] Swapped cards at positions {index1} and {index2}");
+        }
+    }
+    
+    /// <summary>
+    /// Broken Glass's mechanic - Destroys low-durability cards after round ends
+    /// </summary>
+    private void DestroyLowDurabilityCards(BossMechanic mechanic)
+    {
+        if (InventoryManager.Instance == null)
+        {
+            Debug.LogWarning("[BrokenGlass] InventoryManager not found!");
+            return;
+        }
+        
+        int durabilityThreshold = mechanic.mechanicValue > 0 ? mechanic.mechanicValue : 2;
+        
+        // Get all tarot cards in inventory
+        var tarotCards = InventoryManager.Instance.GetAllInventoryCards();
+        if (tarotCards == null || tarotCards.Count == 0)
+        {
+            Debug.Log("[BrokenGlass] No tarot cards to destroy");
+            return;
+        }
+        
+        // Find cards with low durability
+        List<TarotCardData> lowDurabilityCards = new List<TarotCardData>();
+        foreach (var card in tarotCards)
+        {
+            if (card != null && card.assignedMaterial != null)
+            {
+                int remainingUses = card.maxUses - card.currentUses;
+                if (remainingUses <= durabilityThreshold && !card.assignedMaterial.HasUnlimitedUses())
+                {
+                    lowDurabilityCards.Add(card);
+                }
+            }
+        }
+        
+        if (lowDurabilityCards.Count > 0)
+        {
+            // Destroy a random low-durability card
+            TarotCardData cardToDestroy = lowDurabilityCards[Random.Range(0, lowDurabilityCards.Count)];
+            
+            // Show message
+            if (newBossPanel != null)
+            {
+                string minionName = MinionEncounterManager.Instance?.currentMinion?.minionName ?? "Broken Glass";
+                newBossPanel.ShowBossMessage($"{minionName} shattered {cardToDestroy.cardName}!");
+                StartCoroutine(HideBossMessageAfterDelay(2.5f));
+            }
+            
+            // Remove the card
+            InventoryManager.Instance.RemoveUsedUpCard(cardToDestroy);
+            
+            Debug.Log($"[BrokenGlass] Destroyed low-durability card: {cardToDestroy.cardName}");
+        }
+        else
+        {
+            Debug.Log("[BrokenGlass] No low-durability cards found to destroy");
         }
     }
     

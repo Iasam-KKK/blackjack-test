@@ -35,6 +35,10 @@ MonoBehaviour:
     mechanicValue: 2
     mechanicMultiplier: 1
     mechanicTags: []
+  minions:
+  - {fileID: 11400000, guid: 9a4e7c2f5b8d1f3e6c9a2d4f7b1e5c8a, type: 2}
+  - {fileID: 11400000, guid: 1f5d8c3e6a9b2d4f7c1e8a3d5f7b9c2e, type: 2}
+  - {fileID: 11400000, guid: 4c8e1a6f9d2b5c7e4a1f8d3c6b9e2a5d, type: 2}
   rewards:
   - rewardName: Seer's Vision
     rewardDescription: Unlocks the Fortune Teller tarot card
