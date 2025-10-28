@@ -41,6 +41,24 @@ public class MinionEncounterManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Set the current minion for the next battle (called from map)
+    /// </summary>
+    public void SetCurrentMinion(MinionData minion)
+    {
+        if (minion == null)
+        {
+            Debug.LogError("[MinionEncounterManager] Cannot set null minion");
+            return;
+        }
+        
+        currentMinion = minion;
+        isMinionActive = true;
+        isMinionDefeated = false;
+        
+        Debug.Log($"[MinionEncounterManager] Current minion set: {minion.minionName}");
+    }
+    
+    /// <summary>
     /// Initialize a minion encounter
     /// </summary>
     public void InitializeMinion(MinionData minion, BossType bossType)

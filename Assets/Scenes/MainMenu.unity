@@ -1208,7 +1208,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainMenuSceneName: MainMenu
   gameSceneName: Blackjack
-  bossMapSceneName: BossMap
+  bossMapSceneName: Map
 --- !u!4 &1722449088
 Transform:
   m_ObjectHideFlags: 0
@@ -1397,6 +1397,8 @@ MonoBehaviour:
     rewardStates: []
     selectedBossType: 
     lastUpdated: 
+    actStates: []
+    currentActBoss: 
 --- !u!4 &1849513129
 Transform:
   m_ObjectHideFlags: 0

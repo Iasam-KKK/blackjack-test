@@ -12,6 +12,9 @@ EditorBuildSettings:
     path: Assets/Scenes/BossMap.unity
     guid: 61091f9ac1c9b114297f81004e9e4002
   - enabled: 1
+    path: Assets/Scenes/Map.unity
+    guid: 29fe9dfb59d55d44bb59efc059b6a582
+  - enabled: 0
     path: Assets/Scenes/Blackjack.unity
     guid: c0d794b0976451043ae2241f21ac9959
   m_configObjects: {}

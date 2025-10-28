@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5f491b607b1cd948b5bc856850b2616, type: 3}
+  m_Name: Regen
+  m_EditorClassIdentifier: 
+  sprite: {fileID: -1523469440745620014, guid: cb72a2696bfedbd40a6f856ff6d177b6, type: 3}
+  nodeName: regen
+  description: 
+  nodeType: 2
+  bossType: 0
+  minionData: {fileID: 0}
+  tarotCardChance: 0.5

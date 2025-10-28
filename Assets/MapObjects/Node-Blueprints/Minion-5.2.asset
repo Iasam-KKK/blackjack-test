@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5f491b607b1cd948b5bc856850b2616, type: 3}
+  m_Name: Minion-5.2
+  m_EditorClassIdentifier: 
+  sprite: {fileID: 6206525659759322035, guid: 043539d56534ee549bfc0266d2be2001, type: 3}
+  nodeName: Knuckle Scribe
+  description: 
+  nodeType: 0
+  bossType: 5
+  minionData: {fileID: 11400000, guid: 8e4a6c2f9b1d5c7e3a4f8d6c9e2a5b7d, type: 2}
+  tarotCardChance: 0.5

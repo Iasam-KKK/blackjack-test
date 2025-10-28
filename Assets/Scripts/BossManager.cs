@@ -530,7 +530,15 @@ public class BossManager : MonoBehaviour
         if (MinionEncounterManager.Instance == null) return;
         
         var minion = MinionEncounterManager.Instance.currentMinion;
-        Debug.Log($"[BossManager] Minion defeated: {minion.minionName}");
+        BossType currentBossType = MinionEncounterManager.Instance.currentBossType;
+        Debug.Log($"[BossManager] Minion defeated: {minion.minionName} for boss {currentBossType}");
+        
+        // Mark minion as defeated in progression manager
+        if (BossProgressionManager.Instance != null)
+        {
+            BossProgressionManager.Instance.MarkMinionDefeated(currentBossType, minion.minionName);
+            Debug.Log($"[BossManager] Marked minion {minion.minionName} as defeated");
+        }
         
         // Mark boss as inactive
         isBossActive = false;
@@ -2813,6 +2821,23 @@ public class BossManager : MonoBehaviour
     public int GetTotalBossesDefeated() => totalBossesDefeated;
 
     public List<BossData> GetAvailableBosses() => allBosses;
+    
+    /// <summary>
+    /// Set the current boss (called from map system)
+    /// This prepares the boss but doesn't initialize the battle yet
+    /// </summary>
+    public void SetCurrentBoss(BossData bossData)
+    {
+        if (bossData == null)
+        {
+            Debug.LogError("[BossManager] Cannot set null boss data");
+            return;
+        }
+        
+        currentBoss = bossData;
+        currentBossType = bossData.bossType;
+        Debug.Log($"[BossManager] Current boss set to: {bossData.bossName}");
+    }
     
     // Debug methods
     [System.Diagnostics.Conditional("UNITY_EDITOR")]

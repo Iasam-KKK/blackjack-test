@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5f491b607b1cd948b5bc856850b2616, type: 3}
+  m_Name: Minion-5.3
+  m_EditorClassIdentifier: 
+  sprite: {fileID: 976508318212584436, guid: 3703abf3c3b6bc141a4939c9ba315d81, type: 3}
+  nodeName: Line Weaver
+  description: 
+  nodeType: 0
+  bossType: 5
+  minionData: {fileID: 11400000, guid: 7d2f9e4c1a6b8d3f5e7c9a2d4f6b8e1c, type: 2}
+  tarotCardChance: 0.5
