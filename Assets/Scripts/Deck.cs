@@ -1249,7 +1249,13 @@ private void EndHand(WinCode code)
 
             Debug.Log("Loss calculation: Lost Amount=$" + lossAmount + ", Earnings Impact=-$" + lossAmount);
             
-            // Notify boss system about player loss
+            // Notify GameProgressionManager about player loss (SINGLE SOURCE OF TRUTH)
+            if (GameProgressionManager.Instance != null)
+            {
+                GameProgressionManager.Instance.OnPlayerLoseRound();
+            }
+            
+            // Notify boss system about player loss (for mechanics only, state is in GameProgressionManager)
             if (bossManager != null)
             {
                 bossManager.OnPlayerLose();
@@ -1287,7 +1293,13 @@ private void EndHand(WinCode code)
                      ", Total Winnings=$" + totalWinnings + ", Net Earnings=$" + netEarnings +
                      ", Multiplier=" + multiplier.ToString("F2") + "x");
             
-            // Notify boss system about player win
+            // Notify GameProgressionManager about player win (SINGLE SOURCE OF TRUTH)
+            if (GameProgressionManager.Instance != null)
+            {
+                GameProgressionManager.Instance.OnPlayerWinRound();
+            }
+            
+            // Notify boss system about player win (for mechanics only, state is in GameProgressionManager)
             if (bossManager != null)
             {
                 bossManager.OnPlayerWin();

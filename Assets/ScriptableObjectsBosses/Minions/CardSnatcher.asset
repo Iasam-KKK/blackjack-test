@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 0}
   minionDescription: A brazen thief who snatches cards mid-game. Steals a random
     card from your hand into the enemy pool.
+  associatedBossType: 2
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.7
@@ -37,4 +38,3 @@ MonoBehaviour:
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
-

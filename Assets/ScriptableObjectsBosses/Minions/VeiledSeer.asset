@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 0}
   minionDescription: A shrouded oracle who warps reality itself. Replaces one drawn
     card with a different, random one from the void.
+  associatedBossType: 1
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.6
@@ -36,4 +37,3 @@ MonoBehaviour:
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
-

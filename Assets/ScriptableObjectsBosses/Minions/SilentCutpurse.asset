@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 0}
   minionDescription: A stealthy saboteur who damages your cards. Reduces the durability
     of a random card by 1 at the end of each hand.
+  associatedBossType: 2
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.6
@@ -37,4 +38,3 @@ MonoBehaviour:
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
-

@@ -16,8 +16,7 @@ public class BossManager : MonoBehaviour
     
     [Header("Boss Progression")]
     public int currentBossHealth;
-    public int currentHand = 0;
-    public int handsRemaining = 0; // Track remaining hands for current boss
+    // Hand tracking removed - using player health as primary game state
     public int totalBossesDefeated = 0;
     public BossType currentBossType = BossType.TheDrunkard;
     
@@ -86,27 +85,41 @@ public class BossManager : MonoBehaviour
             LoadAllBossData();
         }
         
-        // CHECK FOR MINION ENCOUNTER FIRST
-        Debug.Log($"[BossManager.Start] Checking for minion encounter...");
-        Debug.Log($"[BossManager.Start] MinionEncounterManager.Instance: {(MinionEncounterManager.Instance != null ? "EXISTS" : "NULL")}");
-        if (MinionEncounterManager.Instance != null)
+        // CHECK IF WE'RE ALREADY IN A BATTLE (returning from previous battle)
+        if (isBossActive)
         {
-            Debug.Log($"[BossManager.Start] MinionEncounterManager.Instance.isMinionActive: {MinionEncounterManager.Instance.isMinionActive}");
-            Debug.Log($"[BossManager.Start] MinionEncounterManager.Instance.currentMinion: {(MinionEncounterManager.Instance.currentMinion != null ? MinionEncounterManager.Instance.currentMinion.minionName : "NULL")}");
-        }
-        
-        if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
-        {
-            Debug.Log("[BossManager] Minion encounter detected, initializing minion battle");
-            InitializeMinion();
+            Debug.Log("[BossManager.Start] Already in active battle, skipping initialization");
             return;
         }
-        else
+        
+        // USE GAMEPROGRESSION MANAGER - SINGLE SOURCE OF TRUTH
+        Debug.Log($"[BossManager.Start] Checking GameProgressionManager for active encounter...");
+        
+        if (GameProgressionManager.Instance != null && GameProgressionManager.Instance.isEncounterActive)
         {
-            Debug.Log("[BossManager] No active minion encounter - proceeding with boss initialization");
+            Debug.Log($"[BossManager.Start] Active encounter found: IsMinion={GameProgressionManager.Instance.isMinion}");
+            
+            if (GameProgressionManager.Instance.isMinion)
+            {
+                Debug.Log("[BossManager] Minion encounter detected, initializing minion battle");
+                InitializeMinion();
+                return;
+            }
+            else
+            {
+                Debug.Log("[BossManager] Boss encounter detected, initializing boss battle");
+                var bossData = GameProgressionManager.Instance.currentBoss;
+                if (bossData != null)
+                {
+                    InitializeBoss(bossData.bossType);
+                    return;
+                }
+            }
         }
         
-        // NEW FLOW: Read selected boss from BossProgressionManager
+        Debug.LogWarning("[BossManager] No active encounter - player must enter battle from map");
+        
+        // OLD FLOW: Fallback for compatibility
         if (BossProgressionManager.Instance != null)
         {
             BossType? selectedBoss = BossProgressionManager.Instance.GetSelectedBoss();
@@ -139,25 +152,17 @@ public class BossManager : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("[BossManager] No boss selected in BossProgressionManager, falling back to first unlocked boss");
+                Debug.LogWarning("[BossManager] No boss selected - player must enter battle from map");
+                Debug.LogWarning("[BossManager] Skipping boss initialization - waiting for map selection");
                 
-                // Hide intro panel for fallback
+                // Hide intro panel
                 if (bossIntroPreviewPanel != null)
                 {
                     bossIntroPreviewPanel.gameObject.SetActive(false);
                 }
                 
-                // Fallback: load first unlocked boss
-                var unlockedBosses = BossProgressionManager.Instance.GetUnlockedBosses();
-                if (unlockedBosses.Count > 0)
-                {
-                    InitializeBoss(unlockedBosses[0].bossType);
-                }
-                else
-                {
-                    Debug.LogError("[BossManager] No unlocked bosses found! Falling back to TheDrunkard");
-                    InitializeBoss(BossType.TheDrunkard);
-                }
+                // DO NOT auto-initialize any boss - this prevents the auto-loading issue
+                // Player must click a node in the map to start a battle
             }
         }
         else
@@ -308,7 +313,7 @@ public class BossManager : MonoBehaviour
         // Set up boss state
         currentBossType = bossType;
         currentBossHealth = currentBoss.maxHealth;
-        currentHand = 0;
+        // Hand tracking removed
         isBossActive = true;
         
         // Load boss mechanics
@@ -357,8 +362,8 @@ public class BossManager : MonoBehaviour
         // Set up boss state
         currentBossType = bossType;
         currentBossHealth = currentBoss.maxHealth;
-        currentHand = 0;
-        handsRemaining = currentBoss.handsPerRound; // Initialize hands remaining
+        // Hand tracking removed
+        // Hand tracking removed - using player health as primary game state
         isBossActive = true;
         isGameOver = false;
         isBossDefeated = false;
@@ -448,13 +453,13 @@ public class BossManager : MonoBehaviour
         activeMechanics.Clear();
         mechanicStates.Clear();
         
-        if (MinionEncounterManager.Instance == null || MinionEncounterManager.Instance.currentMinion == null)
+        if (GameProgressionManager.Instance == null || GameProgressionManager.Instance.currentMinion == null)
         {
-            Debug.LogError("[BossManager] Cannot load minion mechanics - no active minion");
+            Debug.LogError("[BossManager] Cannot load minion mechanics - no active minion in GameProgressionManager");
             return;
         }
         
-        var minion = MinionEncounterManager.Instance.currentMinion;
+        var minion = GameProgressionManager.Instance.currentMinion;
         
         Debug.Log($"[BossManager] Loading mechanics for minion: {minion.minionName}, Total mechanics: {minion.mechanics.Count}");
         
@@ -484,18 +489,17 @@ public class BossManager : MonoBehaviour
     /// </summary>
     private void InitializeMinion()
     {
-        if (MinionEncounterManager.Instance == null || MinionEncounterManager.Instance.currentMinion == null)
+        if (GameProgressionManager.Instance == null || GameProgressionManager.Instance.currentMinion == null)
         {
-            Debug.LogError("[BossManager] Cannot initialize minion - MinionEncounterManager or minion is null");
+            Debug.LogError("[BossManager] Cannot initialize minion - GameProgressionManager or minion is null");
             return;
         }
         
-        var minion = MinionEncounterManager.Instance.currentMinion;
+        var minion = GameProgressionManager.Instance.currentMinion;
         Debug.Log($"[BossManager] Initializing minion encounter: {minion.minionName}");
         
-        // Set hands remaining based on minion
-        handsRemaining = minion.handsPerRound;
-        currentHand = 0;
+        // Sync local state from GameProgressionManager
+        // Hand tracking removed - using player health as primary game state
         isBossActive = true; // Mark as active for game logic
         
         // Load minion mechanics into activeMechanics list
@@ -519,7 +523,7 @@ public class BossManager : MonoBehaviour
             Debug.Log($"[BossManager] Tarot cards disabled for minion: {minion.minionName}");
         }
         
-        Debug.Log($"[BossManager] Minion encounter ready: {minion.minionName} - {minion.handsPerRound} hands");
+        Debug.Log($"[BossManager] Minion encounter ready: {minion.minionName}");
     }
     
     /// <summary>
@@ -598,17 +602,17 @@ public class BossManager : MonoBehaviour
         isBossActive = false;
         currentBoss = null;
         
-        // Return to boss map
-        Debug.Log("[BossManager] Returning to Boss Map after minion defeat");
+        // Return to map scene
+        Debug.Log("[BossManager] Returning to Map Scene after minion defeat");
         
         if (GameSceneManager.Instance != null)
         {
-            GameSceneManager.Instance.LoadBossMapScene();
+            GameSceneManager.Instance.LoadMapScene();
         }
         else
         {
-            // Fallback
-            UnityEngine.SceneManagement.SceneManager.LoadScene("BossMap");
+            // Fallback - return to MapScene (procedural map)
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MapScene");
         }
     }
     
@@ -641,17 +645,17 @@ public class BossManager : MonoBehaviour
         isBossActive = false;
         currentBoss = null;
         
-        // Return to boss map
-        Debug.Log("[BossManager] Returning to Boss Map after minion loss");
+        // Return to map scene
+        Debug.Log("[BossManager] Returning to Map Scene after minion loss");
         
         if (GameSceneManager.Instance != null)
         {
-            GameSceneManager.Instance.LoadBossMapScene();
+            GameSceneManager.Instance.LoadMapScene();
         }
         else
         {
-            // Fallback
-            UnityEngine.SceneManagement.SceneManager.LoadScene("BossMap");
+            // Fallback - return to MapScene (procedural map)
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MapScene");
         }
     }
     
@@ -715,10 +719,9 @@ public class BossManager : MonoBehaviour
             MinionEncounterManager.Instance.NextHand();
             
             // Update BossManager's hand tracking to sync with MinionEncounterManager
-            currentHand = MinionEncounterManager.Instance.currentHand;
-            handsRemaining = MinionEncounterManager.Instance.handsRemaining;
+            // Hand tracking removed - using player health as primary game state
             
-            Debug.Log($"[BossManager] Minion battle - Hand: {currentHand}, Remaining: {handsRemaining}");
+            Debug.Log($"[BossManager] Minion battle in progress");
             
             // Update UI
             if (newBossPanel != null)
@@ -737,10 +740,9 @@ public class BossManager : MonoBehaviour
         if (!isBossActive || isGameOver) return;
         
         currentBossHealth--;
-        currentHand++;
-        handsRemaining--;
+        // Hand tracking removed - using player health as primary game state
         
-        Debug.Log($"Boss takes damage! Health: {currentBossHealth}/{currentBoss.maxHealth}, Hands remaining: {handsRemaining}");
+        Debug.Log($"Boss takes damage! Health: {currentBossHealth}/{currentBoss.maxHealth}");
         
         // Update the health bar display
         if (newBossPanel != null)
@@ -764,11 +766,6 @@ public class BossManager : MonoBehaviour
         {
             DefeatBoss();
         }
-        else if (handsRemaining <= 0)
-        {
-            // Player ran out of hands - game over
-            TriggerGameOver(false);
-        }
     }
     
     /// <summary>
@@ -783,10 +780,9 @@ public class BossManager : MonoBehaviour
             MinionEncounterManager.Instance.NextHand();
             
             // Update BossManager's hand tracking to sync with MinionEncounterManager
-            currentHand = MinionEncounterManager.Instance.currentHand;
-            handsRemaining = MinionEncounterManager.Instance.handsRemaining;
+            // Hand tracking removed - using player health as primary game state
             
-            Debug.Log($"[BossManager] Minion battle - Hand: {currentHand}, Remaining: {handsRemaining}");
+            Debug.Log($"[BossManager] Minion battle in progress");
             
             // Update UI
             if (newBossPanel != null)
@@ -795,7 +791,7 @@ public class BossManager : MonoBehaviour
             }
             
             // Check if player ran out of hands
-            if (handsRemaining <= 0)
+            if (currentBossHealth <= 0)
             {
                 HandleMinionLoss();
             }
@@ -804,10 +800,9 @@ public class BossManager : MonoBehaviour
         
         if (!isBossActive || isGameOver) return;
         
-        currentHand++;
-        handsRemaining--;
+        // Hand tracking removed - using player health as primary game state
         
-        Debug.Log($"Player loses hand! Hands remaining: {handsRemaining}");
+        Debug.Log($"Player loses hand!");
         
         // Trigger mechanics that activate on round end
         TriggerMechanicsOnRoundEnd(false);
@@ -855,7 +850,7 @@ public class BossManager : MonoBehaviour
         }
         
         // Check if player ran out of hands
-        if (handsRemaining <= 0)
+        if (currentBossHealth <= 0)
         {
             TriggerGameOver(false);
         }
@@ -999,24 +994,24 @@ public class BossManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Return to BossMap scene after boss defeat
+    /// Return to Map scene after boss defeat
     /// </summary>
     private IEnumerator ReturnToBossMapAfterDelay()
     {
         // Wait for defeat animation and effects
         yield return new WaitForSeconds(3f);
         
-        Debug.Log("[BossManager] Returning to Boss Map after defeat");
+        Debug.Log("[BossManager] Returning to Map Scene after boss defeat");
         
-        // Load BossMap scene
+        // Load MapScene (procedural map)
         if (GameSceneManager.Instance != null)
         {
-            GameSceneManager.Instance.LoadBossMapScene();
+            GameSceneManager.Instance.LoadMapScene();
         }
         else
         {
-            // Fallback
-            UnityEngine.SceneManagement.SceneManager.LoadScene("BossMap");
+            // Fallback - return to MapScene (procedural map)
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MapScene");
         }
     }
     
@@ -1030,7 +1025,7 @@ public class BossManager : MonoBehaviour
         isGameOver = true;
         isBossActive = false;
         
-        Debug.Log($"Game Over triggered! Player won: {playerWon}, All bosses defeated: {playerWon && isBossDefeated}, Hands remaining: {handsRemaining}");
+        Debug.Log($"Game Over triggered! Player won: {playerWon}, All bosses defeated: {playerWon && isBossDefeated}");
         
         // Notify the deck about game over
         if (deck != null)
@@ -1064,7 +1059,7 @@ public class BossManager : MonoBehaviour
     /// </summary>
     public int GetRemainingHands()
     {
-        return handsRemaining;
+        return currentBossHealth;
     }
     
     /// <summary>
@@ -1075,8 +1070,8 @@ public class BossManager : MonoBehaviour
         isGameOver = false;
         isBossDefeated = false;
         isBossActive = false;
-        currentHand = 0;
-        handsRemaining = 0;
+        // Hand tracking removed
+        // Hand tracking removed - using player health as primary game state
         currentBossHealth = 0;
         totalBossesDefeated = 0;
         
@@ -2802,7 +2797,7 @@ public class BossManager : MonoBehaviour
         PlayerPrefs.SetInt("TotalBossesDefeated", totalBossesDefeated);
         PlayerPrefs.SetInt("CurrentBossType", (int)currentBossType);
         PlayerPrefs.SetInt("CurrentBossHealth", currentBossHealth);
-        PlayerPrefs.SetInt("CurrentHand", currentHand);
+        // Hand tracking removed - using player health as primary game state
         PlayerPrefs.Save();
     }
     
@@ -2811,7 +2806,7 @@ public class BossManager : MonoBehaviour
         totalBossesDefeated = PlayerPrefs.GetInt("TotalBossesDefeated", 0);
         currentBossType = (BossType)PlayerPrefs.GetInt("CurrentBossType", 0);
         currentBossHealth = PlayerPrefs.GetInt("CurrentBossHealth", 3);
-        currentHand = PlayerPrefs.GetInt("CurrentHand", 0);
+        // Hand tracking removed - using player health as primary game state
     }
     
     // Public methods for external access
@@ -2846,7 +2841,7 @@ public class BossManager : MonoBehaviour
         Debug.Log($"=== BOSS SYSTEM DEBUG ===");
         Debug.Log($"Current Boss: {currentBoss?.bossName ?? "None"}");
         Debug.Log($"Boss Health: {currentBossHealth}/{currentBoss?.maxHealth ?? 0}");
-        Debug.Log($"Current Hand: {currentHand}/{currentBoss?.handsPerRound ?? 0}");
+        Debug.Log($"Current Boss Health: {currentBossHealth}/{currentBoss?.maxHealth ?? 0}");
         Debug.Log($"Total Defeated: {totalBossesDefeated}");
         Debug.Log($"Active Mechanics: {activeMechanics.Count}");
         Debug.Log($"Is Boss Active: {isBossActive}");
@@ -3025,7 +3020,7 @@ public class BossManager : MonoBehaviour
         totalBossesDefeated = 0;
         currentBossType = BossType.TheDrunkard;
         currentBossHealth = 3;
-        currentHand = 0;
+        // Hand tracking removed
         isBossActive = false;
         currentBoss = null;
         

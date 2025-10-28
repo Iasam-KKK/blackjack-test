@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 0}
   minionDescription: A confused seer whose visions twist reality. Randomizes a played
     card's value after it has been used.
+  associatedBossType: 3
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.6
@@ -37,4 +38,3 @@ MonoBehaviour:
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
-

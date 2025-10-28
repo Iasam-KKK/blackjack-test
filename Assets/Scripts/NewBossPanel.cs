@@ -12,8 +12,14 @@ public class NewBossPanel : MonoBehaviour
     public TextMeshProUGUI bossDescriptionText;
     public Image bossHealthBar; // Changed from Slider to Image
     public TextMeshProUGUI healthText;
-    public TextMeshProUGUI handsRemainingText;
-    public TextMeshProUGUI currentHandText;
+    // Hand tracking removed - using player health as primary game state
+    
+    [Header("Player Health Display")]
+    public TextMeshProUGUI playerHealthText;
+    public Image playerHealthBar;
+    
+    [Header("Testing")]
+    public UnityEngine.UI.Button testPlayerWinButton;
     
     [Header("Boss Messages")]
     public TextMeshProUGUI bossMessageText; // For showing boss mechanic messages
@@ -31,6 +37,7 @@ public class NewBossPanel : MonoBehaviour
     public float shakeDuration = 0.5f;
     
     private BossManager bossManager;
+    private GameProgressionManager gameProgressionManager;
     private bool isVisible = false;
     private BossData cachedBoss;
     
@@ -38,6 +45,20 @@ public class NewBossPanel : MonoBehaviour
     {
         // Find BossManager
         bossManager = FindObjectOfType<BossManager>();
+        
+        // Find GameProgressionManager
+        gameProgressionManager = GameProgressionManager.Instance;
+        if (gameProgressionManager == null)
+        {
+            gameProgressionManager = FindObjectOfType<GameProgressionManager>();
+        }
+        
+        // Setup test player win button
+        if (testPlayerWinButton != null)
+        {
+            testPlayerWinButton.onClick.AddListener(TestPlayerWin);
+            Debug.Log("[NewBossPanel] Test Player Win button configured");
+        }
         
         // Set up initial state
         if (bossBackground != null)
@@ -70,11 +91,63 @@ public class NewBossPanel : MonoBehaviour
             UpdateBossDisplay();
         }
         
-        // Also update during battle to reflect health/hands changes
+        // Also update during battle to reflect health changes
         if (bossManager != null && bossManager.IsBossActive())
         {
             UpdateBossDisplay();
         }
+        
+        // Update player health display
+        UpdatePlayerHealth();
+    }
+    
+    /// <summary>
+    /// Update player health display
+    /// </summary>
+    private void UpdatePlayerHealth()
+    {
+        if (gameProgressionManager == null) return;
+        
+        float playerHealth = gameProgressionManager.GetPlayerHealth();
+        
+        // Update player health text
+        if (playerHealthText != null)
+        {
+            playerHealthText.text = $"{playerHealth:F0}%";
+        }
+        
+        // Update player health bar
+        if (playerHealthBar != null)
+        {
+            playerHealthBar.fillAmount = playerHealth / 100f;
+        }
+    }
+    
+    /// <summary>
+    /// Test function to force player win and reduce encounter health
+    /// </summary>
+    public void TestPlayerWin()
+    {
+        if (gameProgressionManager == null)
+        {
+            Debug.LogWarning("[NewBossPanel] GameProgressionManager not found for test player win");
+            return;
+        }
+        
+        if (!gameProgressionManager.isEncounterActive)
+        {
+            Debug.LogWarning("[NewBossPanel] No active encounter to test win against");
+            return;
+        }
+        
+        Debug.Log("[NewBossPanel] Test Player Win triggered - forcing encounter health reduction");
+        
+        // Force player win by reducing encounter health
+        gameProgressionManager.OnPlayerWinRound();
+        
+        // Update UI to reflect the change
+        UpdateBossDisplay();
+        UpdatePlayerHealth();
     }
     
     /// <summary>
@@ -230,16 +303,16 @@ public class NewBossPanel : MonoBehaviour
         }
         
         // Priority 2: If we're in BossMap, show the selected or next available boss
-        if (BossProgressionManager.Instance != null)
+        if (GameProgressionManager.Instance != null)
         {
-            BossType? selectedBoss = BossProgressionManager.Instance.GetSelectedBoss();
+            BossType? selectedBoss = GameProgressionManager.Instance.GetSelectedBoss();
             if (selectedBoss.HasValue)
             {
-                return BossProgressionManager.Instance.GetBossData(selectedBoss.Value);
+                return GameProgressionManager.Instance.GetBossData(selectedBoss.Value);
             }
             
             // Fallback: show first available (unlocked but not defeated) boss
-            var availableBosses = BossProgressionManager.Instance.GetAvailableBosses();
+            var availableBosses = GameProgressionManager.Instance.GetAvailableBosses();
             if (availableBosses.Count > 0)
             {
                 return availableBosses[0];
@@ -260,11 +333,14 @@ public class NewBossPanel : MonoBehaviour
     /// </summary>
     private void UpdateBossDisplay()
     {
-        // CHECK FOR MINION ENCOUNTER FIRST
-        if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
+        // Use GameProgressionManager as single source of truth
+        if (GameProgressionManager.Instance != null && GameProgressionManager.Instance.isEncounterActive)
         {
-            UpdateMinionDisplay();
-            return;
+            if (GameProgressionManager.Instance.isMinion)
+            {
+                UpdateMinionDisplay();
+                return;
+            }
         }
         
         BossData currentBoss = GetCurrentDisplayBoss();
@@ -296,19 +372,15 @@ public class NewBossPanel : MonoBehaviour
         
         int currentHealth;
         int maxHealth = currentBoss.maxHealth;
-        int currentHand;
-        int handsPerRound = currentBoss.handsPerRound;
         
         if (isInBattle)
         {
             currentHealth = bossManager.GetCurrentBossHealth();
-            currentHand = bossManager.currentHand;
         }
         else
         {
             // Not in battle - show default stats
             currentHealth = maxHealth;
-            currentHand = 0;
         }
         
         // Update health bar with smooth animation
@@ -325,25 +397,7 @@ public class NewBossPanel : MonoBehaviour
             healthText.text = $"{currentHealth}/{maxHealth}";
         }
         
-        // Update hands remaining
-        if (handsRemainingText != null)
-        {
-            if (isInBattle)
-            {
-                int remainingHands = bossManager.GetRemainingHands();
-                handsRemainingText.text = $"Hands Left: {remainingHands}/{handsPerRound}";
-            }
-            else
-            {
-                handsRemainingText.text = $"Hands: {handsPerRound}";
-            }
-        }
-        
-        // Update current hand
-        if (currentHandText != null)
-        {
-            currentHandText.text = $"Hand {currentHand + 1}";
-        }
+        // Hand tracking removed - using player health as primary game state
     }
     
     /// <summary>
@@ -351,13 +405,13 @@ public class NewBossPanel : MonoBehaviour
     /// </summary>
     private void UpdateMinionDisplay()
     {
-        if (MinionEncounterManager.Instance == null || !MinionEncounterManager.Instance.isMinionActive)
+        if (GameProgressionManager.Instance == null || !GameProgressionManager.Instance.isEncounterActive || !GameProgressionManager.Instance.isMinion)
         {
-            Debug.LogWarning("[NewBossPanel] No active minion to display");
+            Debug.LogWarning("[NewBossPanel] No active minion encounter");
             return;
         }
         
-        var minion = MinionEncounterManager.Instance.currentMinion;
+        var minion = GameProgressionManager.Instance.currentMinion;
         if (minion == null)
         {
             Debug.LogWarning("[NewBossPanel] Minion data is null");
@@ -367,15 +421,32 @@ public class NewBossPanel : MonoBehaviour
         Debug.Log($"[NewBossPanel] Updating display for minion: {minion.minionName}");
         
         // Update portrait with minion portrait
-        if (bossPortrait != null && minion.minionPortrait != null)
+        if (bossPortrait != null)
         {
-            bossPortrait.sprite = minion.minionPortrait;
+            if (minion.minionPortrait != null)
+            {
+                bossPortrait.sprite = minion.minionPortrait;
+                bossPortrait.enabled = true;
+                Debug.Log($"[NewBossPanel] Set minion portrait: {minion.minionPortrait.name}");
+            }
+            else
+            {
+                Debug.LogError($"[NewBossPanel] CRITICAL: Minion '{minion.minionName}' has NO portrait assigned in ScriptableObject!");
+                Debug.LogError($"[NewBossPanel] Please assign a sprite to the 'minionPortrait' field in the MinionData asset");
+                // Keep current sprite as fallback, but make it obvious
+                bossPortrait.color = Color.red;
+            }
+        }
+        else
+        {
+            Debug.LogError("[NewBossPanel] CRITICAL: bossPortrait UI Image component is not assigned in Inspector!");
         }
         
         // Update name and description
         if (bossNameText != null)
         {
             bossNameText.text = minion.minionName;
+            Debug.Log($"[NewBossPanel] Set minion name: {minion.minionName}");
         }
         
         if (bossDescriptionText != null)
@@ -383,37 +454,32 @@ public class NewBossPanel : MonoBehaviour
             bossDescriptionText.text = minion.minionDescription;
         }
         
-        // Get current stats from MinionEncounterManager
-        int currentHealth = MinionEncounterManager.Instance.currentMinionHealth;
+        // Get current stats from GameProgressionManager (SINGLE SOURCE OF TRUTH)
+        int currentHealth = GameProgressionManager.Instance.currentEncounterHealth;
         int maxHealth = minion.maxHealth;
-        int currentHand = bossManager != null ? bossManager.currentHand : 0;
-        int handsPerRound = minion.handsPerRound;
+        
+        Debug.Log($"[NewBossPanel] Minion stats - Health: {currentHealth}/{maxHealth}");
         
         // Update health bar
         if (bossHealthBar != null)
         {
             float targetValue = (float)currentHealth / maxHealth;
+            Debug.Log($"[NewBossPanel] Setting health bar fill amount to: {targetValue} ({currentHealth}/{maxHealth})");
             bossHealthBar.DOFillAmount(targetValue, healthBarAnimationDuration).SetEase(Ease.OutQuad);
+        }
+        else
+        {
+            Debug.LogWarning("[NewBossPanel] bossHealthBar is null!");
         }
         
         // Update health text
         if (healthText != null)
         {
             healthText.text = $"{currentHealth}/{maxHealth}";
+            Debug.Log($"[NewBossPanel] Set health text: {currentHealth}/{maxHealth}");
         }
         
-        // Update hands remaining
-        if (handsRemainingText != null)
-        {
-            int remainingHands = bossManager != null ? bossManager.GetRemainingHands() : handsPerRound;
-            handsRemainingText.text = $"Hands Left: {remainingHands}/{handsPerRound}";
-        }
-        
-        // Update current hand
-        if (currentHandText != null)
-        {
-            currentHandText.text = $"Hand {currentHand + 1}";
-        }
+        // Hand tracking removed - using player health as primary game state
     }
     
     /// <summary>
@@ -554,15 +620,7 @@ public class NewBossPanel : MonoBehaviour
             healthText.text = $"{nextBoss.maxHealth}/{nextBoss.maxHealth}";
         }
         
-        if (handsRemainingText != null)
-        {
-            handsRemainingText.text = $"Level Hands: {nextBoss.handsPerRound}/{nextBoss.handsPerRound}";
-        }
-        
-        if (currentHandText != null)
-        {
-            currentHandText.text = "Hand 1";
-        }
+        // Hand tracking removed - using player health as primary game state
         
         // Animate with special effects for next boss introduction
         AnimateNextBossIntroduction();

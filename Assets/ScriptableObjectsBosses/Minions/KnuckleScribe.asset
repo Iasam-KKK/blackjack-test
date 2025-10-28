@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 0}
   minionDescription: A bone carver who etches curses into flesh. Imprints a curse
     that reduces your next card's durability by 1 to 3.
+  associatedBossType: 5
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.6
@@ -38,4 +39,3 @@ MonoBehaviour:
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
-

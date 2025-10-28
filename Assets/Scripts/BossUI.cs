@@ -12,8 +12,7 @@ public class BossUI : MonoBehaviour
     public TextMeshProUGUI bossDescriptionText;
     public Slider bossHealthBar;
     public TextMeshProUGUI healthText;
-    public TextMeshProUGUI handsRemainingText;
-    public TextMeshProUGUI currentHandText;
+    // Hand tracking removed - using player health as primary game state
     
     [Header("Boss Effects")]
     public Image bossBackground;
@@ -226,8 +225,7 @@ public class BossUI : MonoBehaviour
         
         int currentHealth = bossManager.GetCurrentBossHealth();
         int maxHealth = currentBoss.maxHealth;
-        int currentHand = bossManager.currentHand;
-        int handsPerRound = currentBoss.handsPerRound;
+        // Hand tracking removed - using player health as primary game state
         
         // Update health bar with smooth animation
         if (bossHealthBar != null)
@@ -242,18 +240,7 @@ public class BossUI : MonoBehaviour
             healthText.text = $"{currentHealth}/{maxHealth}";
         }
         
-        // Update hands remaining
-        if (handsRemainingText != null)
-        {
-            int handsRemaining = handsPerRound - currentHand;
-            handsRemainingText.text = $"Hands: {handsRemaining}/{handsPerRound}";
-        }
-        
-        // Update current hand
-        if (currentHandText != null)
-        {
-            currentHandText.text = $"Hand {currentHand + 1}";
-        }
+        // Hand tracking removed - using player health as primary game state
         
         // Update boss name and description if they exist
         if (bossNameText != null && currentBoss.bossName != null)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Map
@@ -23,13 +24,22 @@ namespace Map
             config.extraPaths = 1;
             config.layers = new List<MapLayer>();
 
+            // Group minions by their associated boss
+            var minionsByBoss = GroupMinionsByBoss(allNodeBlueprints);
+            var bossBlueprints = allNodeBlueprints.Where(b => b.nodeType == NodeType.Boss).ToList();
+
             // For each boss, create: 3 minion layers + 1 reward layer + 1 boss layer = 5 layers per boss
-            for (int bossIndex = 0; bossIndex < numBosses; bossIndex++)
+            for (int bossIndex = 0; bossIndex < numBosses && bossIndex < bossBlueprints.Count; bossIndex++)
             {
-                // Add 3 minion layers
+                var bossBlueprint = bossBlueprints[bossIndex];
+                var bossType = bossBlueprint.bossType;
+                
+                Debug.Log($"[MapConfigGenerator] Creating map section for boss: {bossType}");
+
+                // Add 3 minion layers with minions associated to this boss
                 for (int minionLayer = 0; minionLayer < 3; minionLayer++)
                 {
-                    config.layers.Add(CreateMinionLayer(minionLayer, bossIndex == 0 && minionLayer == 0));
+                    config.layers.Add(CreateMinionLayerForBoss(minionLayer, bossType, minionsByBoss, bossIndex == 0 && minionLayer == 0));
                 }
 
                 // Add 1 reward layer (Shop, Regen, Treasure randomly placed)
@@ -40,6 +50,66 @@ namespace Map
             }
 
             return config;
+        }
+        
+        /// <summary>
+        /// Group minion blueprints by their associated boss type
+        /// </summary>
+        private static Dictionary<BossType, List<NodeBlueprint>> GroupMinionsByBoss(List<NodeBlueprint> allNodeBlueprints)
+        {
+            var minionsByBoss = new Dictionary<BossType, List<NodeBlueprint>>();
+            
+            var minionBlueprints = allNodeBlueprints.Where(b => b.nodeType == NodeType.Minion).ToList();
+            
+            foreach (var minionBlueprint in minionBlueprints)
+            {
+                if (minionBlueprint.minionData != null)
+                {
+                    var bossType = minionBlueprint.bossType; // This should match the minion's associatedBossType
+                    
+                    if (!minionsByBoss.ContainsKey(bossType))
+                    {
+                        minionsByBoss[bossType] = new List<NodeBlueprint>();
+                    }
+                    
+                    minionsByBoss[bossType].Add(minionBlueprint);
+                    Debug.Log($"[MapConfigGenerator] Grouped minion '{minionBlueprint.nodeName}' under boss '{bossType}'");
+                }
+            }
+            
+            return minionsByBoss;
+        }
+
+        /// <summary>
+        /// Create a minion layer for a specific boss
+        /// </summary>
+        private static MapLayer CreateMinionLayerForBoss(int layerIndex, BossType bossType, Dictionary<BossType, List<NodeBlueprint>> minionsByBoss, bool isFirstLayer)
+        {
+            MapLayer layer = new MapLayer
+            {
+                nodeType = NodeType.Minion,
+                distanceFromPreviousLayer = new FloatMinMax
+                {
+                    min = isFirstLayer ? 0f : 3f,
+                    max = isFirstLayer ? 0f : 4f
+                },
+                nodesApartDistance = 2f,
+                randomizePosition = 0.1f,
+                randomizeNodes = 0f // No randomization - always minions
+            };
+
+            // Filter node blueprints to only include minions for this boss
+            if (minionsByBoss.ContainsKey(bossType))
+            {
+                var bossMinions = minionsByBoss[bossType];
+                Debug.Log($"[MapConfigGenerator] Found {bossMinions.Count} minions for boss {bossType}");
+            }
+            else
+            {
+                Debug.LogWarning($"[MapConfigGenerator] No minions found for boss {bossType}");
+            }
+
+            return layer;
         }
 
         /// <summary>

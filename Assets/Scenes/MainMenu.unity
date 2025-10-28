@@ -361,8 +361,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1920, y: 1080}
+  m_AnchoredPosition: {x: -0.0095558, y: 0}
+  m_SizeDelta: {x: 2073.7, y: 1080}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &603081843
 MonoBehaviour:
@@ -698,6 +698,57 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e78c31e3ebbdac7428c1a626479f6586, type: 3}
+--- !u!1 &1257142971
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1257142973}
+  - component: {fileID: 1257142972}
+  m_Layer: 0
+  m_Name: MinionEncounterManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1257142972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1257142971}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0d29cab050c8924cab0ca4bfe1060c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  currentMinion: {fileID: 0}
+  currentBossType: 0
+  currentMinionHealth: 0
+  isMinionActive: 0
+  isMinionDefeated: 0
+  currentHand: 0
+  handsRemaining: 0
+--- !u!4 &1257142973
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1257142971}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 506.41187, y: 474.06128, z: 52.72328}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1359380691
 GameObject:
   m_ObjectHideFlags: 0
@@ -1208,7 +1259,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainMenuSceneName: MainMenu
   gameSceneName: Blackjack
-  bossMapSceneName: Map
+  bossMapSceneName: MapScene
+  mapSceneName: MapScene
 --- !u!4 &1722449088
 Transform:
   m_ObjectHideFlags: 0
@@ -1362,7 +1414,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1849513128
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1414,6 +1466,140 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1867803762
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1867803764}
+  - component: {fileID: 1867803763}
+  m_Layer: 0
+  m_Name: PlayerHealthManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1867803763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1867803762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac51a07e69936054ab699d5c826cc36a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  currentHealthPercentage: 100
+  maxHealthPercentage: 100
+  damagePerLoss: 10
+  healthBarImage: {fileID: 0}
+  healthText: {fileID: 0}
+--- !u!4 &1867803764
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1867803762}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 62.44665, y: 290.3632, z: -0.9512757}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2010815501
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2010815503}
+  - component: {fileID: 2010815502}
+  m_Layer: 0
+  m_Name: GameProgressionManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2010815502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2010815501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27328d5a047dba244bda2e4d85da33a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  allBosses:
+  - {fileID: 11400000, guid: 15fe2c3a399185c4f86ed822c4d056a2, type: 2}
+  - {fileID: 11400000, guid: 967ab479678fbeb4bbc4ed3297e38b95, type: 2}
+  - {fileID: 11400000, guid: f021d01f1ab394c4eb6e27185f9df345, type: 2}
+  - {fileID: 11400000, guid: 387919796449b8145bd6d18a535b5432, type: 2}
+  - {fileID: 11400000, guid: 5d1f3138e0eb5f2498e62aac72535133, type: 2}
+  - {fileID: 11400000, guid: e39bf47dc8832a145af92138e6414a48, type: 2}
+  - {fileID: 11400000, guid: 527e319ad82f7ab4da6cf485a76e09bb, type: 2}
+  - {fileID: 11400000, guid: bf873f44d0e06e24ebec95a52aaac9d6, type: 2}
+  - {fileID: 11400000, guid: 8413223a0f3d5434592ea428398e6790, type: 2}
+  - {fileID: 11400000, guid: 1c80eb7f3f7d0f447bfbc785c11fc2cf, type: 2}
+  - {fileID: 11400000, guid: 8e54edbf9caff5d43a199bb8f9b2afbc, type: 2}
+  - {fileID: 11400000, guid: 14f45e4210f02254391fffec58bbba73, type: 2}
+  - {fileID: 11400000, guid: de3ff98588874764ebe85674158543a3, type: 2}
+  - {fileID: 11400000, guid: 27344157a17b1eb4794ce9ab277077a2, type: 2}
+  allMinions:
+  - {fileID: 11400000, guid: 12c0cd9c992e79740965638dcc022768, type: 2}
+  - {fileID: 11400000, guid: dd7f6d9d81c0bc14b8021e5f645bd64d, type: 2}
+  - {fileID: 11400000, guid: 4c8e1a6f9d2b5c7e4a1f8d3c6b9e2a5d, type: 2}
+  - {fileID: 11400000, guid: 2a7f9e3c1d4b6f8e2a7c9e3d1f4b6a8c, type: 2}
+  - {fileID: 11400000, guid: 3b9e5c7a2d4f6b8e1c3a5d7f9b2e4c6a, type: 2}
+  - {fileID: 11400000, guid: 7e9d1c2f4b6a8e0c2f4b6a8e0c2f4b6a, type: 2}
+  - {fileID: 11400000, guid: 8e4a6c2f9b1d5c7e3a4f8d6c9e2a5b7d, type: 2}
+  - {fileID: 11400000, guid: 7d2f9e4c1a6b8d3f5e7c9a2d4f6b8e1c, type: 2}
+  - {fileID: 11400000, guid: 9a4e7c2f5b8d1f3e6c9a2d4f7b1e5c8a, type: 2}
+  - {fileID: 11400000, guid: 3f8a2b9e1c4d5f7a9e2b4c6d8f1a3e5b, type: 2}
+  - {fileID: 11400000, guid: 8d4b6c9f2e5a7d1f3b8c4a6e9d2b5c8f, type: 2}
+  - {fileID: 11400000, guid: 6f1e8d3c5b7a9e2d4f6c8a1e3d5b7c9a, type: 2}
+  - {fileID: 11400000, guid: 4a7961a0929eea94dbe385e849271f70, type: 2}
+  - {fileID: 11400000, guid: 5c7f9e1d3a5b7c9e1d3a5b7c9e1d3a5b, type: 2}
+  - {fileID: 11400000, guid: 1f5d8c3e6a9b2d4f7c1e8a3d5f7b9c2e, type: 2}
+  playerHealthPercentage: 100
+  maxHealthPercentage: 100
+  damagePerLoss: 10
+  currentMinion: {fileID: 0}
+  currentBoss: {fileID: 0}
+  currentBossType: 0
+  currentEncounterHealth: 0
+  isEncounterActive: 0
+  isMinion: 0
+  enablePersistence: 1
+--- !u!4 &2010815503
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2010815501}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 506.41187, y: 474.06128, z: 52.72328}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1424,3 +1610,6 @@ SceneRoots:
   - {fileID: 1359380692}
   - {fileID: 1722449088}
   - {fileID: 1849513129}
+  - {fileID: 1867803764}
+  - {fileID: 1257142973}
+  - {fileID: 2010815503}

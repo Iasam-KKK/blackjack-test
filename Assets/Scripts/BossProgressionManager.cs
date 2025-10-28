@@ -428,6 +428,16 @@ public class BossProgressionManager : MonoBehaviour
     }
     
     /// <summary>
+    /// Clear the currently selected boss (use when entering minion battles)
+    /// </summary>
+    public void ClearSelectedBoss()
+    {
+        progressionData.selectedBossType = "";
+        SaveProgression();
+        Debug.Log("[BossProgressionManager] Selected boss cleared");
+    }
+    
+    /// <summary>
     /// Get the currently selected boss
     /// </summary>
     public BossType? GetSelectedBoss()

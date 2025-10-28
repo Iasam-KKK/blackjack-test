@@ -78,8 +78,10 @@ public class MinionEncounterManager : MonoBehaviour
         isMinionDefeated = false;
         
         Debug.Log($"[MinionEncounterManager] Minion initialized: {minion.minionName}");
-        Debug.Log($"  Health: {currentMinionHealth}");
-        Debug.Log($"  Hands: {handsRemaining}");
+        Debug.Log($"[MinionEncounterManager]   Health: {currentMinionHealth}/{minion.maxHealth}");
+        Debug.Log($"[MinionEncounterManager]   Hands: {handsRemaining}");
+        Debug.Log($"[MinionEncounterManager]   Boss Type: {bossType}");
+        Debug.Log($"[MinionEncounterManager]   isMinionActive: {isMinionActive}");
         
         OnMinionHealthChanged?.Invoke(currentMinionHealth);
     }

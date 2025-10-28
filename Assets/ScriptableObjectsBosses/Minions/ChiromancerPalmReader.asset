@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 0}
   minionDescription: A hand diviner who twists fate through touch. Has a low chance
     to flip an Ace's value from 11 to 1 at the worst moment.
+  associatedBossType: 5
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.6
@@ -37,4 +38,3 @@ MonoBehaviour:
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
-

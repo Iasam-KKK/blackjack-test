@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 0}
   minionDescription: A fortune teller who bends fate to her will. Predicts and slightly
     alters the dealer's hidden card to her benefit.
+  associatedBossType: 1
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.7
@@ -37,4 +38,3 @@ MonoBehaviour:
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
-

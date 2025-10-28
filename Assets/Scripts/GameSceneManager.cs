@@ -9,6 +9,7 @@ public class GameSceneManager : MonoBehaviour
     public string mainMenuSceneName = "MainMenu";
     public string gameSceneName = "Blackjack";
     public string bossMapSceneName = "BossMap";
+    public string mapSceneName = "MapScene";
 
     private void Awake()
     {
@@ -46,6 +47,14 @@ public class GameSceneManager : MonoBehaviour
     public void LoadBossMapScene()
     {
         SceneManager.LoadScene(bossMapSceneName);
+    }
+
+    /// <summary>
+    /// Load the map scene (procedural node-based map)
+    /// </summary>
+    public void LoadMapScene()
+    {
+        SceneManager.LoadScene(mapSceneName);
     }
 
     /// <summary>

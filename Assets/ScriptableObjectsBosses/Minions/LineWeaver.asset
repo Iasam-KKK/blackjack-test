@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 0}
   minionDescription: A fate binder who intertwines destinies. Binds two cards together
     so they must be played as a pair.
+  associatedBossType: 5
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.7
@@ -37,4 +38,3 @@ MonoBehaviour:
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
-

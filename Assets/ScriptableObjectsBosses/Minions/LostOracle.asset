@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   minionName: Lost Oracle
   minionPortrait: {fileID: 0}
-  minionDescription: A prophet who forgot their gift. Randomly removes one card
-    from your hand each other turn.
+  minionDescription: A prophet who forgot their gift. Randomly removes one card from
+    your hand each other turn.
+  associatedBossType: 3
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.7
@@ -37,4 +38,3 @@ MonoBehaviour:
   minionDefeatSound: {fileID: 0}
   disablesTarotCards: 1
   usesSpecialDeck: 0
-

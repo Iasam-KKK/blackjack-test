@@ -75,7 +75,7 @@ namespace Map
                     : layer.nodeType;
                 
                 // Get all blueprints of this type
-                var matchingBlueprints = config.nodeBlueprints.Where(b => b.nodeType == nodeType).ToList();
+                var matchingBlueprints = GetFilteredBlueprints(nodeType, layerIndex);
                 
                 if (matchingBlueprints.Count == 0)
                 {
@@ -94,6 +94,60 @@ namespace Map
             }
 
             nodes.Add(nodesOnThisLayer);
+        }
+        
+        /// <summary>
+        /// Get filtered blueprints based on layer context and boss associations
+        /// </summary>
+        private static List<NodeBlueprint> GetFilteredBlueprints(NodeType nodeType, int layerIndex)
+        {
+            var allMatchingBlueprints = config.nodeBlueprints.Where(b => b.nodeType == nodeType).ToList();
+            
+            // For minions, try to filter by boss association if we can determine the boss for this layer
+            if (nodeType == NodeType.Minion)
+            {
+                var bossForLayer = GetBossForLayer(layerIndex);
+                if (bossForLayer != null)
+                {
+                    var bossMinions = allMatchingBlueprints.Where(b => 
+                        b.minionData != null && 
+                        b.minionData.associatedBossType == bossForLayer.Value).ToList();
+                    
+                    if (bossMinions.Count > 0)
+                    {
+                        Debug.Log($"[MapGenerator] Filtered to {bossMinions.Count} minions for boss {bossForLayer.Value} on layer {layerIndex}");
+                        return bossMinions;
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[MapGenerator] No minions found for boss {bossForLayer.Value} on layer {layerIndex}, using all minions");
+                    }
+                }
+            }
+            
+            return allMatchingBlueprints;
+        }
+        
+        /// <summary>
+        /// Determine which boss this layer should be associated with
+        /// </summary>
+        private static BossType? GetBossForLayer(int layerIndex)
+        {
+            // Find the boss layer that comes after this minion layer
+            for (int i = layerIndex + 1; i < config.layers.Count; i++)
+            {
+                if (config.layers[i].nodeType == NodeType.Boss)
+                {
+                    // Find the boss blueprint for this layer
+                    var bossBlueprint = config.nodeBlueprints.FirstOrDefault(b => b.nodeType == NodeType.Boss);
+                    if (bossBlueprint != null)
+                    {
+                        return bossBlueprint.bossType;
+                    }
+                }
+            }
+            
+            return null;
         }
 
         private static void RandomizeNodePositions()

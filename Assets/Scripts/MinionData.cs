@@ -14,6 +14,10 @@ public class MinionData : ScriptableObject
     [TextArea(2, 4)]
     public string minionDescription;
     
+    [Header("Boss Association")]
+    [Tooltip("The boss this minion belongs to - used for progression tracking")]
+    public BossType associatedBossType;
+    
     [Header("Minion Stats")]
     public int maxHealth = 1; // Number of wins needed to defeat this minion (usually 1-2)
     public int handsPerRound = 5; // Hands available for this minion battle (less than boss)

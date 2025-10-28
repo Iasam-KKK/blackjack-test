@@ -85,63 +85,167 @@ namespace Map
             }
         }
 
-        private static void HandleMinionNode(MapNode mapNode)
+    private static void HandleMinionNode(MapNode mapNode)
+    {
+        // Ensure GameProgressionManager exists
+        if (GameProgressionManager.Instance == null)
         {
-            // Get the minion data from blueprint
-            MinionData minionData = mapNode.Blueprint.minionData;
+            Debug.LogError("[MapPlayerTracker] GameProgressionManager.Instance is null! Creating one...");
             
-            if (minionData == null)
+            // Try to find existing GameProgressionManager
+            var existingManager = FindObjectOfType<GameProgressionManager>();
+            if (existingManager != null)
             {
-                Debug.LogError("Minion node has no MinionData assigned!");
+                Debug.Log("[MapPlayerTracker] Found existing GameProgressionManager, setting instance");
+                GameProgressionManager.SetInstance(existingManager);
+            }
+            else
+            {
+                Debug.LogError("[MapPlayerTracker] No GameProgressionManager found in scene! Please add one to the scene.");
                 return;
             }
-
-            Debug.Log($"Starting minion battle: {minionData.minionName}");
-            
-            // Store the current map state so we can return to it
-            PlayerPrefs.SetString("ReturnToMap", "true");
-            PlayerPrefs.SetString("CurrentNodeType", "Minion");
-            PlayerPrefs.Save();
-            
-            // Set up the minion encounter
-            if (MinionEncounterManager.Instance != null)
-            {
-                MinionEncounterManager.Instance.SetCurrentMinion(minionData);
-            }
-            
-            // Load the blackjack scene
-            UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
+        }
+        
+        // Get minion data from centralized manager
+        MinionData minionData = GameProgressionManager.Instance.GetMinionDataFromMapNode(mapNode);
+        
+        if (minionData == null)
+        {
+            Debug.LogError("[MapPlayerTracker] Could not get minion data from GameProgressionManager!");
+            return;
         }
 
-        private static void HandleBossNode(MapNode mapNode)
+        Debug.Log($"[MapPlayerTracker] Starting minion battle: {minionData.minionName}");
+        
+        // Get the boss type from the blueprint
+        BossType bossType = mapNode.Blueprint.bossType;
+        Debug.Log($"[MapPlayerTracker] Boss type from blueprint: {bossType}");
+        
+        // Check if minion is already defeated
+        bool isDefeated = GameProgressionManager.Instance.IsMinionDefeated(minionData.minionName, bossType);
+        Debug.Log($"[MapPlayerTracker] Is {minionData.minionName} defeated for {bossType}? {isDefeated}");
+        
+        if (isDefeated)
         {
-            BossType bossType = mapNode.Blueprint.bossType;
-            
-            Debug.Log($"Starting boss battle: {bossType}");
-            
-            // Store the current map state
-            PlayerPrefs.SetString("ReturnToMap", "true");
-            PlayerPrefs.SetString("CurrentNodeType", "Boss");
+            Debug.LogWarning($"[MapPlayerTracker] Minion {minionData.minionName} already defeated for boss {bossType}");
+            Instance.Locked = false;
+            return;
+        }
+        
+        // Store the current map state so we can return to it
+        Debug.Log("[MapPlayerTracker] Storing map return state");
+        PlayerPrefs.SetString("ReturnToMap", "true");
+        PlayerPrefs.SetString("CurrentNodeType", "Minion");
+        PlayerPrefs.Save();
+        
+        // Start minion encounter via GameProgressionManager
+        Debug.Log("[MapPlayerTracker] Clearing selected boss");
+        GameProgressionManager.Instance.ClearSelectedBoss();
+        
+        Debug.Log($"[MapPlayerTracker] Starting minion encounter for {minionData.minionName}");
+        GameProgressionManager.Instance.StartMinionEncounter(minionData, bossType);
+        Debug.Log($"[MapPlayerTracker] Minion encounter started via GameProgressionManager");
+        
+        // Load the blackjack scene
+        Debug.Log("[MapPlayerTracker] Loading Blackjack scene...");
+        try
+        {
+            // Force save PlayerPrefs before scene load
             PlayerPrefs.Save();
             
+            // Try using GameSceneManager first if available
+            if (GameSceneManager.Instance != null)
+            {
+                Debug.Log("[MapPlayerTracker] Using GameSceneManager to load scene");
+                GameSceneManager.Instance.LoadGameScene();
+            }
+            else
+            {
+                Debug.Log("[MapPlayerTracker] Using direct SceneManager.LoadScene");
+                UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
+            }
+            Debug.Log("[MapPlayerTracker] LoadScene called for Blackjack");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[MapPlayerTracker] Failed to load Blackjack scene: {e.Message}");
+            Debug.LogError($"[MapPlayerTracker] Stack trace: {e.StackTrace}");
+            
+            // Try fallback loading
+            Debug.Log("[MapPlayerTracker] Attempting fallback scene load...");
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
+        }
+    }
+
+    private static void HandleBossNode(MapNode mapNode)
+    {
+        BossType bossType = mapNode.Blueprint.bossType;
+        
+        Debug.Log($"Starting boss battle: {bossType}");
+        
+        // Store the current map state
+        PlayerPrefs.SetString("ReturnToMap", "true");
+        PlayerPrefs.SetString("CurrentNodeType", "Boss");
+        PlayerPrefs.Save();
+        
+        // Use GameProgressionManager (SINGLE SOURCE OF TRUTH)
+        if (GameProgressionManager.Instance != null)
+        {
             // Check if boss is unlocked
-            if (!BossProgressionManager.Instance.IsBossUnlocked(bossType))
+            if (!GameProgressionManager.Instance.IsBossUnlocked(bossType))
             {
                 Debug.LogWarning($"Boss {bossType} is not unlocked yet!");
                 Instance.Locked = false;
                 return;
             }
             
-            // Set up the boss encounter
-            BossData bossData = BossProgressionManager.Instance.GetBossData(bossType);
-            if (bossData != null && BossManager.Instance != null)
+            // Get boss data and start encounter
+            BossData bossData = GameProgressionManager.Instance.GetBossData(bossType);
+            if (bossData != null)
             {
-                BossManager.Instance.SetCurrentBoss(bossData);
+                GameProgressionManager.Instance.SelectBoss(bossType);
+                GameProgressionManager.Instance.StartBossEncounter(bossData);
+                Debug.Log($"[MapPlayerTracker] Boss encounter started via GameProgressionManager: {bossType}");
             }
+            else
+            {
+                Debug.LogError($"[MapPlayerTracker] Boss data not found for {bossType}");
+                Instance.Locked = false;
+                return;
+            }
+        }
+        else
+        {
+            Debug.LogError("[MapPlayerTracker] GameProgressionManager.Instance is null!");
+            Instance.Locked = false;
+            return;
+        }
+        
+        // Load the blackjack scene
+        try
+        {
+            // Force save PlayerPrefs before scene load
+            PlayerPrefs.Save();
             
-            // Load the blackjack scene
+            // Try using GameSceneManager first if available
+            if (GameSceneManager.Instance != null)
+            {
+                Debug.Log("[MapPlayerTracker] Using GameSceneManager to load scene for boss");
+                GameSceneManager.Instance.LoadGameScene();
+            }
+            else
+            {
+                Debug.Log("[MapPlayerTracker] Using direct SceneManager.LoadScene for boss");
+                UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[MapPlayerTracker] Failed to load Blackjack scene for boss: {e.Message}");
+            // Try fallback loading
             UnityEngine.SceneManagement.SceneManager.LoadScene("Blackjack");
         }
+    }
 
         private static void HandleRegenNode(MapNode mapNode)
         {

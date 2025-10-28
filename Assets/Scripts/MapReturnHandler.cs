@@ -37,8 +37,8 @@ namespace Map
                 PlayerPrefs.SetString("ReturnToMap", "false");
                 PlayerPrefs.Save();
                 
-                // Load the map scene
-                SceneManager.LoadScene("BossMap");
+                // Load the map scene (procedural node-based map)
+                SceneManager.LoadScene("MapScene");
             }
             else
             {
