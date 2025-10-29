@@ -121,13 +121,13 @@ namespace Map
         BossType bossType = mapNode.Blueprint.bossType;
         Debug.Log($"[MapPlayerTracker] Boss type from blueprint: {bossType}");
         
-        // Check if minion is already defeated
-        bool isDefeated = GameProgressionManager.Instance.IsMinionDefeated(minionData.minionName, bossType);
-        Debug.Log($"[MapPlayerTracker] Is {minionData.minionName} defeated for {bossType}? {isDefeated}");
+        // Check if this specific node instance is already defeated
+        bool isDefeated = GameProgressionManager.Instance.IsNodeInstanceDefeated(mapNode.Node.nodeInstanceId);
+        Debug.Log($"[MapPlayerTracker] Is node instance {mapNode.Node.nodeInstanceId} defeated? {isDefeated}");
         
         if (isDefeated)
         {
-            Debug.LogWarning($"[MapPlayerTracker] Minion {minionData.minionName} already defeated for boss {bossType}");
+            Debug.LogWarning($"[MapPlayerTracker] Node instance {mapNode.Node.nodeInstanceId} already defeated");
             Instance.Locked = false;
             return;
         }
@@ -143,7 +143,7 @@ namespace Map
         GameProgressionManager.Instance.ClearSelectedBoss();
         
         Debug.Log($"[MapPlayerTracker] Starting minion encounter for {minionData.minionName}");
-        GameProgressionManager.Instance.StartMinionEncounter(minionData, bossType);
+        GameProgressionManager.Instance.StartMinionEncounter(minionData, bossType, mapNode.Node.nodeInstanceId);
         Debug.Log($"[MapPlayerTracker] Minion encounter started via GameProgressionManager");
         
         // Load the blackjack scene

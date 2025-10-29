@@ -39,6 +39,9 @@ namespace Map
             // select all the nodes with connections:
             List<Node> nodesList = nodes.SelectMany(n => n).Where(n => n.incoming.Count > 0 || n.outgoing.Count > 0).ToList();
 
+            // Log map structure for debugging
+            LogMapStructure(nodesList);
+
             // pick a random name of the boss level for this map:
             string bossNodeName = config.nodeBlueprints.Where(b => b.nodeType == NodeType.Boss).ToList().Random().name;
             return new Map(conf.name, bossNodeName, nodesList, new List<Vector2Int>());
@@ -58,15 +61,57 @@ namespace Map
             return layerDistances.Take(layerIndex + 1).Sum();
         }
 
+        /// <summary>
+        /// Determine how many nodes to place on a specific layer
+        /// </summary>
+        private static int GetNodeCountForLayer(int layerIndex)
+        {
+            if (layerIndex >= config.layers.Count) return 0;
+
+            MapLayer layer = config.layers[layerIndex];
+            
+            // For branching maps, determine node count based on layer type
+            if (layer.nodeType == NodeType.Boss)
+            {
+                // Boss layer: count how many unique bosses we have
+                var bossBlueprints = config.nodeBlueprints.Where(b => b.nodeType == NodeType.Boss).ToList();
+                
+                // If this is the stage boss layer (last layer), only 1 node
+                if (layerIndex == config.layers.Count - 1)
+                {
+                    return 1;
+                }
+                // Otherwise, place all bosses
+                else
+                {
+                    return Mathf.Min(bossBlueprints.Count, 5); // Max 5 bosses
+                }
+            }
+            else if (layer.nodeType == NodeType.Minion)
+            {
+                // Minion layers: 2-5 nodes for branching
+                if (layerIndex == 0) return 2; // Starting branches
+                return Random.Range(3, 6); // Random splits
+            }
+            else
+            {
+                // Reward layers: 4-6 nodes
+                return Random.Range(4, 7);
+            }
+        }
+
         private static void PlaceLayer(int layerIndex)
         {
             MapLayer layer = config.layers[layerIndex];
             List<Node> nodesOnThisLayer = new List<Node>();
 
+            // Determine how many nodes to place on this layer
+            int nodeCount = GetNodeCountForLayer(layerIndex);
+            
             // offset of this layer to make all the nodes centered:
-            float offset = layer.nodesApartDistance * config.GridWidth / 2f;
+            float offset = layer.nodesApartDistance * nodeCount / 2f;
 
-            for (int i = 0; i < config.GridWidth; i++)
+            for (int i = 0; i < nodeCount; i++)
             {
                 var supportedRandomNodeTypes =
                     config.rewardNodes.Where(t => config.nodeBlueprints.Any(b => b.nodeType == t)).ToList();
@@ -85,8 +130,20 @@ namespace Map
                     return;
                 }
                 
-                string blueprintName = matchingBlueprints.Random().name;
-                Node node = new Node(nodeType, blueprintName, new Vector2Int(i, layerIndex))
+                // For boss convergence layer, use specific boss for each position
+                NodeBlueprint selectedBlueprint;
+                if (nodeType == NodeType.Boss && layerIndex == config.layers.Count - 2)
+                {
+                    // Use the i-th unique boss blueprint
+                    selectedBlueprint = i < matchingBlueprints.Count ? matchingBlueprints[i] : matchingBlueprints.Random();
+                    Debug.Log($"[MapGenerator] Placing boss {selectedBlueprint.bossType} at position {i}");
+                }
+                else
+                {
+                    selectedBlueprint = matchingBlueprints.Random();
+                }
+                
+                Node node = new Node(nodeType, selectedBlueprint.name, new Vector2Int(i, layerIndex))
                 {
                     position = new Vector2(-offset + i * layer.nodesApartDistance, GetDistanceToLayer(layerIndex))
                 };
@@ -102,6 +159,36 @@ namespace Map
         private static List<NodeBlueprint> GetFilteredBlueprints(NodeType nodeType, int layerIndex)
         {
             var allMatchingBlueprints = config.nodeBlueprints.Where(b => b.nodeType == nodeType).ToList();
+            
+            // For boss layers in branching maps, we want to place different bosses
+            if (nodeType == NodeType.Boss)
+            {
+                // For the boss convergence layer (second to last), place all unique bosses
+                if (layerIndex == config.layers.Count - 2)
+                {
+                    // Get unique boss blueprints (one per boss type)
+                    var uniqueBosses = new List<NodeBlueprint>();
+                    var usedBossTypes = new HashSet<BossType>();
+                    
+                    foreach (var blueprint in allMatchingBlueprints)
+                    {
+                        if (!usedBossTypes.Contains(blueprint.bossType))
+                        {
+                            uniqueBosses.Add(blueprint);
+                            usedBossTypes.Add(blueprint.bossType);
+                        }
+                    }
+                    
+                    Debug.Log($"[MapGenerator] Found {uniqueBosses.Count} unique boss types for convergence layer");
+                    return uniqueBosses;
+                }
+                // For stage boss layer (last layer), just return all bosses (will pick one randomly)
+                else if (layerIndex == config.layers.Count - 1)
+                {
+                    Debug.Log($"[MapGenerator] Stage boss layer - using all boss blueprints");
+                    return allMatchingBlueprints;
+                }
+            }
             
             // For minions, try to filter by boss association if we can determine the boss for this layer
             if (nodeType == NodeType.Minion)
@@ -253,41 +340,43 @@ namespace Map
         private static Vector2Int GetFinalNode()
         {
             int y = config.layers.Count - 1;
-            if (config.GridWidth % 2 == 1)
-                return new Vector2Int(config.GridWidth / 2, y);
+            int nodeCount = GetNodeCountForLayer(y);
+            
+            if (nodeCount % 2 == 1)
+                return new Vector2Int(nodeCount / 2, y);
 
             return Random.Range(0, 2) == 0
-                ? new Vector2Int(config.GridWidth / 2, y)
-                : new Vector2Int(config.GridWidth / 2 - 1, y);
+                ? new Vector2Int(nodeCount / 2, y)
+                : new Vector2Int(nodeCount / 2 - 1, y);
         }
 
         private static List<List<Vector2Int>> GeneratePaths()
         {
             Vector2Int finalNode = GetFinalNode();
             var paths = new List<List<Vector2Int>>();
-            int numOfStartingNodes = config.numOfMinionNodes.GetValue();
-            int numOfPreBossNodes = config.numOfRewardNodes.GetValue();
-
+            
+            // For branching maps, create paths from each starting node to each boss
+            int numOfStartingNodes = GetNodeCountForLayer(0);
+            int numOfBossNodes = GetNodeCountForLayer(config.layers.Count - 2); // Second to last layer (boss convergence)
+            
             List<int> candidateXs = new List<int>();
-            for (int i = 0; i < config.GridWidth; i++)
+            for (int i = 0; i < numOfStartingNodes; i++)
                 candidateXs.Add(i);
 
             candidateXs.Shuffle();
-            IEnumerable<int> startingXs = candidateXs.Take(numOfStartingNodes);
-            List<Vector2Int> startingPoints = (from x in startingXs select new Vector2Int(x, 0)).ToList();
+            List<Vector2Int> startingPoints = (from x in candidateXs select new Vector2Int(x, 0)).ToList();
 
-            candidateXs.Shuffle();
-            IEnumerable<int> preBossXs = candidateXs.Take(numOfPreBossNodes);
-            List<Vector2Int> preBossPoints = (from x in preBossXs select new Vector2Int(x, finalNode.y - 1)).ToList();
-
-            int numOfPaths = Mathf.Max(numOfStartingNodes, numOfPreBossNodes) + Mathf.Max(0, config.extraPaths);
-            for (int i = 0; i < numOfPaths; ++i)
+            // Create paths from each starting node to each boss node
+            for (int startIdx = 0; startIdx < numOfStartingNodes; startIdx++)
             {
-                Vector2Int startNode = startingPoints[i % numOfStartingNodes];
-                Vector2Int endNode = preBossPoints[i % numOfPreBossNodes];
-                List<Vector2Int> path = Path(startNode, endNode);
-                path.Add(finalNode);
-                paths.Add(path);
+                for (int bossIdx = 0; bossIdx < numOfBossNodes; bossIdx++)
+                {
+                    Vector2Int startNode = startingPoints[startIdx];
+                    Vector2Int bossNode = new Vector2Int(bossIdx, config.layers.Count - 2);
+                    List<Vector2Int> path = Path(startNode, bossNode);
+                    path.Add(finalNode); // Add stage boss at the end
+                    paths.Add(path);
+                }
             }
 
             return paths;
@@ -309,10 +398,11 @@ namespace Map
 
                 int verticalDistance = toRow - row;
                 int horizontalDistance;
+                int maxCols = GetNodeCountForLayer(row);
 
                 int forwardCol = lastNodeCol;
                 horizontalDistance = Mathf.Abs(toCol - forwardCol);
-                if (horizontalDistance <= verticalDistance)
+                if (horizontalDistance <= verticalDistance && forwardCol < maxCols)
                     candidateCols.Add(lastNodeCol);
 
                 int leftCol = lastNodeCol - 1;
@@ -322,8 +412,14 @@ namespace Map
 
                 int rightCol = lastNodeCol + 1;
                 horizontalDistance = Mathf.Abs(toCol - rightCol);
-                if (rightCol < config.GridWidth && horizontalDistance <= verticalDistance)
+                if (rightCol < maxCols && horizontalDistance <= verticalDistance)
                     candidateCols.Add(rightCol);
+
+                if (candidateCols.Count == 0)
+                {
+                    // Fallback: pick any valid column for this row
+                    candidateCols.Add(Random.Range(0, maxCols));
+                }
 
                 int randomCandidateIndex = Random.Range(0, candidateCols.Count);
                 int candidateCol = candidateCols[randomCandidateIndex];
@@ -337,6 +433,37 @@ namespace Map
             path.Add(toPoint);
 
             return path;
+        }
+
+        /// <summary>
+        /// Log the map structure for debugging
+        /// </summary>
+        private static void LogMapStructure(List<Node> nodesList)
+        {
+            Debug.Log("=== MAP STRUCTURE DEBUG ===");
+            
+            var nodesByLayer = nodesList.GroupBy(n => n.point.y).OrderBy(g => g.Key);
+            
+            foreach (var layer in nodesByLayer)
+            {
+                Debug.Log($"Layer {layer.Key}: {layer.Count()} nodes");
+                foreach (var node in layer)
+                {
+                    string nodeInfo = $"{node.nodeType} - {node.blueprintName} (ID: {node.nodeInstanceId})";
+                    if (node.nodeType == NodeType.Boss)
+                    {
+                        // Find the blueprint to get boss type
+                        var blueprint = config.nodeBlueprints.FirstOrDefault(b => b.name == node.blueprintName);
+                        if (blueprint != null)
+                        {
+                            nodeInfo += $" - BossType: {blueprint.bossType}";
+                        }
+                    }
+                    Debug.Log($"  {nodeInfo}");
+                }
+            }
+            
+            Debug.Log("=== END MAP STRUCTURE ===");
         }
     }
 }

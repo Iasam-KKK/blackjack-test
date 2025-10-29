@@ -17,16 +17,20 @@ namespace Map
             {
                 string mapJson = PlayerPrefs.GetString("Map");
                 Map map = JsonConvert.DeserializeObject<Map>(mapJson);
-                // using this instead of .Contains()
-                if (map.path.Any(p => p.Equals(map.GetBossNode().point)))
+                
+                // Only regenerate if STAGE boss (final boss) was defeated
+                var stageBossNode = map.GetStageBossNode();
+                if (stageBossNode != null && map.path.Any(p => p.Equals(stageBossNode.point)))
                 {
-                    // payer has already reached the boss, generate a new map
+                    // Player has reached the stage boss, generate a new map
+                    Debug.Log("[MapManager] Stage boss reached, generating new map");
                     GenerateNewMap();
                 }
                 else
                 {
                     CurrentMap = map;
-                    // player has not reached the boss yet, load the current map
+                    // Player has not reached the stage boss yet, continue existing map
+                    Debug.Log("[MapManager] Continuing existing map");
                     view.ShowMap(map);
                 }
             }
@@ -38,7 +42,9 @@ namespace Map
 
         public void GenerateNewMap()
         {
-            Map map = MapGenerator.GetMap(config);
+            // Use branching map configuration instead of sequential
+            var branchingConfig = MapConfigGenerator.GenerateBranchingMapConfig(config.nodeBlueprints);
+            Map map = MapGenerator.GetMap(branchingConfig);
             CurrentMap = map;
             Debug.Log(map.ToJson());
             view.ShowMap(map);

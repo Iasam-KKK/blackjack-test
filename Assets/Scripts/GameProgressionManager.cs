@@ -50,6 +50,7 @@ public class GameProgressionManager : MonoBehaviour
     public int currentEncounterHealth;
     public bool isEncounterActive = false;
     public bool isMinion = false; // true = minion battle, false = boss battle
+    public string currentNodeInstanceId = ""; // Track which node instance we're fighting
     
     [Header("Persistence")]
     public bool enablePersistence = true;
@@ -222,9 +223,9 @@ public class GameProgressionManager : MonoBehaviour
     // ENCOUNTER MANAGEMENT (Minion/Boss)
     // ============================================================================
     
-    public void StartMinionEncounter(MinionData minion, BossType bossType)
+    public void StartMinionEncounter(MinionData minion, BossType bossType, string nodeInstanceId = "")
     {
-        Debug.Log($"[GameProgressionManager] StartMinionEncounter called with minion: {minion?.minionName}, bossType: {bossType}");
+        Debug.Log($"[GameProgressionManager] StartMinionEncounter called with minion: {minion?.minionName}, bossType: {bossType}, nodeInstanceId: {nodeInstanceId}");
         
         if (minion == null)
         {
@@ -245,10 +246,12 @@ public class GameProgressionManager : MonoBehaviour
         currentEncounterHealth = minion.maxHealth;
         isEncounterActive = true;
         isMinion = true;
+        currentNodeInstanceId = nodeInstanceId;
         
         Debug.Log($"[GameProgressionManager] Minion encounter started: {minion.minionName}");
         Debug.Log($"  Health: {currentEncounterHealth}/{minion.maxHealth}");
         Debug.Log($"  Boss Type: {bossType}");
+        Debug.Log($"  Node Instance ID: {nodeInstanceId}");
         Debug.Log($"  Portrait: {(minion.minionPortrait != null ? minion.minionPortrait.name : "NULL")}");
         Debug.Log($"  Mechanics: {minion.mechanics.Count}");
         Debug.Log($"[GameProgressionManager] Encounter state set - isEncounterActive: {isEncounterActive}, isMinion: {isMinion}");
@@ -411,6 +414,12 @@ public class GameProgressionManager : MonoBehaviour
             MarkMinionDefeated(currentBossType, currentMinion.minionName);
             OnMinionDefeated?.Invoke(currentMinion);
             
+            // Mark the specific node instance as defeated
+            if (!string.IsNullOrEmpty(currentNodeInstanceId))
+            {
+                MarkNodeInstanceDefeated(currentNodeInstanceId);
+            }
+            
             // Log minion statistics after defeat
             LogMinionStatistics();
         }
@@ -447,6 +456,7 @@ public class GameProgressionManager : MonoBehaviour
         currentEncounterHealth = 0;
         isEncounterActive = false;
         isMinion = false;
+        currentNodeInstanceId = "";
         
         Debug.Log("[GameProgressionManager] Encounter reset");
     }
@@ -890,6 +900,49 @@ public class GameProgressionManager : MonoBehaviour
     }
     
     // ============================================================================
+    // NODE INSTANCE TRACKING
+    // ============================================================================
+    
+    /// <summary>
+    /// Check if a specific node instance is defeated
+    /// </summary>
+    public bool IsNodeInstanceDefeated(string nodeInstanceId)
+    {
+        return progressionData.defeatedNodeInstances.Contains(nodeInstanceId);
+    }
+    
+    /// <summary>
+    /// Mark a specific node instance as defeated
+    /// </summary>
+    public void MarkNodeInstanceDefeated(string nodeInstanceId)
+    {
+        if (!progressionData.defeatedNodeInstances.Contains(nodeInstanceId))
+        {
+            progressionData.defeatedNodeInstances.Add(nodeInstanceId);
+            SaveProgression();
+            Debug.Log($"[GameProgressionManager] Node instance defeated: {nodeInstanceId}");
+        }
+    }
+    
+    /// <summary>
+    /// Get all defeated node instances
+    /// </summary>
+    public List<string> GetDefeatedNodeInstances()
+    {
+        return new List<string>(progressionData.defeatedNodeInstances);
+    }
+    
+    /// <summary>
+    /// Clear all defeated node instances (for testing/debugging)
+    /// </summary>
+    public void ClearDefeatedNodeInstances()
+    {
+        progressionData.defeatedNodeInstances.Clear();
+        SaveProgression();
+        Debug.Log("[GameProgressionManager] All defeated node instances cleared");
+    }
+    
+    // ============================================================================
     // PERSISTENCE
     // ============================================================================
     
@@ -1026,6 +1079,9 @@ public class GameProgressionData
     // Minion progression
     public List<ActState> actStates = new List<ActState>();
     public string currentActBoss = "";
+    
+    // Node instance tracking
+    public List<string> defeatedNodeInstances = new List<string>();
     
     // Metadata
     public string lastUpdated = "";

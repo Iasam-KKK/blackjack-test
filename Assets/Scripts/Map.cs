@@ -25,6 +25,16 @@ namespace Map
             return nodes.FirstOrDefault(n => n.nodeType == NodeType.Boss);
         }
 
+        public Node GetStageBossNode()
+        {
+            // Find the boss node with the highest Y coordinate (furthest right in the map)
+            // This should be the final stage boss that all paths converge to
+            var bossNodes = nodes.Where(n => n.nodeType == NodeType.Boss).ToList();
+            if (bossNodes.Count == 0) return null;
+            
+            return bossNodes.OrderByDescending(n => n.point.y).FirstOrDefault();
+        }
+
         public float DistanceBetweenFirstAndLastLayers()
         {
             Node bossNode = GetBossNode();

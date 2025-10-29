@@ -207,6 +207,127 @@ namespace Map
         }
 
         /// <summary>
+        /// Generate a branching map config where all 5 acts are visible simultaneously
+        /// Structure: 2 starting branches -> random splits -> 5 boss nodes -> 1 stage boss
+        /// </summary>
+        public static MapConfig GenerateBranchingMapConfig(List<NodeBlueprint> allNodeBlueprints, int numBosses = 5)
+        {
+            MapConfig config = ScriptableObject.CreateInstance<MapConfig>();
+            config.nodeBlueprints = allNodeBlueprints;
+            config.rewardNodes = new List<NodeType> { NodeType.Shop, NodeType.Regen, NodeType.Treasure };
+            config.extraPaths = 2; // More paths for branching
+            config.layers = new List<MapLayer>();
+
+            var bossBlueprints = allNodeBlueprints.Where(b => b.nodeType == NodeType.Boss).ToList();
+            Debug.Log($"[MapConfigGenerator] Creating branching map with {bossBlueprints.Count} bosses");
+
+            // Layer 0: 2 starting minion nodes (initial branch point)
+            config.layers.Add(CreateBranchingMinionLayer(0, true, 2));
+
+            // Layer 1-2: More minion layers with random additional splits (3-5 nodes)
+            config.layers.Add(CreateBranchingMinionLayer(1, false, Random.Range(3, 6)));
+            config.layers.Add(CreateBranchingMinionLayer(2, false, Random.Range(3, 6)));
+
+            // Layer 3: Reward layer (Shop/Regen/Treasure) - 4-6 nodes
+            config.layers.Add(CreateBranchingRewardLayer(3, Random.Range(4, 7)));
+
+            // Layer 4: 5 boss nodes (one per boss type) - paths converge here
+            config.layers.Add(CreateBossConvergenceLayer(4, numBosses));
+
+            // Layer 5: Single stage boss node (final convergence)
+            config.layers.Add(CreateStageBossLayer(5));
+
+            Debug.Log($"[MapConfigGenerator] Created branching map with {config.layers.Count} layers");
+            return config;
+        }
+
+        /// <summary>
+        /// Create a minion layer for branching map
+        /// </summary>
+        private static MapLayer CreateBranchingMinionLayer(int layerIndex, bool isFirstLayer, int nodeCount)
+        {
+            MapLayer layer = new MapLayer
+            {
+                nodeType = NodeType.Minion,
+                distanceFromPreviousLayer = new FloatMinMax
+                {
+                    min = isFirstLayer ? 1f : 3f,
+                    max = isFirstLayer ? 2f : 5f
+                },
+                nodesApartDistance = 2f,
+                randomizePosition = isFirstLayer ? 0.1f : 0.3f,
+                randomizeNodes = 0f // No randomization for minion layers - always minions
+            };
+
+            // Set GridWidth to nodeCount for this layer
+            // Note: This will be handled in MapGenerator by using the layer's nodeCount
+            return layer;
+        }
+
+        /// <summary>
+        /// Create a reward layer for branching map
+        /// </summary>
+        private static MapLayer CreateBranchingRewardLayer(int layerIndex, int nodeCount)
+        {
+            MapLayer layer = new MapLayer
+            {
+                nodeType = NodeType.Shop, // Default, but will be randomized
+                distanceFromPreviousLayer = new FloatMinMax
+                {
+                    min = 3f,
+                    max = 5f
+                },
+                nodesApartDistance = 2.5f,
+                randomizePosition = 0.4f,
+                randomizeNodes = 1f // 100% randomization - always pick from reward nodes
+            };
+
+            return layer;
+        }
+
+        /// <summary>
+        /// Create boss convergence layer where all 5 bosses are placed
+        /// </summary>
+        private static MapLayer CreateBossConvergenceLayer(int layerIndex, int numBosses)
+        {
+            MapLayer layer = new MapLayer
+            {
+                nodeType = NodeType.Boss,
+                distanceFromPreviousLayer = new FloatMinMax
+                {
+                    min = 4f,
+                    max = 6f
+                },
+                nodesApartDistance = 3f,
+                randomizePosition = 0.1f,
+                randomizeNodes = 0f // No randomization - always boss
+            };
+
+            return layer;
+        }
+
+        /// <summary>
+        /// Create stage boss layer (final boss)
+        /// </summary>
+        private static MapLayer CreateStageBossLayer(int layerIndex)
+        {
+            MapLayer layer = new MapLayer
+            {
+                nodeType = NodeType.Boss,
+                distanceFromPreviousLayer = new FloatMinMax
+                {
+                    min = 5f,
+                    max = 7f
+                },
+                nodesApartDistance = 3f,
+                randomizePosition = 0.1f,
+                randomizeNodes = 0f // No randomization - always boss
+            };
+
+            return layer;
+        }
+
+        /// <summary>
         /// Get node blueprints by boss type from a list
         /// </summary>
         public static List<NodeBlueprint> GetNodeBlueprintsForBoss(List<NodeBlueprint> allBlueprints, BossType bossType)

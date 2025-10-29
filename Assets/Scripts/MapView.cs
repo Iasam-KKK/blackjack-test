@@ -162,7 +162,18 @@ namespace Map
             {
                 // we have not started traveling on this map yet, set entire first layer as attainable:
                 foreach (MapNode node in MapNodes.Where(n => n.Node.point.y == 0))
-                    node.SetState(NodeStates.Attainable);
+                {
+                    // Check if node is already defeated
+                    if (GameProgressionManager.Instance != null && 
+                        GameProgressionManager.Instance.IsNodeInstanceDefeated(node.Node.nodeInstanceId))
+                    {
+                        node.SetState(NodeStates.Visited); // Show as completed
+                    }
+                    else
+                    {
+                        node.SetState(NodeStates.Attainable);
+                    }
+                }
             }
             else
             {
@@ -182,7 +193,18 @@ namespace Map
                 {
                     MapNode mapNode = GetNode(point);
                     if (mapNode != null)
-                        mapNode.SetState(NodeStates.Attainable);
+                    {
+                        // Check if node is already defeated
+                        if (GameProgressionManager.Instance != null && 
+                            GameProgressionManager.Instance.IsNodeInstanceDefeated(mapNode.Node.nodeInstanceId))
+                        {
+                            mapNode.SetState(NodeStates.Visited); // Show as completed
+                        }
+                        else
+                        {
+                            mapNode.SetState(NodeStates.Attainable);
+                        }
+                    }
                 }
             }
         }

@@ -14,13 +14,15 @@ namespace Map
         [JsonConverter(typeof(StringEnumConverter))]
         public readonly NodeType nodeType;
         public readonly string blueprintName;
+        public readonly string nodeInstanceId; // Unique per node placement
         public Vector2 position;
 
-        public Node(NodeType nodeType, string blueprintName, Vector2Int point)
+        public Node(NodeType nodeType, string blueprintName, Vector2Int point, string nodeInstanceId = null)
         {
             this.nodeType = nodeType;
             this.blueprintName = blueprintName;
             this.point = point;
+            this.nodeInstanceId = nodeInstanceId ?? $"{nodeType}_{blueprintName}_{point.x}_{point.y}_{System.Guid.NewGuid().ToString("N")[..8]}";
         }
 
         public void AddIncoming(Vector2Int p)
