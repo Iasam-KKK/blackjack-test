@@ -42,9 +42,9 @@ namespace Map
 
         public void GenerateNewMap()
         {
-            // Use branching map configuration instead of sequential
-            var branchingConfig = MapConfigGenerator.GenerateBranchingMapConfig(config.nodeBlueprints);
-            Map map = MapGenerator.GetMap(branchingConfig);
+            // Use sequential map configuration for proper boss progression
+            var sequentialConfig = MapConfigGenerator.GenerateMapConfig(config.nodeBlueprints);
+            Map map = MapGenerator.GetMap(sequentialConfig);
             CurrentMap = map;
             Debug.Log(map.ToJson());
             view.ShowMap(map);

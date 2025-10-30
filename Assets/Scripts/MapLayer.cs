@@ -15,5 +15,11 @@ namespace Map
         [Range(0f, 1f)] public float randomizePosition;
         [Tooltip("Chance to get a random node that is different from the default node on this layer")]
         [Range(0f, 1f)] public float randomizeNodes;
+
+        [Header("Boss-Specific Filtering")]
+        [Tooltip("For minion layers: restrict to minions of this specific boss type. Leave None for all minions.")]
+        public BossType bossTypeFilter = BossType.TheDrunkard; // Default to first boss, but will be set appropriately
+        [Tooltip("Whether to use boss-specific filtering for this layer")]
+        public bool useBossFilter = false;
     }
 }

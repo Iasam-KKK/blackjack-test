@@ -40,6 +40,11 @@ namespace Map
                 GenerateConfig();
             }
 
+            if (GUILayout.Button("Validate Existing Config"))
+            {
+                ValidateConfig();
+            }
+
             GUILayout.Space(10);
             EditorGUILayout.HelpBox(
                 "This will create a new MapConfig asset with the appropriate layer structure:\n" +
@@ -91,11 +96,37 @@ namespace Map
             Selection.activeObject = config;
             EditorGUIUtility.PingObject(config);
 
-            EditorUtility.DisplayDialog("Success", 
+            EditorUtility.DisplayDialog("Success",
                 $"Map config created at: {uniquePath}\n\n" +
                 $"Layers: {config.layers.Count}\n" +
                 $"Blueprints: {config.nodeBlueprints.Count}\n\n" +
                 "The config is now selected in the Project window.", "OK");
+        }
+
+        private void ValidateConfig()
+        {
+            MapConfig selectedConfig = Selection.activeObject as MapConfig;
+            if (selectedConfig == null)
+            {
+                // Try to find any MapConfig in the project
+                string[] guids = AssetDatabase.FindAssets("t:MapConfig");
+                if (guids.Length > 0)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                    selectedConfig = AssetDatabase.LoadAssetAtPath<MapConfig>(path);
+                }
+            }
+
+            if (selectedConfig == null)
+            {
+                EditorUtility.DisplayDialog("No Config Found",
+                    "No MapConfig asset found. Please select a MapConfig asset or create one first.", "OK");
+                return;
+            }
+
+            MapConfigGenerator.ValidateMapConfig(selectedConfig);
+            EditorUtility.DisplayDialog("Validation Complete",
+                "Check the console for validation results.", "OK");
         }
     }
 }

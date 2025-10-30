@@ -33,8 +33,8 @@ namespace Map
             {
                 var bossBlueprint = bossBlueprints[bossIndex];
                 var bossType = bossBlueprint.bossType;
-                
-                Debug.Log($"[MapConfigGenerator] Creating map section for boss: {bossType}");
+
+                Debug.Log($"[MapConfigGenerator] Creating map section for boss: {bossType} (boss {bossIndex + 1}/{numBosses})");
 
                 // Add 3 minion layers with minions associated to this boss
                 for (int minionLayer = 0; minionLayer < 3; minionLayer++)
@@ -45,8 +45,9 @@ namespace Map
                 // Add 1 reward layer (Shop, Regen, Treasure randomly placed)
                 config.layers.Add(CreateRewardLayer());
 
-                // Add 1 boss layer
-                config.layers.Add(CreateBossLayer(bossIndex == numBosses - 1));
+                // Add 1 boss layer for this specific boss
+                config.layers.Add(CreateBossLayer(bossIndex == numBosses - 1, bossType));
+                Debug.Log($"[MapConfigGenerator] Added boss layer for {bossType}");
             }
 
             return config;
@@ -65,13 +66,13 @@ namespace Map
             {
                 if (minionBlueprint.minionData != null)
                 {
-                    var bossType = minionBlueprint.bossType; // This should match the minion's associatedBossType
-                    
+                    var bossType = minionBlueprint.minionData.associatedBossType;
+
                     if (!minionsByBoss.ContainsKey(bossType))
                     {
                         minionsByBoss[bossType] = new List<NodeBlueprint>();
                     }
-                    
+
                     minionsByBoss[bossType].Add(minionBlueprint);
                     Debug.Log($"[MapConfigGenerator] Grouped minion '{minionBlueprint.nodeName}' under boss '{bossType}'");
                 }
@@ -95,18 +96,20 @@ namespace Map
                 },
                 nodesApartDistance = 2f,
                 randomizePosition = 0.1f,
-                randomizeNodes = 0f // No randomization - always minions
+                randomizeNodes = 0f, // No randomization - always minions
+                bossTypeFilter = bossType,
+                useBossFilter = true
             };
 
-            // Filter node blueprints to only include minions for this boss
+            // Verify minions exist for this boss
             if (minionsByBoss.ContainsKey(bossType))
             {
                 var bossMinions = minionsByBoss[bossType];
-                Debug.Log($"[MapConfigGenerator] Found {bossMinions.Count} minions for boss {bossType}");
+                Debug.Log($"[MapConfigGenerator] Created layer for boss {bossType} with {bossMinions.Count} available minions");
             }
             else
             {
-                Debug.LogWarning($"[MapConfigGenerator] No minions found for boss {bossType}");
+                Debug.LogWarning($"[MapConfigGenerator] No minions found for boss {bossType}, layer will be empty!");
             }
 
             return layer;
@@ -157,7 +160,7 @@ namespace Map
         /// <summary>
         /// Create a boss layer
         /// </summary>
-        private static MapLayer CreateBossLayer(bool isFinalBoss)
+        private static MapLayer CreateBossLayer(bool isFinalBoss, BossType bossType = BossType.TheDrunkard)
         {
             MapLayer layer = new MapLayer
             {
@@ -169,7 +172,9 @@ namespace Map
                 },
                 nodesApartDistance = 3f,
                 randomizePosition = 0.1f,
-                randomizeNodes = 0f // No randomization - always boss
+                randomizeNodes = 0f, // No randomization - always boss
+                bossTypeFilter = bossType,
+                useBossFilter = true
             };
 
             return layer;
@@ -333,7 +338,7 @@ namespace Map
         public static List<NodeBlueprint> GetNodeBlueprintsForBoss(List<NodeBlueprint> allBlueprints, BossType bossType)
         {
             List<NodeBlueprint> filtered = new List<NodeBlueprint>();
-            
+
             foreach (var blueprint in allBlueprints)
             {
                 // Include if it's the boss itself
@@ -342,20 +347,80 @@ namespace Map
                     filtered.Add(blueprint);
                 }
                 // Include if it's a minion for this boss
-                else if (blueprint.nodeType == NodeType.Minion && blueprint.bossType == bossType)
+                else if (blueprint.nodeType == NodeType.Minion && blueprint.minionData != null && blueprint.minionData.associatedBossType == bossType)
                 {
                     filtered.Add(blueprint);
                 }
                 // Include all reward nodes (they're not boss-specific)
-                else if (blueprint.nodeType == NodeType.Shop || 
-                         blueprint.nodeType == NodeType.Regen || 
+                else if (blueprint.nodeType == NodeType.Shop ||
+                         blueprint.nodeType == NodeType.Regen ||
                          blueprint.nodeType == NodeType.Treasure)
                 {
                     filtered.Add(blueprint);
                 }
             }
-            
+
             return filtered;
+        }
+
+        /// <summary>
+        /// Debug method to validate map config generation
+        /// </summary>
+        public static void ValidateMapConfig(MapConfig config)
+        {
+            Debug.Log($"[MapConfigValidator] Validating config with {config.layers.Count} layers and {config.nodeBlueprints.Count} blueprints");
+
+            var bossBlueprints = config.nodeBlueprints.Where(b => b.nodeType == NodeType.Boss).ToList();
+            var minionBlueprints = config.nodeBlueprints.Where(b => b.nodeType == NodeType.Minion).ToList();
+
+            Debug.Log($"[MapConfigValidator] Found {bossBlueprints.Count} boss blueprints and {minionBlueprints.Count} minion blueprints");
+
+            // Group minions by boss for validation
+            var minionsByBoss = new System.Collections.Generic.Dictionary<BossType, List<NodeBlueprint>>();
+            foreach (var minion in minionBlueprints)
+            {
+                if (minion.minionData != null)
+                {
+                    var bossType = minion.minionData.associatedBossType;
+                    if (!minionsByBoss.ContainsKey(bossType))
+                        minionsByBoss[bossType] = new List<NodeBlueprint>();
+                    minionsByBoss[bossType].Add(minion);
+                }
+            }
+
+            Debug.Log($"[MapConfigValidator] Minions grouped by boss:");
+            foreach (var kvp in minionsByBoss)
+            {
+                Debug.Log($"[MapConfigValidator]   {kvp.Key}: {kvp.Value.Count} minions");
+            }
+
+            // Validate layers
+            for (int i = 0; i < config.layers.Count; i++)
+            {
+                var layer = config.layers[i];
+                Debug.Log($"[MapConfigValidator] Layer {i}: {layer.nodeType}, bossFilter={layer.useBossFilter}, bossType={layer.bossTypeFilter}");
+
+                if (layer.useBossFilter)
+                {
+                    if (layer.nodeType == NodeType.Minion)
+                    {
+                        var availableMinions = config.nodeBlueprints.Where(b =>
+                            b.nodeType == NodeType.Minion &&
+                            b.minionData != null &&
+                            b.minionData.associatedBossType == layer.bossTypeFilter).ToList();
+
+                        Debug.Log($"[MapConfigValidator]   Layer {i} expects minions for {layer.bossTypeFilter}, found {availableMinions.Count} available");
+                    }
+                    else if (layer.nodeType == NodeType.Boss)
+                    {
+                        var availableBosses = config.nodeBlueprints.Where(b =>
+                            b.nodeType == NodeType.Boss &&
+                            b.bossType == layer.bossTypeFilter).ToList();
+
+                        Debug.Log($"[MapConfigValidator]   Layer {i} expects boss {layer.bossTypeFilter}, found {availableBosses.Count} available");
+                    }
+                }
+            }
         }
     }
 }

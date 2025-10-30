@@ -1,0 +1,281 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a21f71146b25f5f4faa3957f18d627ba, type: 3}
+  m_Name: GeneratedMapConfig 1
+  m_EditorClassIdentifier: 
+  nodeBlueprints:
+  - {fileID: 11400000, guid: cd38fde98cc45894abbfb08ca331e1ea, type: 2}
+  - {fileID: 11400000, guid: 25cdd4a7dfbbba149bf95b1c36cc1e43, type: 2}
+  - {fileID: 11400000, guid: c5feae4b8c1da8d4886389a92d3fd7e4, type: 2}
+  - {fileID: 11400000, guid: 71355da573a9fd64ca9f668981199fd5, type: 2}
+  - {fileID: 11400000, guid: 017da249919c83140af559e896cc3f6e, type: 2}
+  - {fileID: 11400000, guid: 3c313550dddae3048a6321de115289b2, type: 2}
+  - {fileID: 11400000, guid: 292dd0c831b18404ba44b8e0fad721d5, type: 2}
+  - {fileID: 11400000, guid: aa6be215924158b47aa8c9f1f6fcb512, type: 2}
+  - {fileID: 11400000, guid: 3f99d8128ba350642a5f80e00908ccfc, type: 2}
+  - {fileID: 11400000, guid: 79fdbc6546ab673419e4bcf7c5729461, type: 2}
+  - {fileID: 11400000, guid: b1fa5cb02876c7545b7f37d1870e5728, type: 2}
+  - {fileID: 11400000, guid: 79ded0b813c555e499b11dd7bf32be37, type: 2}
+  - {fileID: 11400000, guid: 8db7585780b458740a6e9463aed5b594, type: 2}
+  - {fileID: 11400000, guid: 4a696af2f66462f4cbc9c1528cda182d, type: 2}
+  - {fileID: 11400000, guid: be5adf9ff0073b94791593a0619405e3, type: 2}
+  - {fileID: 11400000, guid: 6007fc642f640314aa13233d4a722559, type: 2}
+  - {fileID: 11400000, guid: 66986a8c43ff5a74594c24cbd67ab752, type: 2}
+  - {fileID: 11400000, guid: 117c7290a2e2d1a4a8ce7f2a5c5017d4, type: 2}
+  - {fileID: 11400000, guid: a1a1b3e129b1d604790e5971ef60b6fa, type: 2}
+  - {fileID: 11400000, guid: 862b2d3ea98ed4447816c1b9518b2106, type: 2}
+  - {fileID: 11400000, guid: 037a41680379eed4d8999547b3188dd1, type: 2}
+  - {fileID: 11400000, guid: b14e69ac8c737d24d9e329c7ac1e023a, type: 2}
+  - {fileID: 11400000, guid: 7e29b24f93e74ba4f8081fadf919275b, type: 2}
+  - {fileID: 11400000, guid: f09a895d243765545b867adcb10cd13e, type: 2}
+  - {fileID: 11400000, guid: f369b9255d8081740905a1ada3e1b72d, type: 2}
+  - {fileID: 11400000, guid: 2cc0c8e74e85bc14d8be96c9a834594d, type: 2}
+  - {fileID: 11400000, guid: 97a3dd99dcf39e9428d65410797a0ff4, type: 2}
+  - {fileID: 11400000, guid: bb14966bf28c4164ba9c2580c724cdf9, type: 2}
+  - {fileID: 11400000, guid: 9686a87dacea8254c959c4f1aec9941f, type: 2}
+  - {fileID: 11400000, guid: 3cd24b2e276b6dc48a3c3842ff38a96c, type: 2}
+  - {fileID: 11400000, guid: e1635866d1c2f154e8c9045bd0e000f2, type: 2}
+  - {fileID: 11400000, guid: dfb2651849bbba640970aec1f4b8601f, type: 2}
+  rewardNodes: 040000000200000003000000
+  numOfRewardNodes:
+    min: 2
+    max: 3
+  numOfMinionNodes:
+    min: 3
+    max: 4
+  extraPaths: 1
+  layers:
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 0
+      max: 0
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 0
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 0
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 0
+    useBossFilter: 1
+  - nodeType: 4
+    distanceFromPreviousLayer:
+      min: 3
+      max: 5
+    nodesApartDistance: 2.5
+    randomizePosition: 0.4
+    randomizeNodes: 1
+    bossTypeFilter: 0
+    useBossFilter: 0
+  - nodeType: 1
+    distanceFromPreviousLayer:
+      min: 4
+      max: 6
+    nodesApartDistance: 3
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 0
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 1
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 1
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 1
+    useBossFilter: 1
+  - nodeType: 4
+    distanceFromPreviousLayer:
+      min: 3
+      max: 5
+    nodesApartDistance: 2.5
+    randomizePosition: 0.4
+    randomizeNodes: 1
+    bossTypeFilter: 0
+    useBossFilter: 0
+  - nodeType: 1
+    distanceFromPreviousLayer:
+      min: 4
+      max: 6
+    nodesApartDistance: 3
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 1
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 2
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 2
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 2
+    useBossFilter: 1
+  - nodeType: 4
+    distanceFromPreviousLayer:
+      min: 3
+      max: 5
+    nodesApartDistance: 2.5
+    randomizePosition: 0.4
+    randomizeNodes: 1
+    bossTypeFilter: 0
+    useBossFilter: 0
+  - nodeType: 1
+    distanceFromPreviousLayer:
+      min: 4
+      max: 6
+    nodesApartDistance: 3
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 2
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 3
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 3
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 3
+    useBossFilter: 1
+  - nodeType: 4
+    distanceFromPreviousLayer:
+      min: 3
+      max: 5
+    nodesApartDistance: 2.5
+    randomizePosition: 0.4
+    randomizeNodes: 1
+    bossTypeFilter: 0
+    useBossFilter: 0
+  - nodeType: 1
+    distanceFromPreviousLayer:
+      min: 4
+      max: 6
+    nodesApartDistance: 3
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 3
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 5
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 5
+    useBossFilter: 1
+  - nodeType: 0
+    distanceFromPreviousLayer:
+      min: 3
+      max: 4
+    nodesApartDistance: 2
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 5
+    useBossFilter: 1
+  - nodeType: 4
+    distanceFromPreviousLayer:
+      min: 3
+      max: 5
+    nodesApartDistance: 2.5
+    randomizePosition: 0.4
+    randomizeNodes: 1
+    bossTypeFilter: 0
+    useBossFilter: 0
+  - nodeType: 1
+    distanceFromPreviousLayer:
+      min: 5
+      max: 7
+    nodesApartDistance: 3
+    randomizePosition: 0.1
+    randomizeNodes: 0
+    bossTypeFilter: 5
+    useBossFilter: 1

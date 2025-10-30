@@ -160,16 +160,33 @@ namespace Map
         {
             var allMatchingBlueprints = config.nodeBlueprints.Where(b => b.nodeType == nodeType).ToList();
             
-            // For boss layers in branching maps, we want to place different bosses
+            // For boss layers, filter by boss type if specified
             if (nodeType == NodeType.Boss)
             {
+                var layer = config.layers[layerIndex];
+
+                // If layer specifies a boss filter, use it
+                if (layer.useBossFilter)
+                {
+                    var filteredBosses = allMatchingBlueprints.Where(b => b.bossType == layer.bossTypeFilter).ToList();
+                    if (filteredBosses.Count > 0)
+                    {
+                        Debug.Log($"[MapGenerator] Filtered to {filteredBosses.Count} boss blueprints for {layer.bossTypeFilter} on layer {layerIndex}");
+                        return filteredBosses;
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[MapGenerator] No boss blueprint found for {layer.bossTypeFilter} on layer {layerIndex}");
+                    }
+                }
+
                 // For the boss convergence layer (second to last), place all unique bosses
                 if (layerIndex == config.layers.Count - 2)
                 {
                     // Get unique boss blueprints (one per boss type)
                     var uniqueBosses = new List<NodeBlueprint>();
                     var usedBossTypes = new HashSet<BossType>();
-                    
+
                     foreach (var blueprint in allMatchingBlueprints)
                     {
                         if (!usedBossTypes.Contains(blueprint.bossType))
@@ -178,7 +195,7 @@ namespace Map
                             usedBossTypes.Add(blueprint.bossType);
                         }
                     }
-                    
+
                     Debug.Log($"[MapGenerator] Found {uniqueBosses.Count} unique boss types for convergence layer");
                     return uniqueBosses;
                 }
@@ -190,24 +207,24 @@ namespace Map
                 }
             }
             
-            // For minions, try to filter by boss association if we can determine the boss for this layer
+            // For minions, filter by boss association if the layer specifies a boss filter
             if (nodeType == NodeType.Minion)
             {
-                var bossForLayer = GetBossForLayer(layerIndex);
-                if (bossForLayer != null)
+                var layer = config.layers[layerIndex];
+                if (layer.useBossFilter)
                 {
-                    var bossMinions = allMatchingBlueprints.Where(b => 
-                        b.minionData != null && 
-                        b.minionData.associatedBossType == bossForLayer.Value).ToList();
-                    
+                    var bossMinions = allMatchingBlueprints.Where(b =>
+                        b.minionData != null &&
+                        b.minionData.associatedBossType == layer.bossTypeFilter).ToList();
+
                     if (bossMinions.Count > 0)
                     {
-                        Debug.Log($"[MapGenerator] Filtered to {bossMinions.Count} minions for boss {bossForLayer.Value} on layer {layerIndex}");
+                        Debug.Log($"[MapGenerator] Filtered to {bossMinions.Count} minions for boss {layer.bossTypeFilter} on layer {layerIndex}");
                         return bossMinions;
                     }
                     else
                     {
-                        Debug.LogWarning($"[MapGenerator] No minions found for boss {bossForLayer.Value} on layer {layerIndex}, using all minions");
+                        Debug.LogWarning($"[MapGenerator] No minions found for boss {layer.bossTypeFilter} on layer {layerIndex}, using all minions");
                     }
                 }
             }
@@ -215,27 +232,6 @@ namespace Map
             return allMatchingBlueprints;
         }
         
-        /// <summary>
-        /// Determine which boss this layer should be associated with
-        /// </summary>
-        private static BossType? GetBossForLayer(int layerIndex)
-        {
-            // Find the boss layer that comes after this minion layer
-            for (int i = layerIndex + 1; i < config.layers.Count; i++)
-            {
-                if (config.layers[i].nodeType == NodeType.Boss)
-                {
-                    // Find the boss blueprint for this layer
-                    var bossBlueprint = config.nodeBlueprints.FirstOrDefault(b => b.nodeType == NodeType.Boss);
-                    if (bossBlueprint != null)
-                    {
-                        return bossBlueprint.bossType;
-                    }
-                }
-            }
-            
-            return null;
-        }
 
         private static void RandomizeNodePositions()
         {
@@ -352,13 +348,59 @@ namespace Map
 
         private static List<List<Vector2Int>> GeneratePaths()
         {
+            // Check if this is a sequential map (5 layers per boss: 3 minion + 1 reward + 1 boss)
+            bool isSequential = config.layers.Count > 0 && (config.layers.Count % 5 == 0);
+
+            if (isSequential)
+            {
+                // For sequential maps, create a single path through all layers
+                return GenerateSequentialPaths();
+            }
+            else
+            {
+                // For branching maps, use the original logic
+                return GenerateBranchingPaths();
+            }
+        }
+
+        private static List<List<Vector2Int>> GenerateSequentialPaths()
+        {
+            var paths = new List<List<Vector2Int>>();
+
+            // Start from the center of the first layer
+            int startX = GetNodeCountForLayer(0) / 2;
+            Vector2Int currentPoint = new Vector2Int(startX, 0);
+            List<Vector2Int> path = new List<Vector2Int> { currentPoint };
+
+            // Go through each layer sequentially
+            for (int layerIndex = 1; layerIndex < config.layers.Count; layerIndex++)
+            {
+                int nodeCount = GetNodeCountForLayer(layerIndex);
+                int nextX = Mathf.Clamp(currentPoint.x, 0, nodeCount - 1); // Try to stay in similar column
+
+                // If the next layer has fewer nodes, adjust to center
+                if (nextX >= nodeCount)
+                {
+                    nextX = nodeCount / 2;
+                }
+
+                currentPoint = new Vector2Int(nextX, layerIndex);
+                path.Add(currentPoint);
+            }
+
+            paths.Add(path);
+            return paths;
+        }
+
+        private static List<List<Vector2Int>> GenerateBranchingPaths()
+        {
             Vector2Int finalNode = GetFinalNode();
             var paths = new List<List<Vector2Int>>();
-            
+
             // For branching maps, create paths from each starting node to each boss
             int numOfStartingNodes = GetNodeCountForLayer(0);
             int numOfBossNodes = GetNodeCountForLayer(config.layers.Count - 2); // Second to last layer (boss convergence)
-            
+
             List<int> candidateXs = new List<int>();
             for (int i = 0; i < numOfStartingNodes; i++)
                 candidateXs.Add(i);
