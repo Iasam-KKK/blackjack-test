@@ -110,6 +110,34 @@ public class GameProgressionManager : MonoBehaviour
         {
             Debug.Log($"[GameProgressionManager] Blackjack scene loaded with active encounter: {(isMinion ? "Minion" : "Boss")}");
             Debug.Log($"[GameProgressionManager] Current encounter health: {currentEncounterHealth}");
+            
+            // Setup shop for minion/boss encounters
+            SetupShopForEncounter();
+        }
+    }
+    
+    /// <summary>
+    /// Setup shop when entering battle scene
+    /// </summary>
+    private void SetupShopForEncounter()
+    {
+        ShopManager shopManager = FindObjectOfType<ShopManager>();
+        if (shopManager != null)
+        {
+            if (isMinion && currentMinion != null)
+            {
+                Debug.Log($"[GameProgressionManager] Setting up shop for minion: {currentMinion.minionName} (disablesTarotCards: {currentMinion.disablesTarotCards})");
+            }
+            else if (!isMinion && currentBoss != null)
+            {
+                Debug.Log($"[GameProgressionManager] Setting up shop for boss: {currentBoss.bossName} (allowTarotCards: {currentBoss.allowTarotCards})");
+            }
+            
+            shopManager.SetupShop(); // ShopManager will check minion.disablesTarotCards and boss.allowTarotCards internally
+        }
+        else
+        {
+            Debug.LogWarning("[GameProgressionManager] ShopManager not found in scene - tarot cards won't be available");
         }
     }
     

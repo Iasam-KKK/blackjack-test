@@ -143,7 +143,7 @@ public class Deck : MonoBehaviour
     private uint _balance = Constants.InitialBalance;
     public uint _bet;
     private bool _isPeeking = false;
-    private bool _isBetPlaced = false; // Track if bet has been placed for current round
+    public bool _isBetPlaced = false; // Track if bet has been placed for current round
     public bool _hasUsedPeekThisRound = false; // Track if peek has been used in current round
     public bool _hasUsedTransformThisRound = false; // Track if transform has been used in current round
     
@@ -559,10 +559,10 @@ public class Deck : MonoBehaviour
     }
 
     public int GetPlayerPoints() => 
-        player.GetComponent<CardHand>().points;
+        GetVisibleScore(player, true);
 
     public int GetDealerPoints() => 
-        dealer.GetComponent<CardHand>().points;
+        GetVisibleScore(dealer, false);
 
     private void CalculateProbabilities()
     {
@@ -625,7 +625,7 @@ public class Deck : MonoBehaviour
  
     private double ProbabilityPlayerInBetween(float possibleCases)
     {
-        int playerPoints = GetDealerPoints();
+        int playerPoints = GetPlayerPoints();
         int favorableCases = 0;
         int sum = 0;
 
@@ -2195,7 +2195,7 @@ private void EndHand(WinCode code)
     }
     
     /// <summary>
-    /// The Blind Seer - Allows to see the next cards to be played from dealer's hand
+    /// The Blind Seer - Allows to see the next 2 cards to be dealt from the deck
     /// </summary>
     public void UseBlindSeerCard()
     {
@@ -2207,28 +2207,33 @@ private void EndHand(WinCode code)
         
         _hasUsedBlindSeerThisRound = true;
         
-        // Show current dealer's hand (all cards including hidden ones)
-        CardHand dealerHand = dealer.GetComponent<CardHand>();
-        if (dealerHand != null && dealerHand.cards.Count > 0)
+        // Get next 2 cards from deck
+        List<CardInfo> nextCards = new List<CardInfo>();
+        int cardsToShow = Mathf.Min(2, values.Length - cardIndex);
+        
+        for (int i = 0; i < cardsToShow; i++)
         {
-            List<CardInfo> dealerCards = GetHandCardInfo(dealer);
-            
-            if (cardPreviewManager != null)
+            if (cardIndex + i < values.Length)
             {
-                cardPreviewManager.ShowPreview(
-                    dealerCards,
-                    "The Blind Seer - Dealer's Hand",
-                    false, // No rearranging
-                    false, // No removing
-                    0,
-                    null, // No confirm callback needed
-                    null  // No cancel callback needed
-                );
+                nextCards.Add(GetCardInfo(cardIndex + i));
             }
+        }
+        
+        if (nextCards.Count > 0 && cardPreviewManager != null)
+        {
+            cardPreviewManager.ShowPreview(
+                nextCards,
+                "The Blind Seer - Next Two Cards",
+                false, // No rearranging
+                false, // No removing
+                0,
+                null, // No confirm callback needed
+                null  // No cancel callback needed
+            );
         }
         else
         {
-            Debug.Log("Dealer has no cards to reveal");
+            Debug.Log("No more cards in deck to reveal");
         }
     }
     
@@ -2403,7 +2408,7 @@ private void EndHand(WinCode code)
         
         _hasUsedFortuneTellerThisRound = true;
         
-        // Get next 2 cards from deck
+        // Get next 2 cards that will be dealt from the deck
         List<CardInfo> nextCards = new List<CardInfo>();
         int cardsToShow = Mathf.Min(2, values.Length - cardIndex);
         
@@ -2419,13 +2424,17 @@ private void EndHand(WinCode code)
         {
             cardPreviewManager.ShowPreview(
                 nextCards,
-                "The Fortune Teller - Next Two Cards",
+                "The Fortune Teller - Next Player Cards",
                 false, // No rearranging
                 false, // No removing
                 0,
                 null, // No confirm callback needed
                 null  // No cancel callback needed
             );
+        }
+        else
+        {
+            Debug.Log("No more cards in deck to show");
         }
     }
     

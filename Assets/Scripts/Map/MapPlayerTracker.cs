@@ -191,13 +191,18 @@ namespace Map
         // Use GameProgressionManager (SINGLE SOURCE OF TRUTH)
         if (GameProgressionManager.Instance != null)
         {
-            // Check if boss is unlocked
-            if (!GameProgressionManager.Instance.IsBossUnlocked(bossType))
+            // Check if boss is unlocked (either globally OR by defeating 2+ minions)
+            bool isGloballyUnlocked = GameProgressionManager.Instance.IsBossUnlocked(bossType);
+            bool isUnlockedByMinions = GameProgressionManager.Instance.IsBossUnlockedByMinions(bossType);
+            
+            if (!isGloballyUnlocked && !isUnlockedByMinions)
             {
-                Debug.LogWarning($"Boss {bossType} is not unlocked yet!");
+                Debug.LogWarning($"Boss {bossType} is not unlocked yet! Global: {isGloballyUnlocked}, ByMinions: {isUnlockedByMinions}");
                 Instance.Locked = false;
                 return;
             }
+            
+            Debug.Log($"Boss {bossType} is unlocked - Global: {isGloballyUnlocked}, ByMinions: {isUnlockedByMinions}");
             
             // Get boss data and start encounter
             BossData bossData = GameProgressionManager.Instance.GetBossData(bossType);

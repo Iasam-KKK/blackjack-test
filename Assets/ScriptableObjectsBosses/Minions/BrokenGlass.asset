@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 21300000, guid: f57b0df4d3c6eb54e909c36a7750cd85, type: 3}
   minionDescription: Shards of malice that cut through fragile cards. Has a chance
     to destroy a low-durability card (2 remaining uses) after the round.
+  associatedBossType: 0
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.6

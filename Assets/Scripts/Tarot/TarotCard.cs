@@ -593,10 +593,20 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 case TarotCardType.CursedHourglass:
                     if (!hasBeenUsedThisRound)
                     {
+                        // Check if bet has been placed
+                        if (!deck._isBetPlaced)
+                        {
+                            Debug.Log("[CursedHourglass] Cannot use - no bet placed");
+                            break;
+                        }
+                        
                         // Deduct half of the current bet from the player's balance
                         int halfBet = Mathf.FloorToInt(deck._bet / 2f);
                         deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - halfBet);
-                        deck.bet.text = halfBet.ToString();
+                        
+                        // Update bet to remaining half
+                        deck._bet /= 2;
+                        deck.bet.text = deck._bet.ToString() + " $";
                         Debug.Log($"[CursedHourglass] Deducted half of the bet: -{halfBet}");
 
                         // Activate the card's effect

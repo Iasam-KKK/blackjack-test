@@ -16,6 +16,7 @@ MonoBehaviour:
   minionPortrait: {fileID: 21300000, guid: 9ca6f6aa2a120a141a28cac7b6d04ff0, type: 3}
   minionDescription: A wobbling drunkard who can't keep his cards straight. Occasionally
     swaps two random cards in your hand.
+  associatedBossType: 0
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.5

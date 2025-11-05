@@ -202,25 +202,28 @@ public class ShopManager : MonoBehaviour
     }*/
     public void SetupShop()
 {
-    // 🔹 CHECK FOR MINION ENCOUNTER FIRST
-    if (MinionEncounterManager.Instance != null && MinionEncounterManager.Instance.isMinionActive)
+    // 🔹 CHECK GAMEPROGRESSION MANAGER (single source of truth)
+    if (GameProgressionManager.Instance != null && GameProgressionManager.Instance.isEncounterActive)
     {
-        var minion = MinionEncounterManager.Instance.currentMinion;
-        if (minion != null && minion.disablesTarotCards)
+        // Check minion encounter first
+        if (GameProgressionManager.Instance.isMinion)
         {
-            Debug.Log($"[ShopManager] Tarot cards disabled for minion: {minion.minionName}");
-            return; // 🚫 Stop before spawning any tarot cards
+            var minion = GameProgressionManager.Instance.currentMinion;
+            if (minion != null && minion.disablesTarotCards)
+            {
+                Debug.Log($"[ShopManager] Tarot cards disabled for minion: {minion.minionName}");
+                return; // 🚫 Stop before spawning any tarot cards
+            }
         }
-    }
-    
-    // 🔹 Check if tarot cards are disabled for this boss
-    BossManager bossManager = FindObjectOfType<BossManager>();
-    if (bossManager != null && bossManager.GetCurrentBoss() != null)
-    {
-        if (!bossManager.GetCurrentBoss().allowTarotCards)
+        // Check boss encounter
+        else
         {
-            Debug.Log("Tarot cards disabled for this boss: " + bossManager.GetCurrentBoss().bossName);
-            return; // 🚫 Stop before spawning any tarot cards
+            var boss = GameProgressionManager.Instance.currentBoss;
+            if (boss != null && !boss.allowTarotCards)
+            {
+                Debug.Log($"[ShopManager] Tarot cards disabled for boss: {boss.bossName}");
+                return; // 🚫 Stop before spawning any tarot cards
+            }
         }
     }
 
@@ -252,16 +255,16 @@ public class ShopManager : MonoBehaviour
     List<TarotCardData> cardsToShow = new List<TarotCardData>(availableTarotCards);
     ShuffleList(cardsToShow);
 
-    if (bossManager != null && bossManager.GetCurrentBoss() != null)
+    // 🔹 Special cases by boss type (check through GameProgressionManager)
+    if (GameProgressionManager.Instance != null && GameProgressionManager.Instance.isEncounterActive)
     {
-        var currentBoss = bossManager.GetCurrentBoss();
+        BossType currentBossType = GameProgressionManager.Instance.currentBossType;
 
-        // 🔹 Special cases by boss type
-        if (currentBoss.bossType == BossType.TheFortuneTeller)
+        if (currentBossType == BossType.TheFortuneTeller)
         {
             cardsToShow = cardsToShow.GetRange(0, Mathf.Min(2, cardsToShow.Count));
         }
-        else if (currentBoss.bossType == BossType.TheThief)
+        else if (currentBossType == BossType.TheThief)
         {
             cardsToShow = cardsToShow.GetRange(0, Mathf.Min(3, cardsToShow.Count));
         }

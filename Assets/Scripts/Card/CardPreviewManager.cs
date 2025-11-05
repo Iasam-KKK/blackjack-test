@@ -35,6 +35,11 @@ public class CardPreviewManager : MonoBehaviour
     public Button hitmanCancelButton;
     public Button hitmanShuffleButton;
     
+    [Header("Fortune Teller Buttons")]
+    public Button fortuneTellerConfirmButton;
+    public Button fortuneTellerCancelButton;
+    public Button fortuneTellerShuffleButton;
+    
     [Header("Settings")]
     public float cardSpacing = 100f;
     public float animationDuration = 0.3f;
@@ -79,6 +84,11 @@ public class CardPreviewManager : MonoBehaviour
     [SerializeField] private GameObject playerPreviewPanel;
     [SerializeField] private Image[] playerPreviewImages;
     [SerializeField] private TextMeshProUGUI[] playerPreviewNames;
+    
+    [Header("Fortune Teller Preview")]
+    [SerializeField] private GameObject fortuneTellerPanel;
+    [SerializeField] private Image[] fortuneTellerImages; // Size 3
+    [SerializeField] private TextMeshProUGUI[] fortuneTellerNames; // Size 3
     
     // Hitman card selection variables
     private int selectedCardIndex = -1;
@@ -166,6 +176,22 @@ public class CardPreviewManager : MonoBehaviour
         if (hitmanShuffleButton != null)
         {
             hitmanShuffleButton.onClick.AddListener(TriggerShuffle);
+        }
+        
+        // Set up button listeners for Fortune Teller panel
+        if (fortuneTellerConfirmButton != null)
+        {
+            fortuneTellerConfirmButton.onClick.AddListener(ConfirmPreview);
+        }
+        
+        if (fortuneTellerCancelButton != null)
+        {
+            fortuneTellerCancelButton.onClick.AddListener(CancelPreview);
+        }
+        
+        if (fortuneTellerShuffleButton != null)
+        {
+            fortuneTellerShuffleButton.onClick.AddListener(TriggerShuffle);
         }
     }
     
@@ -287,6 +313,53 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
 
         playerPreviewPanel.transform.localScale = Vector3.zero;
         playerPreviewPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+    }
+    else if (title.Contains("Fortune Teller"))
+    {
+        // Initialize Fortune Teller variables
+        originalCardInfos = new List<CardInfo>(cardInfos);
+        onConfirmCallback = onConfirm;
+        onCancelCallback = onCancel;
+        allowRemoving = canRemove;
+        maxRemovable = maxRemove;
+        
+        // Show Fortune Teller specific buttons
+        if (fortuneTellerConfirmButton != null)
+        {
+            fortuneTellerConfirmButton.gameObject.SetActive(true);
+        }
+
+        if (fortuneTellerCancelButton != null)
+        {
+            fortuneTellerCancelButton.gameObject.SetActive(true);
+        }
+
+        if (fortuneTellerShuffleButton != null)
+        {
+            fortuneTellerShuffleButton.gameObject.SetActive(false);
+        }
+        
+        fortuneTellerPanel.SetActive(true);
+
+        for (int i = 0; i < fortuneTellerImages.Length; i++)
+        {
+            if (i < cardInfos.Count)
+            {
+                fortuneTellerImages[i].sprite = cardInfos[i].cardSprite;
+                fortuneTellerImages[i].gameObject.SetActive(true);
+                fortuneTellerNames[i].text = cardInfos[i].cardName;
+                fortuneTellerNames[i].gameObject.SetActive(true);
+            }
+            else
+            {
+                fortuneTellerImages[i].gameObject.SetActive(false);
+                fortuneTellerNames[i].gameObject.SetActive(false);
+            }
+        }
+
+        fortuneTellerPanel.transform.localScale = Vector3.zero;
+        fortuneTellerPanel.transform.DOScale(Vector3.one, animationDuration).SetEase(Ease.OutBack);
+        StartCoroutine(AutoClosePanel(fortuneTellerPanel, 2f));
     }
     else
     {
@@ -1132,6 +1205,10 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
         {
             HideCorruptJudgePanel();
         }
+        else if (fortuneTellerPanel != null && fortuneTellerPanel.activeInHierarchy)
+        {
+            HideFortuneTellerPanel();
+        }
         else
         {
             HidePreview();
@@ -1186,6 +1263,21 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
         }
     }
     
+    private void HideFortuneTellerPanel()
+    {
+        if (fortuneTellerPanel != null)
+        {
+            fortuneTellerPanel.transform.DOScale(Vector3.zero, animationDuration).SetEase(Ease.InBack)
+                .OnComplete(() => {
+                    fortuneTellerPanel.SetActive(false);
+                    // Hide Fortune Teller buttons
+                    if (fortuneTellerConfirmButton != null) fortuneTellerConfirmButton.gameObject.SetActive(false);
+                    if (fortuneTellerCancelButton != null) fortuneTellerCancelButton.gameObject.SetActive(false);
+                    if (fortuneTellerShuffleButton != null) fortuneTellerShuffleButton.gameObject.SetActive(false);
+                });
+        }
+    }
+    
     private void CancelPreview()
     {
         onCancelCallback?.Invoke();
@@ -1202,6 +1294,10 @@ public void ShowPreview(List<CardInfo> cardInfos, string title, bool canRearrang
         else if (corruptJudgePanel != null && corruptJudgePanel.activeInHierarchy)
         {
             HideCorruptJudgePanel();
+        }
+        else if (fortuneTellerPanel != null && fortuneTellerPanel.activeInHierarchy)
+        {
+            HideFortuneTellerPanel();
         }
         else
         {

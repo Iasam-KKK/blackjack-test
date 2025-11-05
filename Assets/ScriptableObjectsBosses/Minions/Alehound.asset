@@ -17,6 +17,7 @@ MonoBehaviour:
     type: 3}
   minionDescription: A wild beast that corrupts cards with chaotic energy. Adds random
     +1/-1 modifiers to drawn cards.
+  associatedBossType: 0
   maxHealth: 3
   handsPerRound: 5
   difficultyMultiplier: 0.5

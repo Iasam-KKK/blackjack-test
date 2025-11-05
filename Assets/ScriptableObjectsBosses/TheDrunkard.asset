@@ -49,7 +49,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  disablesTarotCards: 0
+  disablesTarotCards: 1
   usesSpecialDeck: 0
   hasWinStreakEffect: 1
   isFinalBoss: 0

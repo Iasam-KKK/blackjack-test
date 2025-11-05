@@ -183,39 +183,28 @@ public class GameMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Restart the game using proper restart functionality (preserves inventory)
+    /// Restart the game - clears all PlayerPrefs and navigates to Map scene
     /// </summary>
     public void RestartGame()
     {
         Time.timeScale = 1f; // Resume time in case game was paused
         
-        // Find the Deck component and use its proper restart functionality
-        Deck deck = FindObjectOfType<Deck>();
-        if (deck != null)
+        Debug.Log("GameMenuManager: Clearing all PlayerPrefs and restarting game...");
+        
+        // Clear ALL PlayerPrefs data
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
+        
+        Debug.Log("GameMenuManager: PlayerPrefs cleared, loading MapScene for fresh start");
+        
+        // Load MapScene which will automatically generate a fresh new map
+        if (GameSceneManager.Instance != null)
         {
-            Debug.Log("GameMenuManager: Using Deck's proper restart functionality");
-            
-            // Hide the pause menu first if it's open
-            if (isPaused)
-            {
-                HidePauseMenu();
-            }
-            
-            // Use the deck's restart game method which preserves inventory
-            deck.RestartGameFromMenu();
+            GameSceneManager.Instance.LoadMapScene();
         }
         else
         {
-            Debug.LogWarning("GameMenuManager: Deck not found, falling back to scene reload");
-            // Fallback to scene reload if Deck is not found
-            if (GameSceneManager.Instance != null)
-            {
-                GameSceneManager.Instance.RestartCurrentScene();
-            }
-            else
-            {
-                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-            }
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MapScene");
         }
     }
 
