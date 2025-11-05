@@ -183,19 +183,29 @@ public class GameMenuManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Restart the game - clears all PlayerPrefs and navigates to Map scene
+    /// Restart the game - preserves inventory and clears only game state
     /// </summary>
     public void RestartGame()
     {
         Time.timeScale = 1f; // Resume time in case game was paused
         
-        Debug.Log("GameMenuManager: Clearing all PlayerPrefs and restarting game...");
+        Debug.Log("GameMenuManager: Restarting game (preserving inventory)...");
         
-        // Clear ALL PlayerPrefs data
-        PlayerPrefs.DeleteAll();
+        // Clear only game state PlayerPrefs, NOT inventory or progression
+        PlayerPrefs.DeleteKey("ReturnToMap");
+        PlayerPrefs.DeleteKey("CurrentNodeType");
+        PlayerPrefs.DeleteKey("SelectedBoss");
+        
+        // Reset player health to 100%
+        if (GameProgressionManager.Instance != null)
+        {
+            GameProgressionManager.Instance.playerHealthPercentage = 100f;
+            Debug.Log("GameMenuManager: Player health reset to 100%");
+        }
+        
         PlayerPrefs.Save();
         
-        Debug.Log("GameMenuManager: PlayerPrefs cleared, loading MapScene for fresh start");
+        Debug.Log("GameMenuManager: Game state cleared, loading MapScene for fresh run");
         
         // Load MapScene which will automatically generate a fresh new map
         if (GameSceneManager.Instance != null)
