@@ -345,8 +345,60 @@ public class Deck : MonoBehaviour
         // Configure bet button hold functionality
         SetupBetButtonHoldListeners();
         
+        // Subscribe to GameProgressionManager events
+        if (GameProgressionManager.Instance != null)
+        {
+            GameProgressionManager.Instance.OnPlayerGameOver += HandlePlayerGameOver;
+        }
+        
         // Initialize game in betting state (no cards dealt yet)
         InitializeBettingState();
+    }
+    
+    private void OnDestroy()
+    {
+        // Unsubscribe from GameProgressionManager events
+        if (GameProgressionManager.Instance != null)
+        {
+            GameProgressionManager.Instance.OnPlayerGameOver -= HandlePlayerGameOver;
+        }
+    }
+    
+    /// <summary>
+    /// Called when player health reaches 0 - show game over UI and pause game
+    /// </summary>
+    private void HandlePlayerGameOver()
+    {
+        Debug.Log("[Deck] HandlePlayerGameOver - Player health depleted!");
+        
+        // Pause the game
+        Time.timeScale = 0f;
+        
+        // End current game if in progress
+        _gameInProgress = false;
+        _currentTurn = GameTurn.GameOver;
+        
+        // Disable all game buttons
+        hitButton.interactable = false;
+        stickButton.interactable = false;
+        discardButton.interactable = false;
+        peekButton.interactable = false;
+        transformButton.interactable = false;
+        raiseBetButton.interactable = false;
+        lowerBetButton.interactable = false;
+        placeBetButton.interactable = false;
+        
+        // Disable play again button (game over means return to main menu, not next round)
+        playAgainButton.interactable = false;
+        
+        // Show game over message
+        if (finalMessage != null)
+        {
+            finalMessage.text = "GAME OVER\nPlayer Health Depleted\n\nReturning to Main Menu...";
+            finalMessage.gameObject.SetActive(true);
+        }
+        
+        Debug.Log("[Deck] Game over UI displayed, returning to main menu in 3 seconds");
     }
  // Helper: apply equipped frame to a spawned card GameObject (sprite-based prefab)
  private void ApplyEquippedFrame(GameObject cardGO)
@@ -556,6 +608,16 @@ public class Deck : MonoBehaviour
         }
 
         return false;
+    }
+    
+    /// <summary>
+    /// Check for blackjack using actual card values (not just visible cards)
+    /// Used at game start when dealer's first card is face-down
+    /// </summary>
+    private bool BlackjackActual(GameObject whoever)
+    {
+        int handPoints = GetActualScore(whoever);
+        return handPoints == Constants.Blackjack;
     }
 
     public int GetPlayerPoints() => 
@@ -1936,6 +1998,39 @@ private void EndHand(WinCode code)
             aces--;
         }
         return visibleScore;
+    }
+    
+    /// <summary>
+    /// Get actual score of all cards regardless of visibility (for blackjack checking)
+    /// </summary>
+    private int GetActualScore(GameObject handOwner)
+    {
+        CardHand hand = handOwner.GetComponent<CardHand>();
+        int actualScore = 0;
+        int aces = 0;
+
+        foreach (GameObject cardGO in hand.cards)
+        {
+            CardModel cardModel = cardGO.GetComponent<CardModel>();
+            
+            if (cardModel.value == 1) // Ace
+            {
+                aces++;
+                actualScore += Constants.SoftAce; // Add as 11 for now
+            }
+            else
+            {
+                actualScore += cardModel.value;
+            }
+        }
+
+        // Adjust for Aces: if score > 21 and there are Aces, convert Aces from 11 to 1
+        while (actualScore > Constants.Blackjack && aces > 0)
+        {
+            actualScore -= (Constants.SoftAce - 1); // Subtract 10 (11 - 1)
+            aces--;
+        }
+        return actualScore;
     }
  
     void Update()
@@ -3396,9 +3491,10 @@ private void EndHand(WinCode code)
         UpdateTransformButtonState();
 
         // Check for blackjack after all cards are dealt
-        if (Blackjack(player, true))
+        // Use BlackjackActual to check actual card values, not just visible ones
+        if (BlackjackActual(player))
         {
-            if (Blackjack(dealer, false))
+            if (BlackjackActual(dealer))
             {
                 EndHand(WinCode.Draw);
             }
@@ -3408,7 +3504,7 @@ private void EndHand(WinCode code)
             }
             yield break;
         }
-        else if (Blackjack(dealer, false))
+        else if (BlackjackActual(dealer))
         {
             EndHand(WinCode.DealerWins);
             yield break;

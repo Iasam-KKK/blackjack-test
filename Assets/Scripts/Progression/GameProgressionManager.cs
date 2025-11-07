@@ -238,12 +238,16 @@ public class GameProgressionManager : MonoBehaviour
         OnPlayerGameOver?.Invoke();
         
         ResetProgression();
-        Invoke(nameof(ReturnToMainMenu), 3f);
+        StartCoroutine(ReturnToMainMenuAfterDelay());
     }
     
-    private void ReturnToMainMenu()
+    private System.Collections.IEnumerator ReturnToMainMenuAfterDelay()
     {
+        // Use unscaled time so it works even when Time.timeScale = 0
+        yield return new WaitForSecondsRealtime(3f);
+        
         Debug.Log("[GameProgressionManager] Returning to main menu after game over");
+        Time.timeScale = 1f; // Resume time before loading scene
         SceneManager.LoadScene("MainMenu");
     }
     
@@ -415,19 +419,8 @@ public class GameProgressionManager : MonoBehaviour
         // Damage player health
         DamagePlayer(damagePerLoss);
         
-        // Check if player is still alive
-        if (playerHealthPercentage <= 0)
-        {
-            // Player is dead, complete encounter as loss
-            if (isMinion)
-            {
-                CompleteMinionEncounter(false);
-            }
-            else
-            {
-                CompleteBossEncounter(false);
-            }
-        }
+        // Note: Game over is already triggered in DamagePlayer() if health <= 0
+        // Do NOT complete the encounter here - let TriggerGameOver() handle it
         // If player is still alive, continue the encounter
     }
     
@@ -1085,7 +1078,15 @@ public class GameProgressionManager : MonoBehaviour
         ResetEncounter();
         InitializeFirstBoss();
         SaveProgression();
-        Debug.Log("[GameProgressionManager] Progression reset");
+        
+        // Clear the map so a new one will be generated
+        PlayerPrefs.DeleteKey("Map");
+        PlayerPrefs.DeleteKey("ReturnToMap");
+        PlayerPrefs.DeleteKey("CurrentNodeType");
+        PlayerPrefs.DeleteKey("SelectedBoss");
+        PlayerPrefs.Save();
+        
+        Debug.Log("[GameProgressionManager] Progression reset - map cleared for fresh start");
     }
 }
 

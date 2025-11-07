@@ -5199,7 +5199,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 1f5d8c3e6a9b2d4f7c1e8a3d5f7b9c2e, type: 2}
   playerHealthPercentage: 100
   maxHealthPercentage: 100
-  damagePerLoss: 10
+  damagePerLoss: 50
   currentMinion: {fileID: 0}
   currentBoss: {fileID: 0}
   currentBossType: 0
