@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using DG.Tweening;
 using TMPro;
+using System.Collections;
 
 public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
@@ -65,12 +66,15 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     // Update card visuals based on data
     public void UpdateCardDisplay()
     {
+        Debug.Log($"[TarotCard] UpdateCardDisplay called. CardData: {(cardData != null ? cardData.cardName : "null")}");
+        
         if (cardData != null)
         {
             // Update image and texts
             if (cardImage != null && cardData.cardImage != null)
             {
                 cardImage.sprite = cardData.cardImage;
+                Debug.Log($"[TarotCard] Updated card image for {cardData.cardName}");
             }
             
             // Update material background
@@ -111,6 +115,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             if (cardNameText != null)
             {
                 cardNameText.text = cardData.cardName;
+                Debug.Log($"[TarotCard] Updated card name text to: {cardData.cardName}");
             }
             
             if (priceText != null)
@@ -222,64 +227,11 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     // Try to purchase the card from the shop
     public void TryPurchaseCard()
     {
-        /*if (deck != null && deck.Balance >= (uint)cardData.price)
+        uint cost = GetFinalPrice();
+        if (deck != null && deck.Balance >= cost)
         {
-            uint cost = (uint)cardData.price;*/
-            
-            // Deduct balance
-            //deck.Balance -= cost;
-            uint cost = GetFinalPrice(); // ✅ use the adjusted material price
-            if (deck != null && deck.Balance >= cost)
-            {
-                deck.Balance -= (uint)cost;
-
-            // Add card to PlayerStats (for compatibility)
-            if (PlayerStats.instance != null && cardData != null)
-            {
-                PlayerStats.instance.ownedCards.Add(cardData);
-                Debug.Log("Added " + cardData.cardName + " to player's owned cards");
-            }
-            
-            // Prioritize the regular InventoryManager if it has data (used by FinalInventorySetup)
-            if (InventoryManager.Instance != null && InventoryManager.Instance.inventoryData != null && cardData != null)
-            {
-                bool addedToInventory = InventoryManager.Instance.AddPurchasedCard(cardData);
-                if (addedToInventory)
-                {
-                    // Try to auto-equip the card
-                    var storageSlots = InventoryManager.Instance.inventoryData.storageSlots;
-                    for (int i = 0; i < storageSlots.Count; i++)
-                    {
-                        if (storageSlots[i].isOccupied && storageSlots[i].storedCard == cardData)
-                        {
-                            // Found the card in storage, try to equip it
-                            bool equipped = InventoryManager.Instance.EquipCardFromStorage(i);
-                            if (equipped)
-                            {
-                                Debug.Log($"Auto-equipped purchased card: {cardData.cardName}");
-                            }
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning("Failed to add card to inventory - inventory might be full!");
-                }
-            }
-            
-            // Notify the deck about the purchase
-            deck.OnCardPurchased(cost);
-            
-            // Notify shop manager (optional)
-            if (shopManager != null)
-            {
-                shopManager.OnCardPurchased(this);
-            }
-            
-            // Card is handled by inventory system - destroy the shop card
-            Debug.Log("Card handled by inventory system - destroying shop card");
-            Destroy(gameObject);
+            // Start purchase animation sequence
+            StartCoroutine(AnimatedPurchaseSequence(cost));
         }
         else
         {
@@ -288,9 +240,114 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             
             if (deck != null)
             {
-                Debug.Log("Not enough balance to purchase card. Balance: " + deck.Balance + ", Price: " + cardData.price);
+                Debug.Log("Not enough balance to purchase card. Balance: " + deck.Balance + ", Price: " + cost);
             }
         }
+    }
+    
+    private IEnumerator AnimatedPurchaseSequence(uint cost)
+    {
+        // Deduct balance immediately
+        deck.Balance -= cost;
+        deck.OnCardPurchased(cost);
+        
+        // Ensure shopManager reference
+        if (shopManager == null)
+        {
+            shopManager = FindObjectOfType<ShopManager>();
+        }
+        if (InventoryManager.Instance.shopManager == null)
+        {
+            InventoryManager.Instance.shopManager = shopManager;
+        }
+        
+        // Add to inventory
+        bool addedToInventory = false;
+        int storageSlotIndex = -1;
+        int equipmentSlotIndex = -1;
+        
+        if (InventoryManager.Instance != null && InventoryManager.Instance.inventoryData != null && cardData != null)
+        {
+            addedToInventory = InventoryManager.Instance.AddPurchasedCard(cardData);
+            
+            if (addedToInventory)
+            {
+                // Find which storage slot it went to
+                var storageSlots = InventoryManager.Instance.inventoryData.storageSlots;
+                for (int i = 0; i < storageSlots.Count; i++)
+                {
+                    if (storageSlots[i].isOccupied && storageSlots[i].storedCard == cardData)
+                    {
+                        storageSlotIndex = i;
+                        break;
+                    }
+                }
+                
+                // Check for available equipment slot
+                var equipmentSlots = InventoryManager.Instance.inventoryData.equipmentSlots;
+                for (int i = 0; i < equipmentSlots.Count; i++)
+                {
+                    if (!equipmentSlots[i].isOccupied)
+                    {
+                        equipmentSlotIndex = i;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("Failed to add card to inventory - inventory might be full!");
+            }
+        }
+        
+        // Add to PlayerStats for compatibility
+        if (PlayerStats.instance != null && cardData != null)
+        {
+            PlayerStats.instance.ownedCards.Add(cardData);
+        }
+        
+        // Animate purchase if successfully added
+        if (addedToInventory && equipmentSlotIndex >= 0)
+        {
+            // Phase 1: Scale up card in shop (0.2s)
+            transform.DOScale(transform.localScale * 1.3f, 0.2f).SetEase(Ease.OutQuad);
+            yield return new WaitForSeconds(0.2f);
+            
+            // Phase 2: Move to equipment slot with arc (0.5s)
+            // Find target position (equipment slot UI position would go here)
+            // For now, just move up and fade out
+            Vector3 targetPos = transform.position + Vector3.up * 200f;
+            
+            Sequence moveSequence = DOTween.Sequence();
+            moveSequence.Append(transform.DOMove(targetPos, 0.5f).SetEase(Ease.OutQuad));
+            moveSequence.Join(transform.DOScale(transform.localScale * 0.5f, 0.5f));
+            
+            // Wait for movement
+            yield return new WaitForSeconds(0.3f);
+            
+            // Auto-equip the card while animation is finishing
+            if (storageSlotIndex >= 0)
+            {
+                bool equipped = InventoryManager.Instance.EquipCardFromStorage(storageSlotIndex, equipmentSlotIndex);
+                if (equipped)
+                {
+                    Debug.Log($"Auto-equipped purchased card: {cardData.cardName} to slot {equipmentSlotIndex}");
+                }
+            }
+            
+            // Wait for animation to complete
+            yield return new WaitForSeconds(0.2f);
+        }
+        
+        // Notify shop manager
+        if (shopManager != null)
+        {
+            shopManager.OnCardPurchased(this);
+        }
+        
+        // Destroy the shop card
+        Debug.Log("Purchase complete - destroying shop card");
+        Destroy(gameObject);
     }
     // Get final price depending on material
     public uint GetFinalPrice()

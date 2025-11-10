@@ -26,6 +26,11 @@ public class InventoryManager : MonoBehaviour
     public System.Action<TarotCardData> OnCardRemoved;
     public System.Action<TarotCardData, bool> OnCardEquippedChanged; // card, isEquipped
     
+    [Header("Tarot Panel Management")]
+    private Dictionary<int, GameObject> tarotSlotObjects = new Dictionary<int, GameObject>();
+    private Dictionary<int, TarotCard> tarotSlotCards = new Dictionary<int, TarotCard>();
+    private bool tarotPanelInitialized = false;
+    
     private void Awake()
     {
         // Singleton pattern
@@ -57,8 +62,8 @@ public class InventoryManager : MonoBehaviour
             LoadInventoryFromPlayerPrefs();
         }
         
-        // Sync equipped cards with tarot panel on startup
-        Invoke("SyncEquippedCardsToTarotPanel", 0.1f);
+        // Initialize tarot panel with pre-created slots on startup
+        Invoke("InitializeTarotPanelSlots", 0.1f);
         
         // Find shop manager for old system integration
         if (shopManager == null)
@@ -87,9 +92,6 @@ public class InventoryManager : MonoBehaviour
                 LoadInventoryFromPlayerPrefs();
             }
             
-            // Sync equipped cards with tarot panel
-            Invoke("SyncEquippedCardsToTarotPanel", 0.1f);
-            
             // Find shop manager for old system integration
             if (shopManager == null)
             {
@@ -99,6 +101,9 @@ public class InventoryManager : MonoBehaviour
                     Debug.Log("✅ Found and assigned ShopManager reference");
                 }
             }
+            
+            // Initialize tarot panel with pre-created slots
+            Invoke("InitializeTarotPanelSlots", 0.1f);
             
             Debug.Log("✅ Inventory force-initialized with " + inventoryData.storageSlotCount + " storage slots and " + 
                      inventoryData.equipmentSlotCount + " equipment slots");
@@ -170,8 +175,11 @@ public class InventoryManager : MonoBehaviour
             
             OnCardEquippedChanged?.Invoke(card, true);
             
-            // Sync with tarot panel
-            SyncEquippedCardsToTarotPanel();
+            Debug.Log($"[InventoryManager] About to update tarot slot {equipmentSlotIndex} with {card.cardName}");
+            Debug.Log($"[InventoryManager] Tarot panel initialized: {tarotPanelInitialized}");
+            
+            // Update specific tarot slot with new slot-based system
+            UpdateTarotSlot(equipmentSlotIndex, card);
             
             // Save to PlayerPrefs
             if (enablePersistence)
@@ -193,9 +201,6 @@ public class InventoryManager : MonoBehaviour
         
         var card = equipmentSlot.storedCard;
         
-        // Remove from tarot panel first
-        RemoveCardFromTarotPanel(card);
-        
         bool success = inventoryData.UnequipCard(equipmentSlotIndex);
         if (success)
         {
@@ -209,8 +214,8 @@ public class InventoryManager : MonoBehaviour
             
             OnCardEquippedChanged?.Invoke(card, false);
             
-            // Sync with tarot panel
-            SyncEquippedCardsToTarotPanel();
+            // Hide the card in the specific tarot slot
+            ShowTarotSlot(equipmentSlotIndex, false);
             
             // Save to PlayerPrefs
             if (enablePersistence)
@@ -227,14 +232,29 @@ public class InventoryManager : MonoBehaviour
     {
         if (inventoryData == null || card == null) return;
         
-        // Remove from tarot panel if present
-        RemoveCardFromTarotPanel(card);
+        // Find which equipment slot this card was in
+        int slotIndex = -1;
+        for (int i = 0; i < inventoryData.equipmentSlots.Count; i++)
+        {
+            var slot = inventoryData.equipmentSlots[i];
+            if (slot.isOccupied && slot.storedCard == card)
+            {
+                slotIndex = i;
+                break;
+            }
+        }
         
         bool removed = inventoryData.RemoveCard(card);
         if (removed)
         {
             Debug.Log($"Removed used up card {card.cardName} from inventory");
             OnCardRemoved?.Invoke(card);
+            
+            // Hide from tarot panel if it was equipped
+            if (slotIndex >= 0)
+            {
+                ShowTarotSlot(slotIndex, false);
+            }
             
             // Also remove from PlayerStats for compatibility
             if (PlayerStats.instance != null && PlayerStats.instance.ownedCards.Contains(card))
@@ -351,8 +371,34 @@ public class InventoryManager : MonoBehaviour
     [ContextMenu("Force Sync With Tarot Panel")]
     public void ForceSyncWithTarotPanel()
     {
-        SyncEquippedCardsToTarotPanel();
-        Debug.Log("Forced synchronization with tarot panel");
+        Debug.Log("[InventoryManager] Force sync requested");
+        
+        // If not initialized, initialize first
+        if (!tarotPanelInitialized)
+        {
+            Debug.Log("[InventoryManager] Tarot panel not initialized, initializing now");
+            InitializeTarotPanelSlots();
+        }
+        else
+        {
+            RefreshAllTarotSlots();
+            Debug.Log("[InventoryManager] Forced synchronization with tarot panel");
+        }
+    }
+    
+    // Force reinitialize tarot panel
+    [ContextMenu("Force Reinitialize Tarot Panel")]
+    public void ForceReinitializeTarotPanel()
+    {
+        Debug.Log("[InventoryManager] Force reinitialization requested");
+        
+        // Clear existing references
+        tarotSlotObjects.Clear();
+        tarotSlotCards.Clear();
+        tarotPanelInitialized = false;
+        
+        // Reinitialize
+        InitializeTarotPanelSlots();
     }
     
     // Force save inventory
@@ -411,6 +457,32 @@ public class InventoryManager : MonoBehaviour
         }
     }
     
+    [ContextMenu("Debug Tarot Panel State")]
+    public void DebugTarotPanelState()
+    {
+        Debug.Log("=== TAROT PANEL STATE ===");
+        Debug.Log($"Initialized: {tarotPanelInitialized}");
+        
+        foreach (var kvp in tarotSlotObjects)
+        {
+            var slotIndex = kvp.Key;
+            var cardObject = kvp.Value;
+            var card = tarotSlotCards.ContainsKey(slotIndex) ? tarotSlotCards[slotIndex] : null;
+            
+            Debug.Log($"Slot {slotIndex}:");
+            Debug.Log($"  - GameObject: {(cardObject != null ? cardObject.name : "null")}");
+            Debug.Log($"  - Active: {(cardObject != null ? cardObject.activeSelf.ToString() : "null")}");
+            Debug.Log($"  - Card Data: {(card != null && card.cardData != null ? card.cardData.cardName : "null")}");
+            
+            // Check equipment slot
+            if (inventoryData != null && slotIndex < inventoryData.equipmentSlots.Count)
+            {
+                var equipSlot = inventoryData.equipmentSlots[slotIndex];
+                Debug.Log($"  - Equipment Slot: {(equipSlot.isOccupied ? equipSlot.storedCard.cardName : "empty")}");
+            }
+        }
+    }
+    
     [ContextMenu("Debug GetInventoryStats")]
     public void DebugGetInventoryStats()
     {
@@ -455,52 +527,6 @@ public class InventoryManager : MonoBehaviour
         Debug.Log($"   ACTUAL STATS: Storage {actualStats.storageUsed}/{actualStats.storageTotal}, Equipment {actualStats.equipmentUsed}/{actualStats.equipmentTotal}");
     }
     
-    [ContextMenu("Debug Tarot Panel State")]
-    public void DebugTarotPanelState()
-    {
-        if (shopManager == null || shopManager.tarotPanel == null)
-        {
-            Debug.LogError("❌ shopManager or tarotPanel is null");
-            return;
-        }
-        
-        Debug.Log("🔍 DEBUG Tarot Panel State:");
-        
-        TarotCard[] allCards = shopManager.tarotPanel.GetComponentsInChildren<TarotCard>();
-        Debug.Log($"   Total cards in tarot panel: {allCards.Length}");
-        
-        int shopCards = 0;
-        int ownedCards = 0;
-        
-        for (int i = 0; i < allCards.Length; i++)
-        {
-            var card = allCards[i];
-            if (card.isInShop)
-            {
-                shopCards++;
-                Debug.Log($"   [{i}] SHOP CARD: {card.cardData?.cardName ?? "null"}");
-            }
-            else
-            {
-                ownedCards++;
-                Debug.Log($"   [{i}] OWNED CARD: {card.cardData?.cardName ?? "null"} (Parent: {card.transform.parent?.name ?? "null"})");
-            }
-        }
-        
-        Debug.Log($"   Summary: {shopCards} shop cards, {ownedCards} owned cards");
-        
-        // Check tarot slots
-        if (shopManager.tarotSlots != null)
-        {
-            Debug.Log($"   Tarot slots available: {shopManager.tarotSlots.Count}");
-            for (int i = 0; i < shopManager.tarotSlots.Count; i++)
-            {
-                var slot = shopManager.tarotSlots[i];
-                Debug.Log($"   Slot[{i}] ({slot.name}): {slot.childCount} children");
-            }
-        }
-    }
-    
     /// <summary>
     /// Immediately force update a specific equipment slot UI, even when inventory is hidden
     /// </summary>
@@ -535,6 +561,12 @@ public class InventoryManager : MonoBehaviour
     // Sync equipped cards TO the tarot panel (populate it with equipped cards)
     public void SyncEquippedCardsToTarotPanel()
     {
+        // Ensure shopManager is found if null
+        if (shopManager == null)
+        {
+            shopManager = FindObjectOfType<ShopManager>();
+        }
+        
         if (shopManager == null || shopManager.tarotPanel == null || inventoryData == null) 
         {
             Debug.LogWarning("Cannot sync to tarot panel - missing references");
@@ -576,6 +608,12 @@ public class InventoryManager : MonoBehaviour
     
     private void CreateTarotCardInPanel(TarotCardData cardData)
     {
+        // Ensure shopManager is found if null
+        if (shopManager == null)
+        {
+            shopManager = FindObjectOfType<ShopManager>();
+        }
+        
         if (shopManager == null || shopManager.tarotCardPrefab == null) 
         {
             Debug.LogWarning($"Cannot create tarot card {cardData?.cardName ?? "null"} - missing shopManager or prefab");
@@ -615,6 +653,185 @@ public class InventoryManager : MonoBehaviour
             Debug.LogError($"❌ Failed to get TarotCard component from instantiated prefab for {cardData.cardName}");
             Destroy(cardObject);
         }
+    }
+    
+    // NEW SLOT-BASED TAROT PANEL MANAGEMENT
+    
+    private void InitializeTarotPanelSlots()
+    {
+        if (!tarotPanelInitialized)
+        {
+            StartCoroutine(InitializeTarotPanelSlotsCoroutine());
+        }
+    }
+    
+    private IEnumerator InitializeTarotPanelSlotsCoroutine()
+    {
+        Debug.Log("[InventoryManager] Starting tarot panel initialization coroutine");
+        
+        // Wait for shopManager to be available
+        while (shopManager == null)
+        {
+            shopManager = FindObjectOfType<ShopManager>();
+            if (shopManager == null)
+            {
+                Debug.Log("[InventoryManager] Waiting for ShopManager...");
+                yield return new WaitForSeconds(0.1f);
+            }
+        }
+        
+        Debug.Log("[InventoryManager] ShopManager found");
+        
+        // Wait for tarot panel to be available
+        while (shopManager.tarotPanel == null)
+        {
+            Debug.Log("[InventoryManager] Waiting for tarot panel...");
+            yield return new WaitForSeconds(0.1f);
+        }
+        
+        Debug.Log("[InventoryManager] Tarot panel found");
+        
+        // Pre-create card objects in all 3 tarot slots
+        for (int i = 0; i < 3; i++)
+        {
+            Transform slot = shopManager.GetTarotSlotByIndex(i);
+            if (slot != null)
+            {
+                GameObject cardObject = Instantiate(shopManager.tarotCardPrefab, slot);
+                TarotCard card = cardObject.GetComponent<TarotCard>();
+                
+                if (card != null)
+                {
+                    // Configure the card object
+                    card.isInShop = false;
+                    card.deck = shopManager.deck;
+                    card.transform.localPosition = Vector3.zero;
+                    card.transform.localScale = Vector3.one * 0.8f;
+                    
+                    // Set up the card's RectTransform
+                    RectTransform cardRect = card.GetComponent<RectTransform>();
+                    if (cardRect != null)
+                    {
+                        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+                        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+                        cardRect.pivot = new Vector2(0.5f, 0.5f);
+                        cardRect.sizeDelta = new Vector2(100, 150);
+                    }
+                    
+                    // Store references
+                    tarotSlotObjects[i] = cardObject;
+                    tarotSlotCards[i] = card;
+                    
+                    // Initially hide the card
+                    cardObject.SetActive(false);
+                    
+                    Debug.Log($"[InventoryManager] Pre-created tarot card object in slot {i}");
+                }
+            }
+        }
+        
+        tarotPanelInitialized = true;
+        Debug.Log($"[InventoryManager] Tarot panel initialization complete. Created {tarotSlotObjects.Count} slots");
+        
+        // Now sync current equipment to tarot slots
+        RefreshAllTarotSlots();
+    }
+    
+    public void RefreshAllTarotSlots()
+    {
+        if (!tarotPanelInitialized || inventoryData == null) return;
+        
+        // Update each slot based on equipment data
+        for (int i = 0; i < inventoryData.equipmentSlots.Count && i < 3; i++)
+        {
+            var slot = inventoryData.equipmentSlots[i];
+            if (slot.isOccupied && slot.storedCard != null && slot.storedCard.CanBeUsed())
+            {
+                UpdateTarotSlot(i, slot.storedCard);
+            }
+            else
+            {
+                ShowTarotSlot(i, false);
+            }
+        }
+    }
+    
+    private void UpdateTarotSlot(int slotIndex, TarotCardData cardData)
+    {
+        // If tarot panel not initialized yet, initialize it first
+        if (!tarotPanelInitialized)
+        {
+            Debug.Log($"Tarot panel not initialized yet. Initializing now for slot {slotIndex}");
+            InitializeTarotPanelSlots();
+            // Queue the update for after initialization
+            StartCoroutine(UpdateTarotSlotAfterInit(slotIndex, cardData));
+            return;
+        }
+        
+        if (!tarotSlotCards.ContainsKey(slotIndex) || !tarotSlotObjects.ContainsKey(slotIndex))
+        {
+            Debug.LogWarning($"Tarot slot {slotIndex} not initialized");
+            return;
+        }
+        
+        var card = tarotSlotCards[slotIndex];
+        var cardObject = tarotSlotObjects[slotIndex];
+        
+        if (card != null && cardObject != null)
+        {
+            // Update card data
+            card.cardData = cardData;
+            Debug.Log($"[InventoryManager] Set card data for slot {slotIndex}: {cardData.cardName}");
+            
+            // Force update the display
+            card.UpdateCardDisplay();
+            Debug.Log($"[InventoryManager] Called UpdateCardDisplay for slot {slotIndex}");
+            
+            // Show the card
+            ShowTarotSlot(slotIndex, true);
+            
+            Debug.Log($"[InventoryManager] Successfully updated tarot slot {slotIndex} with {cardData.cardName}");
+        }
+    }
+    
+    private void ShowTarotSlot(int slotIndex, bool show)
+    {
+        if (tarotSlotObjects.ContainsKey(slotIndex))
+        {
+            var cardObject = tarotSlotObjects[slotIndex];
+            if (cardObject != null)
+            {
+                cardObject.SetActive(show);
+                Debug.Log($"[InventoryManager] Tarot slot {slotIndex} visibility set to: {show}");
+                
+                // Also check if parent is active
+                if (show && cardObject.transform.parent != null)
+                {
+                    bool parentActive = cardObject.transform.parent.gameObject.activeInHierarchy;
+                    Debug.Log($"[InventoryManager] Tarot slot {slotIndex} parent active: {parentActive}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[InventoryManager] Tarot slot {slotIndex} card object is null!");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[InventoryManager] Tarot slot {slotIndex} not found in tarotSlotObjects dictionary!");
+        }
+    }
+    
+    private IEnumerator UpdateTarotSlotAfterInit(int slotIndex, TarotCardData cardData)
+    {
+        // Wait for initialization to complete
+        while (!tarotPanelInitialized)
+        {
+            yield return new WaitForSeconds(0.1f);
+        }
+        
+        // Now update the slot
+        UpdateTarotSlot(slotIndex, cardData);
     }
     
     // PERSISTENCE METHODS
@@ -1127,3 +1344,4 @@ public class CardSaveData
         return card;
     }
 }
+

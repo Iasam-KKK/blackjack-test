@@ -37,6 +37,16 @@ public class ShopManager : MonoBehaviour
         {
             streakRewardNotification.SetActive(false);
         }
+        
+        // Ensure InventoryManager has reference to this ShopManager
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.shopManager = this;
+            Debug.Log("[ShopManager] Set reference in InventoryManager");
+            
+            // Trigger tarot panel initialization if needed
+            InventoryManager.Instance.ForceSyncWithTarotPanel();
+        }
     }
     
 
@@ -395,5 +405,15 @@ private void ShuffleList<T>(List<T> list)
         {
             Debug.LogWarning("No empty slots available in tarot panel!");
         }
+    }
+    
+    // Get tarot slot by index (for fixed slot mapping)
+    public Transform GetTarotSlotByIndex(int index)
+    {
+        if (index >= 0 && index < tarotSlots.Count)
+        {
+            return tarotSlots[index];
+        }
+        return null;
     }
 } 

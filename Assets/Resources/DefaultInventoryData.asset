@@ -67,12 +67,12 @@ MonoBehaviour:
   - slotIndex: 0
     isEquipmentSlot: 1
     storedCard: {fileID: 0}
-    isOccupied: 0
+    isOccupied: 1
   - slotIndex: 1
     isEquipmentSlot: 1
     storedCard: {fileID: 0}
-    isOccupied: 0
+    isOccupied: 1
   - slotIndex: 2
     isEquipmentSlot: 1
     storedCard: {fileID: 0}
-    isOccupied: 0
+    isOccupied: 1

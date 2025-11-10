@@ -40,7 +40,7 @@ public class InventoryTester : MonoBehaviour
         
         if (Input.GetKeyDown(syncTarotPanelKey))
         {
-            InventoryManager.Instance.SyncEquippedCardsToTarotPanel();
+            InventoryManager.Instance.RefreshAllTarotSlots();
         }
     }
     
