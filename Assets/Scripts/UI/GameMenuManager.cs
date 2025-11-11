@@ -191,16 +191,17 @@ public class GameMenuManager : MonoBehaviour
         
         Debug.Log("GameMenuManager: Restarting game (preserving inventory)...");
         
-        // Clear only game state PlayerPrefs, NOT inventory or progression
+        // Clear game state PlayerPrefs including map, NOT inventory
+        PlayerPrefs.DeleteKey("Map");
         PlayerPrefs.DeleteKey("ReturnToMap");
         PlayerPrefs.DeleteKey("CurrentNodeType");
         PlayerPrefs.DeleteKey("SelectedBoss");
         
-        // Reset player health to 100%
+        // Reset progression through GameProgressionManager
         if (GameProgressionManager.Instance != null)
         {
-            GameProgressionManager.Instance.playerHealthPercentage = 100f;
-            Debug.Log("GameMenuManager: Player health reset to 100%");
+            GameProgressionManager.Instance.ResetProgression();
+            Debug.Log("GameMenuManager: Progression and map reset");
         }
         
         PlayerPrefs.Save();
