@@ -54,3 +54,6 @@ MonoBehaviour:
   hasWinStreakEffect: 1
   isFinalBoss: 0
   allowTarotCards: 0
+  modifiesBetRange: 1
+  customMinBet: 10
+  customMaxBet: 100

@@ -499,6 +499,13 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             return;
         }
         
+        // Check tarot usage limit per hand
+        if (deck != null && !deck.CanUseTarot())
+        {
+            Debug.Log($"Cannot use tarot: Limit reached this hand");
+            return;
+        }
+        
         // ✅ NEW: Allow card-removal cards to be used as "rescue" even after round ends
         bool isRescueCard = cardData.cardType == TarotCardType.Scavenger ||
                            cardData.cardType == TarotCardType.Gardener ||

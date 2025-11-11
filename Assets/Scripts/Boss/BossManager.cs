@@ -674,6 +674,25 @@ public class BossManager : MonoBehaviour
             ModifyDeckForBoss();
         }
         
+        // Apply bet range modifiers if boss modifies betting
+        if (currentBoss.modifiesBetRange)
+        {
+            if (deck != null)
+            {
+                deck.SetMinBet(currentBoss.customMinBet);
+                deck.SetMaxBet(currentBoss.customMaxBet);
+                Debug.Log($"Boss {currentBoss.bossName} modified bet range: ${currentBoss.customMinBet} - ${currentBoss.customMaxBet}");
+            }
+        }
+        else
+        {
+            // Reset to defaults if boss doesn't modify bet range
+            if (deck != null)
+            {
+                deck.ResetBetRange();
+            }
+        }
+        
         // Special handling for The Captain
         if (currentBoss.bossType == BossType.TheCaptain)
         {

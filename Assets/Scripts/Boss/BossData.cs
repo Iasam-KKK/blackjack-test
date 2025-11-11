@@ -159,6 +159,11 @@ public class BossData : ScriptableObject
     public bool hasWinStreakEffect = false; // For The Pyro
     public bool isFinalBoss = false; // For The Gypsy
     public bool allowTarotCards = true;
+    
+    [Header("Bet Range Modifiers")]
+    public bool modifiesBetRange = false; // Enable to modify min/max bet
+    public uint customMinBet = 10; // Minimum bet if modifiesBetRange is true
+    public uint customMaxBet = 1000; // Maximum bet if modifiesBetRange is true
 
     // Helper methods
     public bool HasMechanic(BossMechanicType mechanicType)

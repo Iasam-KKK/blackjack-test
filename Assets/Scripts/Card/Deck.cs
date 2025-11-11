@@ -83,6 +83,13 @@ internal static class Constants
     public const int SuitBonusAmount = 50; // Bonus amount per card of matching suit
     public const int CardsPerSuit = 13; // Number of cards per suit (A, 2-10, J, Q, K)
     public const int HouseKeeperBonusAmount = 10; // Bonus amount per Jack/Queen/King card
+    
+    // Round Flow constants
+    public const int MaxHitsPerHand = 3; // Maximum extra hits per hand (default: 3, upgradeable)
+    public const int DefaultActionBudget = 2; // Default action budget per hand for special cards
+    public const int DefaultTarotLimit = 1; // Default number of tarots usable per hand
+    public const uint DefaultMinBet = 10; // Default minimum bet
+    public const uint DefaultMaxBet = 1000; // Default maximum bet (can be modified by balance or bosses)
 }
 
 // Boss system enums
@@ -121,8 +128,21 @@ public class Deck : MonoBehaviour
     public Button raiseBetButton;
     public Button lowerBetButton;
     public Button placeBetButton; // New button to confirm bet placement
+    public Button doubleDownButton; // New button for Double Down action
     public Text balance;
     public Text bet;
+    
+    // UI elements for Round Flow tracking
+    public Text hitsRemainingText; // Display remaining hits
+    public Text actionsRemainingText; // Display remaining actions
+    public Text discardPileCountText; // Display discard pile count
+    public Button reshuffleButton; // Button to manually reshuffle discard pile
+    public Text deckCardsRemainingText; // Display cards remaining in deck
+    
+    // Action Cards System
+    public Transform actionCardsPanel; // Panel to hold action card slots
+    public GameObject actionCardPrefab; // Prefab for action cards
+    public ActionCardData[] availableActionCards; // Array of available action cards
     // New Boss Panel (replaces old blind panel system)
     public NewBossPanel newBossPanel;
     
@@ -187,6 +207,20 @@ public class Deck : MonoBehaviour
     public bool _playerStood = false;
     public bool _dealerStood = false;
     public bool _gameInProgress = false;
+    
+    // Round Flow tracking variables
+    private int _hitsThisHand = 0; // Track number of hits this hand
+    private int _maxHitsPerHand = Constants.MaxHitsPerHand; // Upgradeable
+    private int _actionsRemainingThisHand = Constants.DefaultActionBudget; // Action budget for special cards
+    private int _maxActionsPerHand = Constants.DefaultActionBudget; // Upgradeable
+    private int _tarotsUsedThisHand = 0; // Track tarot usage per hand
+    private int _maxTarotsPerHand = Constants.DefaultTarotLimit; // Upgradeable
+    private uint _minBet = Constants.DefaultMinBet; // Minimum bet (can be modified by bosses/curses)
+    private uint _maxBet = Constants.DefaultMaxBet; // Maximum bet (can be modified by bosses/curses)
+    private bool _hasDoubledDown = false; // Track if player has doubled down this hand
+    
+    // Discard pile system
+    private List<CardInfo> _discardPile = new List<CardInfo>();
 
 
 
@@ -969,6 +1003,14 @@ public class Deck : MonoBehaviour
             return;
         }
         
+        // Check hit limit
+        if (_hitsThisHand >= _maxHitsPerHand)
+        {
+            finalMessage.text = "Maximum hits reached!";
+            Debug.LogWarning($"Maximum hits reached: {_hitsThisHand}/{_maxHitsPerHand}");
+            return;
+        }
+        
         CardHand playerHand = player.GetComponent<CardHand>();
         if (!playerHand.CanAddMoreCards())
         {
@@ -977,6 +1019,19 @@ public class Deck : MonoBehaviour
         }
 
         Debug.Log("Hit conditions passed - starting turn-based hit");
+        
+        // Increment hit counter
+        _hitsThisHand++;
+        Debug.Log($"Hit count: {_hitsThisHand}/{_maxHitsPerHand}");
+        
+        // Update Round Flow UI
+        UpdateRoundFlowUI();
+        
+        // After first hit, disable Double Down
+        if (doubleDownButton != null)
+        {
+            doubleDownButton.interactable = false;
+        }
 
         // Notify boss system about player action
         if (bossManager != null)
@@ -1013,8 +1068,126 @@ public class Deck : MonoBehaviour
         _playerStood = true;
         Debug.Log("Player stands");
         
+        // Disable Double Down when standing
+        if (doubleDownButton != null)
+        {
+            doubleDownButton.interactable = false;
+        }
+        
         // Check if both players have stood or game should end
         CheckTurnBasedGameEnd();
+    }
+    
+    /// <summary>
+    /// Double Down: Double the bet, receive exactly one more card, then stand
+    /// Only available on the initial 2-card hand
+    /// </summary>
+    public void DoubleDown()
+    {
+        Debug.Log("=== DOUBLE DOWN CALLED ===");
+        
+        if (!_isBetPlaced)
+        {
+            Debug.LogWarning("Cannot double down: No bet placed");
+            return;
+        }
+        
+        if (_currentTurn != GameTurn.Player || !_gameInProgress)
+        {
+            Debug.LogWarning("Cannot double down: Not player's turn");
+            return;
+        }
+        
+        if (_hasDoubledDown)
+        {
+            Debug.LogWarning("Cannot double down: Already doubled down this hand");
+            return;
+        }
+        
+        // Can only double down on initial 2-card hand (before any hits)
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand.cards.Count != Constants.InitialCardsDealt || _hitsThisHand > 0)
+        {
+            finalMessage.text = "Can only double down on initial hand!";
+            Debug.LogWarning("Cannot double down: Not on initial 2-card hand");
+            return;
+        }
+        
+        // Check if player has enough balance to double the bet
+        if (_bet > _balance)
+        {
+            finalMessage.text = "Insufficient balance to double down!";
+            Debug.LogWarning($"Cannot double down: Need ${_bet}, have ${_balance}");
+            return;
+        }
+        
+        Debug.Log($"Double Down: Doubling bet from ${_bet} to ${_bet * 2}");
+        
+        // Deduct additional bet from balance
+        _balance -= _bet;
+        PlayerPrefs.SetInt("UserCash", (int)_balance);
+        PlayerPrefs.Save();
+        UpdateBalanceDisplay();
+        
+        // Double the bet amount
+        _bet *= 2;
+        bet.text = _bet.ToString() + " $";
+        
+        _hasDoubledDown = true;
+        
+        // Disable all player controls except for the final card deal
+        DisablePlayerControls();
+        if (doubleDownButton != null)
+        {
+            doubleDownButton.interactable = false;
+        }
+        
+        Debug.Log("Double Down: Dealing one card then automatically standing");
+        
+        // Notify boss system
+        if (bossManager != null)
+        {
+            bossManager.OnPlayerAction();
+        }
+        
+        // Deal exactly one card then automatically stand
+        StartCoroutine(DoubleDownAnimated());
+    }
+    
+    /// <summary>
+    /// Double Down animation: Deal one card, then automatically stand
+    /// </summary>
+    private IEnumerator DoubleDownAnimated()
+    {
+        // Deal one card with animation
+        yield return StartCoroutine(PushPlayerAnimated());
+        
+        // Track the card
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand != null && playerHand.cards.Count > 0)
+        {
+            _lastHitCard = playerHand.cards[playerHand.cards.Count - 1];
+            _hitsThisHand++; // Count this as a hit
+        }
+        
+        // Check for bust or blackjack
+        if (Blackjack(player, true))
+        {
+            EndHand(WinCode.PlayerWins);
+            yield break;
+        }
+        else if (GetPlayerPoints() > Constants.Blackjack)
+        {
+            EndHand(WinCode.DealerWins);
+            yield break;
+        }
+        
+        // Automatically stand after receiving the card
+        _playerStood = true;
+        Debug.Log("Double Down: Automatically standing after receiving card");
+        
+        // Switch to dealer's turn
+        SwitchToDealerTurn();
     }
     
     /// <summary>
@@ -1418,6 +1591,10 @@ private void EndHand(WinCode code)
               ", Current streak: " + _currentStreak +
               ", Multiplier: " + CalculateWinMultiplier().ToString("F2") + "x");
 
+    // Move cards from hands to discard pile (post-hand update)
+    MoveHandsToDiscardPile();
+    UpdateRoundFlowUI(); // Update discard pile count display
+
     hitButton.interactable = false;
     stickButton.interactable = false;
     discardButton.interactable = false;
@@ -1426,6 +1603,10 @@ private void EndHand(WinCode code)
     raiseBetButton.interactable = false;
     lowerBetButton.interactable = false;
     placeBetButton.interactable = false;
+    if (doubleDownButton != null)
+    {
+        doubleDownButton.interactable = false;
+    }
 
     playAgainButton.interactable = true;
 
@@ -1692,6 +1873,16 @@ private void EndHand(WinCode code)
         cardIndex = 0;
         ShuffleCards();
         
+        // Clear discard pile for new game
+        ClearDiscardPile();
+        
+        // Reset Round Flow tracking
+        _hitsThisHand = 0;
+        _actionsRemainingThisHand = _maxActionsPerHand;
+        _tarotsUsedThisHand = 0;
+        _hasDoubledDown = false;
+        ResetBetRange(); // Reset bet range to defaults
+        
         // Reset all round-based tracking
         _hasUsedPeekThisRound = false;
         _hasUsedTransformThisRound = false;
@@ -1733,6 +1924,16 @@ private void EndHand(WinCode code)
         
         // Initialize betting state
         InitializeBettingState();
+        
+        // Initialize action cards
+        SpawnActionCards();
+        
+        // Setup reshuffle button
+        if (reshuffleButton != null)
+        {
+            reshuffleButton.onClick.AddListener(ReshuffleDiscardPileIntoDeck);
+            reshuffleButton.gameObject.SetActive(false); // Hidden by default
+        }
         
         Debug.Log("Game restarted successfully");
     }
@@ -1843,42 +2044,52 @@ private void EndHand(WinCode code)
     private void RaiseBetWithMultiplier(int multiplier)
     {
         uint increment = Constants.BetIncrement * (uint)multiplier;
-        if (_bet + increment <= Balance)
+        uint newBet = _bet + increment;
+        
+        // Apply max bet limit (min of balance and max bet)
+        uint effectiveMaxBet = System.Math.Min(Balance, _maxBet);
+        
+        if (newBet <= effectiveMaxBet)
         {
-            _bet += increment;
+            _bet = newBet;
         }
-        else if (_bet < Balance)
+        else if (_bet < effectiveMaxBet)
         {
-            _bet = Balance; // Set to max possible bet
+            _bet = effectiveMaxBet; // Set to max allowed bet
         }
         
         bet.text = _bet.ToString() + " $";
         
-        // Update place bet button state
+        // Update place bet button state - must meet minimum bet
         if (placeBetButton != null)
         {
-            placeBetButton.interactable = (_bet > 0);
+            placeBetButton.interactable = (_bet >= _minBet);
         }
     }
     
     private void LowerBetWithMultiplier(int multiplier)
     {
         uint decrement = Constants.BetIncrement * (uint)multiplier;
-        if (_bet >= decrement)
+        
+        if (_bet >= decrement + _minBet)
         {
             _bet -= decrement;
         }
+        else if (_bet > _minBet)
+        {
+            _bet = _minBet; // Set to minimum bet
+        }
         else
         {
-            _bet = 0; // Set to minimum bet
+            _bet = 0; // Allow 0 only if below minimum (can't place bet at 0)
         }
         
         bet.text = _bet.ToString() + " $";
         
-        // Update place bet button state
+        // Update place bet button state - must meet minimum bet
         if (placeBetButton != null)
         {
-            placeBetButton.interactable = (_bet > 0);
+            placeBetButton.interactable = (_bet >= _minBet);
         }
     }
 
@@ -1916,15 +2127,23 @@ private void EndHand(WinCode code)
     */
     public void PlaceBet()
     {
-        if (_bet <= 0)
+        if (_bet < _minBet)
         {
-            Debug.LogWarning("Cannot place bet: Bet amount is 0");
+            Debug.LogWarning($"Cannot place bet: Bet amount ${_bet} is below minimum ${_minBet}");
+            finalMessage.text = $"Minimum bet is ${_minBet}!";
             return;
         }
 
         if (_bet > _balance)
         {
             Debug.LogWarning("Cannot place bet: Bet amount exceeds balance");
+            return;
+        }
+        
+        if (_bet > _maxBet)
+        {
+            Debug.LogWarning($"Cannot place bet: Bet amount ${_bet} exceeds maximum ${_maxBet}");
+            finalMessage.text = $"Maximum bet is ${_maxBet}!";
             return;
         }
 
@@ -2612,6 +2831,858 @@ private void EndHand(WinCode code)
                 }
             }
         }
+    }
+    
+    /// <summary>
+    /// Set minimum bet (for boss/curse modifications)
+    /// </summary>
+    public void SetMinBet(uint minBet)
+    {
+        _minBet = minBet;
+        Debug.Log($"Minimum bet set to: ${_minBet}");
+    }
+    
+    /// <summary>
+    /// Set maximum bet (for boss/curse modifications)
+    /// </summary>
+    public void SetMaxBet(uint maxBet)
+    {
+        _maxBet = maxBet;
+        Debug.Log($"Maximum bet set to: ${_maxBet}");
+    }
+    
+    /// <summary>
+    /// Get current minimum bet
+    /// </summary>
+    public uint GetMinBet() => _minBet;
+    
+    /// <summary>
+    /// Get current maximum bet
+    /// </summary>
+    public uint GetMaxBet() => _maxBet;
+    
+    /// <summary>
+    /// Reset bet range to defaults
+    /// </summary>
+    public void ResetBetRange()
+    {
+        _minBet = Constants.DefaultMinBet;
+        _maxBet = Constants.DefaultMaxBet;
+        Debug.Log($"Bet range reset to: ${_minBet} - ${_maxBet}");
+    }
+    
+    /// <summary>
+    /// Upgrade max hits per hand (for progression system)
+    /// </summary>
+    public void UpgradeMaxHits(int additionalHits)
+    {
+        _maxHitsPerHand += additionalHits;
+        Debug.Log($"Max hits upgraded to: {_maxHitsPerHand}");
+    }
+    
+    /// <summary>
+    /// Upgrade action budget (for progression system)
+    /// </summary>
+    public void UpgradeActionBudget(int additionalActions)
+    {
+        _maxActionsPerHand += additionalActions;
+        Debug.Log($"Max actions per hand upgraded to: {_maxActionsPerHand}");
+    }
+    
+    /// <summary>
+    /// Upgrade tarot limit (for progression system)
+    /// </summary>
+    public void UpgradeTarotLimit(int additionalTarots)
+    {
+        _maxTarotsPerHand += additionalTarots;
+        Debug.Log($"Max tarots per hand upgraded to: {_maxTarotsPerHand}");
+    }
+    
+    /// <summary>
+    /// Get remaining actions this hand
+    /// </summary>
+    public int GetRemainingActions() => _actionsRemainingThisHand;
+    
+    /// <summary>
+    /// Consume one action from budget (returns true if successful)
+    /// </summary>
+    public bool ConsumeAction()
+    {
+        if (_actionsRemainingThisHand > 0)
+        {
+            _actionsRemainingThisHand--;
+            Debug.Log($"Action consumed. Remaining: {_actionsRemainingThisHand}/{_maxActionsPerHand}");
+            UpdateRoundFlowUI();
+            return true;
+        }
+        Debug.LogWarning("No actions remaining this hand!");
+        return false;
+    }
+    
+    /// <summary>
+    /// Check if tarot can be used (and consume usage if yes)
+    /// </summary>
+    public bool CanUseTarot()
+    {
+        if (_tarotsUsedThisHand < _maxTarotsPerHand)
+        {
+            _tarotsUsedThisHand++;
+            Debug.Log($"Tarot used. Count: {_tarotsUsedThisHand}/{_maxTarotsPerHand}");
+            UpdateRoundFlowUI();
+            return true;
+        }
+        Debug.LogWarning($"Tarot limit reached this hand! ({_tarotsUsedThisHand}/{_maxTarotsPerHand})");
+        return false;
+    }
+    
+    /// <summary>
+    /// Update all Round Flow UI elements
+    /// </summary>
+    public void UpdateRoundFlowUI()
+    {
+        // Update hits remaining
+        if (hitsRemainingText != null)
+        {
+            int hitsRemaining = _maxHitsPerHand - _hitsThisHand;
+            hitsRemainingText.text = $"Hits: {hitsRemaining}/{_maxHitsPerHand}";
+        }
+        
+        // Update actions remaining
+        if (actionsRemainingText != null)
+        {
+            actionsRemainingText.text = $"Actions: {_actionsRemainingThisHand}/{_maxActionsPerHand}";
+        }
+        
+        // Update discard pile count
+        if (discardPileCountText != null)
+        {
+            discardPileCountText.text = $"Discard Pile: {_discardPile.Count}";
+        }
+        
+        // Update deck cards remaining
+        UpdateDeckCardsDisplay();
+        
+        // Update reshuffle button visibility
+        UpdateReshuffleButtonVisibility();
+    }
+    
+    /// <summary>
+    /// Update deck cards remaining display
+    /// </summary>
+    private void UpdateDeckCardsDisplay()
+    {
+        int cardsRemaining = GetDeckCardsRemaining();
+        
+        if (deckCardsRemainingText != null)
+        {
+            deckCardsRemainingText.text = $"Deck: {cardsRemaining}";
+            
+            // Change color based on remaining cards
+            if (cardsRemaining < 5)
+            {
+                deckCardsRemainingText.color = Color.red;
+            }
+            else if (cardsRemaining < 10)
+            {
+                deckCardsRemainingText.color = Color.yellow;
+            }
+            else
+            {
+                deckCardsRemainingText.color = Color.white;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Show/hide reshuffle button based on deck cards remaining
+    /// </summary>
+    private void UpdateReshuffleButtonVisibility()
+    {
+        if (reshuffleButton == null) return;
+        
+        int cardsRemaining = GetDeckCardsRemaining();
+        
+        // Show button when < 10 cards
+        if (cardsRemaining < 10 && cardsRemaining >= 5 && _discardPile.Count > 0)
+        {
+            reshuffleButton.gameObject.SetActive(true);
+        }
+        else
+        {
+            reshuffleButton.gameObject.SetActive(false);
+        }
+    }
+    
+    /// <summary>
+    /// Check if auto-reshuffle is needed (< 5 cards)
+    /// </summary>
+    private void CheckAutoReshuffle()
+    {
+        int cardsRemaining = GetDeckCardsRemaining();
+        
+        if (cardsRemaining < 5 && _discardPile.Count > 0)
+        {
+            Debug.Log($"AUTO-RESHUFFLE triggered! Only {cardsRemaining} cards remaining.");
+            StartCoroutine(AutoReshuffleWithNotification());
+        }
+    }
+    
+    /// <summary>
+    /// Test method to consume an action (for testing action budget)
+    /// </summary>
+    public void TestConsumeAction()
+    {
+        if (ConsumeAction())
+        {
+            Debug.Log("Test action consumed successfully!");
+            UpdateRoundFlowUI();
+        }
+        else
+        {
+            Debug.LogWarning("No actions remaining to consume!");
+        }
+    }
+    
+    /// <summary>
+    /// Add a card to the discard pile
+    /// </summary>
+    public void AddToDiscardPile(int cardIndex, int value, Sprite sprite)
+    {
+        CardInfo discardedCard = new CardInfo(cardIndex, value, sprite, faces);
+        _discardPile.Add(discardedCard);
+        Debug.Log($"Card added to discard pile: {discardedCard.cardName} (Total in discard: {_discardPile.Count})");
+    }
+    
+    /// <summary>
+    /// Move all cards from both hands to discard pile (called at end of hand)
+    /// </summary>
+    public void MoveHandsToDiscardPile()
+    {
+        // Move player cards to discard pile
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand != null)
+        {
+            foreach (GameObject card in playerHand.cards)
+            {
+                CardModel cardModel = card.GetComponent<CardModel>();
+                if (cardModel != null)
+                {
+                    CardInfo cardInfo = new CardInfo(cardModel.originalDeckIndex, cardModel.value, cardModel.cardFront, faces);
+                    _discardPile.Add(cardInfo);
+                }
+            }
+            Debug.Log($"Moved {playerHand.cards.Count} cards from player hand to discard pile");
+        }
+        
+        // Move dealer cards to discard pile
+        CardHand dealerHand = dealer.GetComponent<CardHand>();
+        if (dealerHand != null)
+        {
+            foreach (GameObject card in dealerHand.cards)
+            {
+                CardModel cardModel = card.GetComponent<CardModel>();
+                if (cardModel != null)
+                {
+                    CardInfo cardInfo = new CardInfo(cardModel.originalDeckIndex, cardModel.value, cardModel.cardFront, faces);
+                    _discardPile.Add(cardInfo);
+                }
+            }
+            Debug.Log($"Moved {dealerHand.cards.Count} cards from dealer hand to discard pile");
+        }
+        
+        Debug.Log($"Total cards in discard pile: {_discardPile.Count}");
+    }
+    
+    /// <summary>
+    /// Get discard pile count
+    /// </summary>
+    public int GetDiscardPileCount() => _discardPile.Count;
+    
+    /// <summary>
+    /// Get cards remaining in deck
+    /// </summary>
+    public int GetDeckCardsRemaining() => Constants.DeckCards - cardIndex;
+    
+    /// <summary>
+    /// Clear discard pile (for new game)
+    /// </summary>
+    public void ClearDiscardPile()
+    {
+        _discardPile.Clear();
+        Debug.Log("Discard pile cleared");
+    }
+    
+    /// <summary>
+    /// Reshuffle discard pile back into deck (when deck runs low)
+    /// </summary>
+    public void ReshuffleDiscardPileIntoDeck()
+    {
+        if (_discardPile.Count == 0)
+        {
+            Debug.Log("No cards in discard pile to reshuffle");
+            return;
+        }
+        
+        Debug.Log($"Reshuffling {_discardPile.Count} cards from discard pile back into deck");
+        
+        int cardsReshuffled = _discardPile.Count;
+        _discardPile.Clear();
+        cardIndex = 0; // Reset to beginning of deck
+        
+        // Reshuffle the entire deck for variety
+        ShuffleCards();
+        
+        Debug.Log($"Reshuffled {cardsReshuffled} cards. Deck reset to position 0");
+        
+        // Update UI
+        UpdateRoundFlowUI();
+        
+        // Show notification
+        if (finalMessage != null)
+        {
+            finalMessage.text = $"Deck Reshuffled! (+{cardsReshuffled} cards)";
+            StartCoroutine(ClearMessageAfterDelay(2f));
+        }
+    }
+    
+    /// <summary>
+    /// Auto-reshuffle with visual notification
+    /// </summary>
+    private IEnumerator AutoReshuffleWithNotification()
+    {
+        if (finalMessage != null)
+        {
+            finalMessage.text = "AUTO-RESHUFFLING DECK...";
+            finalMessage.gameObject.SetActive(true);
+        }
+        
+        yield return new WaitForSeconds(1f);
+        
+        ReshuffleDiscardPileIntoDeck();
+        
+        yield return new WaitForSeconds(1.5f);
+        
+        if (finalMessage != null && _gameInProgress)
+        {
+            finalMessage.text = "";
+        }
+    }
+    
+    /// <summary>
+    /// Clear message after delay
+    /// </summary>
+    private IEnumerator ClearMessageAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (finalMessage != null && _gameInProgress)
+        {
+            finalMessage.text = "";
+        }
+    }
+    
+    // ===== ACTION CARDS SYSTEM =====
+    
+    /// <summary>
+    /// Spawn action cards in the panel
+    /// </summary>
+    private void SpawnActionCards()
+    {
+        if (actionCardsPanel == null || actionCardPrefab == null || availableActionCards == null)
+        {
+            Debug.LogWarning("Action cards system not configured");
+            return;
+        }
+        
+        // Clear existing cards
+        foreach (Transform child in actionCardsPanel)
+        {
+            Destroy(child.gameObject);
+        }
+        
+        // Spawn each available action card
+        foreach (ActionCardData actionData in availableActionCards)
+        {
+            if (actionData == null) continue;
+            
+            GameObject cardObj = Instantiate(actionCardPrefab, actionCardsPanel);
+            ActionCard actionCard = cardObj.GetComponent<ActionCard>();
+            
+            if (actionCard != null)
+            {
+                actionCard.actionData = actionData;
+            }
+        }
+        
+        Debug.Log($"Spawned {availableActionCards.Length} action cards");
+    }
+    
+    /// <summary>
+    /// Reset all action cards for new hand
+    /// </summary>
+    private void ResetActionCards()
+    {
+        if (actionCardsPanel == null) return;
+        
+        foreach (Transform child in actionCardsPanel)
+        {
+            ActionCard actionCard = child.GetComponent<ActionCard>();
+            if (actionCard != null)
+            {
+                actionCard.ResetForNewHand();
+            }
+        }
+    }
+    
+    // ===== ACTION IMPLEMENTATIONS =====
+    
+    /// <summary>
+    /// ACTION: Swap player's selected card with dealer's selected card
+    /// Called from UI button - uses action budget
+    /// </summary>
+    public void ActionSwapWithDealerCard()
+    {
+        // Check if player has actions remaining
+        if (_actionsRemainingThisHand <= 0)
+        {
+            Debug.LogWarning("No actions remaining this hand!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "No actions remaining!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return;
+        }
+        
+        CardHand playerHand = player.GetComponent<CardHand>();
+        CardHand dealerHand = dealer.GetComponent<CardHand>();
+        
+        if (playerHand == null || dealerHand == null) return;
+        
+        // Get player's selected card
+        GameObject playerCard = null;
+        foreach (GameObject card in playerHand.cards)
+        {
+            if (card.GetComponent<CardModel>().isSelected)
+            {
+                playerCard = card;
+                break;
+            }
+        }
+        
+        if (playerCard == null)
+        {
+            Debug.LogWarning("Select one of your cards first!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "Select your card first!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return;
+        }
+        
+        // Get dealer's selected card (or first visible card if none selected)
+        GameObject dealerCard = null;
+        foreach (GameObject card in dealerHand.cards)
+        {
+            CardModel cardModel = card.GetComponent<CardModel>();
+            SpriteRenderer sr = card.GetComponent<SpriteRenderer>();
+            // Only swap with face-up dealer cards
+            if (sr != null && sr.sprite == cardModel.cardFront)
+            {
+                if (cardModel.isSelected)
+                {
+                    dealerCard = card;
+                    break;
+                }
+            }
+        }
+        
+        // If no dealer card selected, use first visible card
+        if (dealerCard == null)
+        {
+            foreach (GameObject card in dealerHand.cards)
+            {
+                CardModel cardModel = card.GetComponent<CardModel>();
+                SpriteRenderer sr = card.GetComponent<SpriteRenderer>();
+                if (sr != null && sr.sprite == cardModel.cardFront)
+                {
+                    dealerCard = card;
+                    break;
+                }
+            }
+        }
+        
+        if (dealerCard == null)
+        {
+            Debug.LogWarning("No visible dealer cards to swap with!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "No dealer cards available!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return;
+        }
+        
+        // Consume action
+        if (!ConsumeAction())
+        {
+            return;
+        }
+        
+        // Swap the cards
+        CardModel playerCardModel = playerCard.GetComponent<CardModel>();
+        CardModel dealerCardModel = dealerCard.GetComponent<CardModel>();
+        
+        int tempValue = playerCardModel.value;
+        Sprite tempFront = playerCardModel.cardFront;
+        int tempIndex = playerCardModel.originalDeckIndex;
+        
+        playerCardModel.value = dealerCardModel.value;
+        playerCardModel.cardFront = dealerCardModel.cardFront;
+        playerCardModel.originalDeckIndex = dealerCardModel.originalDeckIndex;
+        playerCard.GetComponent<SpriteRenderer>().sprite = dealerCardModel.cardFront;
+        
+        dealerCardModel.value = tempValue;
+        dealerCardModel.cardFront = tempFront;
+        dealerCardModel.originalDeckIndex = tempIndex;
+        dealerCard.GetComponent<SpriteRenderer>().sprite = tempFront;
+        
+        // Deselect cards
+        playerCardModel.DeselectCard();
+        if (dealerCardModel.isSelected)
+        {
+            dealerCardModel.DeselectCard();
+        }
+        
+        UpdateScoreDisplays();
+        
+        Debug.Log("Swapped player card with dealer card!");
+        
+        // Show success message
+        if (finalMessage != null)
+        {
+            finalMessage.text = "Cards swapped!";
+            StartCoroutine(ClearMessageAfterDelay(1.5f));
+        }
+    }
+    
+    /// <summary>
+    /// ACTION: Swap two selected cards in player's hand (keep for backward compatibility)
+    /// </summary>
+    public bool ActionSwapTwoCards()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return false;
+        
+        // Get selected cards
+        List<GameObject> selectedCards = new List<GameObject>();
+        foreach (GameObject card in playerHand.cards)
+        {
+            if (card.GetComponent<CardModel>().isSelected)
+            {
+                selectedCards.Add(card);
+            }
+        }
+        
+        if (selectedCards.Count != 2)
+        {
+            Debug.LogWarning("Select exactly 2 cards to swap!");
+            return false;
+        }
+        
+        // Swap card values and sprites
+        CardModel card1 = selectedCards[0].GetComponent<CardModel>();
+        CardModel card2 = selectedCards[1].GetComponent<CardModel>();
+        
+        int tempValue = card1.value;
+        Sprite tempFront = card1.cardFront;
+        int tempIndex = card1.originalDeckIndex;
+        
+        card1.value = card2.value;
+        card1.cardFront = card2.cardFront;
+        card1.originalDeckIndex = card2.originalDeckIndex;
+        card1.GetComponent<SpriteRenderer>().sprite = card2.cardFront;
+        
+        card2.value = tempValue;
+        card2.cardFront = tempFront;
+        card2.originalDeckIndex = tempIndex;
+        card2.GetComponent<SpriteRenderer>().sprite = tempFront;
+        
+        // Deselect cards
+        card1.DeselectCard();
+        card2.DeselectCard();
+        
+        UpdateScoreDisplays();
+        Debug.Log("Cards swapped successfully!");
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Add +1 to a selected card (max 10)
+    /// Called from UI button - uses action budget
+    /// </summary>
+    public void ActionAddOneToCard()
+    {
+        // Check if player has actions remaining
+        if (_actionsRemainingThisHand <= 0)
+        {
+            Debug.LogWarning("No actions remaining this hand!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "No actions remaining!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return;
+        }
+        
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return;
+        
+        GameObject selectedCard = playerHand.GetSelectedCard();
+        if (selectedCard == null)
+        {
+            Debug.LogWarning("Select a card to add +1!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "Select a card first!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return;
+        }
+        
+        CardModel cardModel = selectedCard.GetComponent<CardModel>();
+        if (cardModel.value >= 10)
+        {
+            Debug.LogWarning("Card is already at maximum value (10)!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "Card already at max (10)!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return;
+        }
+        
+        // Consume action
+        if (!ConsumeAction())
+        {
+            return;
+        }
+        
+        // Execute action
+        cardModel.value++;
+        cardModel.DeselectCard();
+        UpdateScoreDisplays();
+        
+        Debug.Log($"Added +1 to card (new value: {cardModel.value})");
+        
+        // Show success message
+        if (finalMessage != null)
+        {
+            finalMessage.text = $"Card +1! (Now: {cardModel.value})";
+            StartCoroutine(ClearMessageAfterDelay(1.5f));
+        }
+    }
+    
+    /// <summary>
+    /// ACTION: Subtract -1 from a selected card (min 1)
+    /// </summary>
+    public bool ActionSubtractOneFromCard()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return false;
+        
+        GameObject selectedCard = playerHand.GetSelectedCard();
+        if (selectedCard == null)
+        {
+            Debug.LogWarning("Select a card to subtract -1!");
+            return false;
+        }
+        
+        CardModel cardModel = selectedCard.GetComponent<CardModel>();
+        if (cardModel.value <= 1)
+        {
+            Debug.LogWarning("Card is already at minimum value (1)!");
+            return false;
+        }
+        
+        cardModel.value--;
+        cardModel.DeselectCard();
+        UpdateScoreDisplays();
+        Debug.Log($"Subtracted -1 from card (new value: {cardModel.value})");
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Peek at dealer's hidden card
+    /// </summary>
+    public bool ActionPeekDealerCard()
+    {
+        PeekAtDealerCard();
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Force redraw - discard selected card and draw new one
+    /// </summary>
+    public bool ActionForceRedraw()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return false;
+        
+        GameObject selectedCard = playerHand.GetSelectedCard();
+        if (selectedCard == null)
+        {
+            Debug.LogWarning("Select a card to redraw!");
+            return false;
+        }
+        
+        // Remove selected card
+        CardModel cardModel = selectedCard.GetComponent<CardModel>();
+        AddToDiscardPile(cardModel.originalDeckIndex, cardModel.value, cardModel.cardFront);
+        playerHand.cards.Remove(selectedCard);
+        Destroy(selectedCard);
+        
+        // Draw new card
+        StartCoroutine(PushPlayerAnimated());
+        UpdateScoreDisplays();
+        Debug.Log("Card redrawn!");
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Double a card's value (capped at 10)
+    /// </summary>
+    public bool ActionDoubleCardValue()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return false;
+        
+        GameObject selectedCard = playerHand.GetSelectedCard();
+        if (selectedCard == null)
+        {
+            Debug.LogWarning("Select a card to double!");
+            return false;
+        }
+        
+        CardModel cardModel = selectedCard.GetComponent<CardModel>();
+        int newValue = Mathf.Min(cardModel.value * 2, 10);
+        cardModel.value = newValue;
+        cardModel.DeselectCard();
+        UpdateScoreDisplays();
+        Debug.Log($"Card value doubled (new value: {newValue})");
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Set any card to value 10
+    /// </summary>
+    public bool ActionSetCardToTen()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return false;
+        
+        GameObject selectedCard = playerHand.GetSelectedCard();
+        if (selectedCard == null)
+        {
+            Debug.LogWarning("Select a card to set to 10!");
+            return false;
+        }
+        
+        CardModel cardModel = selectedCard.GetComponent<CardModel>();
+        cardModel.value = 10;
+        cardModel.DeselectCard();
+        UpdateScoreDisplays();
+        Debug.Log("Card set to 10!");
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Flip Ace between 1 and 11
+    /// </summary>
+    public bool ActionFlipAce()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return false;
+        
+        GameObject selectedCard = playerHand.GetSelectedCard();
+        if (selectedCard == null)
+        {
+            Debug.LogWarning("Select a card!");
+            return false;
+        }
+        
+        CardModel cardModel = selectedCard.GetComponent<CardModel>();
+        if (cardModel.originalDeckIndex % 13 != 0) // Not an ace
+        {
+            Debug.LogWarning("Selected card is not an Ace!");
+            return false;
+        }
+        
+        // Toggle between 1 and 11
+        cardModel.value = (cardModel.value == 1) ? 11 : 1;
+        cardModel.DeselectCard();
+        UpdateScoreDisplays();
+        Debug.Log($"Ace flipped to {cardModel.value}!");
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Shield card (placeholder - could protect from boss effects)
+    /// </summary>
+    public bool ActionShieldCard()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return false;
+        
+        GameObject selectedCard = playerHand.GetSelectedCard();
+        if (selectedCard == null)
+        {
+            Debug.LogWarning("Select a card to shield!");
+            return false;
+        }
+        
+        // For now, just visual feedback
+        CardModel cardModel = selectedCard.GetComponent<CardModel>();
+        cardModel.DeselectCard();
+        Debug.Log("Card shielded! (Protected from boss effects)");
+        // TODO: Implement actual shield mechanics
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Copy one card's value to another
+    /// </summary>
+    public bool ActionCopyCard()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null) return false;
+        
+        List<GameObject> selectedCards = new List<GameObject>();
+        foreach (GameObject card in playerHand.cards)
+        {
+            if (card.GetComponent<CardModel>().isSelected)
+            {
+                selectedCards.Add(card);
+            }
+        }
+        
+        if (selectedCards.Count != 2)
+        {
+            Debug.LogWarning("Select exactly 2 cards: source and target!");
+            return false;
+        }
+        
+        // Copy first card's value to second card
+        CardModel sourceCard = selectedCards[0].GetComponent<CardModel>();
+        CardModel targetCard = selectedCards[1].GetComponent<CardModel>();
+        
+        targetCard.value = sourceCard.value;
+        
+        sourceCard.DeselectCard();
+        targetCard.DeselectCard();
+        UpdateScoreDisplays();
+        Debug.Log($"Copied value {sourceCard.value} to second card!");
+        return true;
     }
     
     // Transform selected cards functionality
@@ -3385,6 +4456,15 @@ private void EndHand(WinCode code)
         _dealerStood = false;
         _gameInProgress = false;
         
+        // Reset Round Flow tracking variables
+        _hitsThisHand = 0;
+        _actionsRemainingThisHand = _maxActionsPerHand;
+        _tarotsUsedThisHand = 0;
+        _hasDoubledDown = false;
+        
+        // Reset action cards for new hand
+        ResetActionCards();
+        
         // Clear any existing cards
         if (player != null && player.GetComponent<CardHand>() != null)
         {
@@ -3395,6 +4475,9 @@ private void EndHand(WinCode code)
             dealer.GetComponent<CardHand>().Clear();
         }
         
+        // Check if auto-reshuffle is needed
+        CheckAutoReshuffle();
+        
         // Disable game action buttons until bet is placed
         hitButton.interactable = false;
         stickButton.interactable = false;
@@ -3402,6 +4485,10 @@ private void EndHand(WinCode code)
         peekButton.interactable = false;
         transformButton.interactable = false;
         playAgainButton.interactable = false;
+        if (doubleDownButton != null)
+        {
+            doubleDownButton.interactable = false;
+        }
         
         // Enable betting buttons
         raiseBetButton.interactable = true;
@@ -3413,6 +4500,17 @@ private void EndHand(WinCode code)
         dealerScoreText.text = "Score: 0";
         probMessage.text = "";
         finalMessage.text = "Place your bet to start the round!";
+        
+        // Update Round Flow UI
+        UpdateRoundFlowUI();
+        
+        // Reapply boss bet range if boss is active (fixes bet range reset issue)
+        if (bossManager != null && bossManager.currentBoss != null && bossManager.currentBoss.modifiesBetRange)
+        {
+            SetMinBet(bossManager.currentBoss.customMinBet);
+            SetMaxBet(bossManager.currentBoss.customMaxBet);
+            Debug.Log($"Reapplied boss bet range: ${bossManager.currentBoss.customMinBet} - ${bossManager.currentBoss.customMaxBet}");
+        }
         
         // Reset tarot ability usage for new round
         _hasUsedPeekThisRound = false;
@@ -3569,6 +4667,10 @@ private void EndHand(WinCode code)
             Debug.Log("Disabling controls - not player turn or game not in progress");
             hitButton.interactable = false;
             stickButton.interactable = false;
+            if (doubleDownButton != null)
+            {
+                doubleDownButton.interactable = false;
+            }
             return;
         }
         
@@ -3578,8 +4680,9 @@ private void EndHand(WinCode code)
         UpdateDiscardButtonState();
         UpdatePeekButtonState();
         UpdateTransformButtonState();
+        UpdateDoubleDownButtonState();
         
-        Debug.Log($"After enabling - Hit: {hitButton.interactable}, Stand: {stickButton.interactable}");
+        Debug.Log($"After enabling - Hit: {hitButton.interactable}, Stand: {stickButton.interactable}, DD: {(doubleDownButton != null ? doubleDownButton.interactable.ToString() : "null")}");
     }
     
     /// <summary>
@@ -3592,6 +4695,31 @@ private void EndHand(WinCode code)
         discardButton.interactable = false;
         peekButton.interactable = false;
         transformButton.interactable = false;
+        if (doubleDownButton != null)
+        {
+            doubleDownButton.interactable = false;
+        }
+    }
+    
+    /// <summary>
+    /// Update Double Down button state based on game conditions
+    /// </summary>
+    private void UpdateDoubleDownButtonState()
+    {
+        if (doubleDownButton == null) return;
+        
+        // Double Down only available on initial 2-card hand, before any hits, with sufficient balance
+        CardHand playerHand = player.GetComponent<CardHand>();
+        bool canDoubleDown = _isBetPlaced &&
+                            _gameInProgress &&
+                            _currentTurn == GameTurn.Player &&
+                            !_hasDoubledDown &&
+                            _hitsThisHand == 0 &&
+                            playerHand.cards.Count == Constants.InitialCardsDealt &&
+                            _bet <= _balance;
+        
+        doubleDownButton.interactable = canDoubleDown;
+        Debug.Log($"Double Down button state: {canDoubleDown} (Bet: {_bet}, Balance: {_balance}, Hits: {_hitsThisHand}, Cards: {playerHand.cards.Count})");
     }
     
     private IEnumerator ReplaceCardWithInitialAnimation(CardModel clickedCard)
@@ -3833,10 +4961,13 @@ private void EndHand(WinCode code)
 
     private IEnumerator PushAnimated(GameObject handOwner, bool isPlayer)
     {
+        // Check if auto-reshuffle is needed before dealing
+        CheckAutoReshuffle();
+        
         // Check if we're reaching the end of the deck and need to reshuffle
         if (cardIndex >= values.Length - 1)
         {
-            Debug.Log((isPlayer ? "Player" : "Dealer") + " drawing - Deck is almost empty, reshuffling...");
+            Debug.Log((isPlayer ? "Player" : "Dealer") + " drawing - Deck is almost empty, force reshuffling...");
             ShuffleCards();
             cardIndex = 0;
         }
