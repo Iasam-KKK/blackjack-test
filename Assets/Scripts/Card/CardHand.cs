@@ -10,9 +10,13 @@ public class CardHand : MonoBehaviour
     public bool isDealer = false;
     public int points;
     
-    // Card positioning constants
-    private const float CARD_SPACING = 3.2f; // Increased spacing for camera-based setup
-    private const float CARD_SCALE = 7.5f; // Much larger scale for camera-based view
+    [Header("Card Slot System")]
+    [Tooltip("Assign your manually created card slots here (Slot1, Slot2, etc.)")]
+    public List<RectTransform> cardSlots = new List<RectTransform>();
+    
+    // Card positioning constants (fallback for non-slot mode)
+    private const float CARD_SPACING = 3.2f;
+    private const float CARD_SCALE = 7.5f;
     private const float CARD_OVERLAP_THRESHOLD = 1.8f;
     
     // Canvas reference for scaling context
@@ -69,16 +73,110 @@ public class CardHand : MonoBehaviour
         GameObject cardCopy = (GameObject) Instantiate(card);
         cards.Add(cardCopy);
         
-        // Set parent directly to this transform
-        cardCopy.transform.SetParent(transform, false);
-        cardCopy.name = "Card_" + cards.Count;
+        int cardIndex = cards.Count - 1;
         
-        // Apply appropriate scale for camera-based setup
-        ApplyCardScale(cardCopy);
-
-        // Position the cards within the hand (unless skipped for animation)
-        if (!skipArrangement)
+        // Use slot-based positioning if slots are available
+        if (cardSlots != null && cardIndex < cardSlots.Count && cardSlots[cardIndex] != null)
         {
+            // Parent to slot for automatic positioning
+            cardCopy.transform.SetParent(cardSlots[cardIndex], false);
+            cardCopy.name = "Card_" + cards.Count;
+            
+            // Reset transform to fill slot
+            RectTransform cardRect = cardCopy.GetComponent<RectTransform>();
+            if (cardRect != null)
+            {
+                cardRect.anchorMin = Vector2.zero;
+                cardRect.anchorMax = Vector2.one;
+                cardRect.offsetMin = Vector2.zero;
+                cardRect.offsetMax = Vector2.zero;
+                cardRect.localScale = Vector3.one;
+            }
+        }
+        else
+        {
+            // Fallback to old positioning system
+            cardCopy.transform.SetParent(transform, false);
+            cardCopy.name = "Card_" + cards.Count;
+            ApplyCardScale(cardCopy);
+            
+            // Position the cards within the hand (unless skipped for animation)
+            if (!skipArrangement)
+            {
+                ArrangeCardsInWindow();
+            }
+        }
+
+        CardModel cardModel = cardCopy.GetComponent<CardModel>();
+        if (cardModel == null)
+        {
+            Debug.LogError("CardModel component missing on card prefab!");
+            return null;
+        }
+        
+        cardModel.cardFront = front;
+        cardModel.value = value;
+        cardModel.originalDeckIndex = originalDeckIndex;
+        
+        // For dealers, the first card should show back, others show front
+        // For players, all cards should show front
+        bool shouldShowFront = true;
+        if (isDealer && cards.Count == 1)  // First dealer card
+        {
+            shouldShowFront = false;
+        }
+        
+        // Toggle the face appropriately
+        cardModel.ToggleFace(shouldShowFront);
+        
+        UpdatePoints();
+        return cardCopy;
+    }
+    
+    public GameObject Push(Sprite front, int value, int originalDeckIndex = -1)
+    {
+        if (cards.Count >= Constants.MaxCardsInHand)
+        {
+            Debug.LogWarning("Maximum card limit reached (" + Constants.MaxCardsInHand + ")");
+            
+            Deck deck = FindObjectOfType<Deck>();
+            if (deck != null)
+            {
+                deck.UpdateScoreDisplays();
+                deck.UpdateDiscardButtonState();
+            }
+            return null;
+        }
+        
+        GameObject cardCopy = (GameObject) Instantiate(card);
+        cards.Add(cardCopy);
+        
+        int cardIndex = cards.Count - 1;
+        
+        // Use slot-based positioning if slots are available
+        if (cardSlots != null && cardIndex < cardSlots.Count && cardSlots[cardIndex] != null)
+        {
+            // Parent to slot for automatic positioning
+            cardCopy.transform.SetParent(cardSlots[cardIndex], false);
+            cardCopy.name = "Card_" + cards.Count;
+            
+            // Reset transform to fill slot
+            RectTransform cardRect = cardCopy.GetComponent<RectTransform>();
+            if (cardRect != null)
+            {
+                cardRect.anchorMin = Vector2.zero;
+                cardRect.anchorMax = Vector2.one;
+                cardRect.offsetMin = Vector2.zero;
+                cardRect.offsetMax = Vector2.zero;
+                cardRect.localScale = Vector3.one;
+            }
+        }
+        else
+        {
+            // Fallback to old positioning system
+            cardCopy.transform.SetParent(transform, false);
+            cardCopy.name = "Card_" + cards.Count;
+            ApplyCardScale(cardCopy);
             ArrangeCardsInWindow();
         }
 
@@ -104,84 +202,6 @@ public class CardHand : MonoBehaviour
         // Toggle the face appropriately
         cardModel.ToggleFace(shouldShowFront);
         
-        // Ensure BoxCollider2D is properly sized for interaction
-        BoxCollider2D boxCollider = cardCopy.GetComponent<BoxCollider2D>();
-        if (boxCollider != null && cardModel.cardFront != null)
-        {
-            // Size the collider based on the sprite bounds and scale
-            Bounds bounds = cardModel.cardFront.bounds;
-            Vector2 size = bounds.size;
-            
-            // Make collider slightly larger to ensure it covers the entire card
-            boxCollider.size = size * 0.7f;
-        }
-        
-        UpdatePoints();
-        return cardCopy;
-    }
-    
-    public GameObject Push(Sprite front, int value, int originalDeckIndex = -1)
-    {
-        if (cards.Count >= Constants.MaxCardsInHand)
-        {
-            Debug.LogWarning("Maximum card limit reached (" + Constants.MaxCardsInHand + ")");
-            
-            Deck deck = FindObjectOfType<Deck>();
-            if (deck != null)
-            {
-                deck.UpdateScoreDisplays();
-                deck.UpdateDiscardButtonState();
-            }
-            return null;
-        }
-        
-        GameObject cardCopy = (GameObject) Instantiate(card);
-        cards.Add(cardCopy);
-        
-        // Set parent directly to this transform
-        cardCopy.transform.SetParent(transform, false);
-        cardCopy.name = "Card_" + cards.Count;
-        
-        // Apply appropriate scale for camera-based setup
-        ApplyCardScale(cardCopy);
-
-        // Position the cards within the hand
-        ArrangeCardsInWindow();
-
-        CardModel cardModel = cardCopy.GetComponent<CardModel>();
-        if (cardModel == null)
-        {
-            Debug.LogError("CardModel component missing on card prefab!");
-            return null;
-        }
-        
-        cardModel.cardFront = front;
-        cardModel.value = value;
-        cardModel.originalDeckIndex = originalDeckIndex;
-        
-        // For dealers, the first card should show back, others show front
-        // For players, all cards should show front
-        bool shouldShowFront = true;
-        if (isDealer && cards.Count == 1)  // First dealer card
-        {
-            shouldShowFront = false;
-        }
-        
-        // Toggle the face appropriately
-        cardModel.ToggleFace(shouldShowFront);
-        
-        // Ensure BoxCollider2D is properly sized for interaction
-        BoxCollider2D boxCollider = cardCopy.GetComponent<BoxCollider2D>();
-        if (boxCollider != null && cardModel.cardFront != null)
-        {
-            // Size the collider based on the sprite bounds and scale
-            Bounds bounds = cardModel.cardFront.bounds;
-            Vector2 size = bounds.size;
-            
-            // Make collider slightly larger to ensure it covers the entire card
-            boxCollider.size = size * 0.7f;
-        }
-        
         UpdatePoints();
         return cardCopy;
     }
@@ -202,7 +222,7 @@ public class CardHand : MonoBehaviour
         float cardSpacing = CARD_SPACING;
         
         // Calculate card width based on actual card sprite and scale
-        SpriteRenderer cardSprite = card.GetComponent<SpriteRenderer>();
+        Image cardSprite = card.GetComponent<Image>();
         float cardWidth = 0;
         
         if (cardSprite != null && cardSprite.sprite != null)

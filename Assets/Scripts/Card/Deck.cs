@@ -447,16 +447,16 @@ public class Deck : MonoBehaviour
          return;
      }
 
-     // Fallback: find "Frame" child and set its SpriteRenderer sprite
+     // Fallback: find "Frame" child and set its Image sprite
      Transform frameT = cardGO.transform.Find("Frame");
      if (frameT != null)
      {
-         SpriteRenderer sr = frameT.GetComponent<SpriteRenderer>();
-         if (sr != null && DeckMaterialManager.Instance != null)
+         Image img = frameT.GetComponent<Image>();
+         if (img != null && DeckMaterialManager.Instance != null)
          {
              Sprite frame = DeckMaterialManager.Instance.GetCurrentFrame();
-             sr.sprite = frame;
-             sr.enabled = frame != null;
+             img.sprite = frame;
+             img.enabled = frame != null;
          }
      }
  }
@@ -2191,9 +2191,9 @@ private void EndHand(WinCode code)
         foreach (GameObject cardGO in hand.cards)
         {
             CardModel cardModel = cardGO.GetComponent<CardModel>(); 
-            SpriteRenderer cardSpriteRenderer = cardGO.GetComponent<SpriteRenderer>();
+            Image cardImage = cardGO.GetComponent<Image>();
 
-            if (cardSpriteRenderer.sprite == cardModel.cardFront)
+            if (cardImage.sprite == cardModel.cardFront)
             {
                 if (cardModel.value == 1) // Ace
                 {
@@ -2418,7 +2418,7 @@ private void EndHand(WinCode code)
         {
             GameObject firstCard = cards[0];
             CardModel cardModel = firstCard.GetComponent<CardModel>();
-            SpriteRenderer spriteRenderer = firstCard.GetComponent<SpriteRenderer>();
+            Image spriteRenderer = firstCard.GetComponent<Image>();
             
             // Store original sprite
             Sprite originalSprite = spriteRenderer.sprite;
@@ -3285,7 +3285,7 @@ private void EndHand(WinCode code)
         foreach (GameObject card in dealerHand.cards)
         {
             CardModel cardModel = card.GetComponent<CardModel>();
-            SpriteRenderer sr = card.GetComponent<SpriteRenderer>();
+            Image sr = card.GetComponent<Image>();
             // Only swap with face-up dealer cards
             if (sr != null && sr.sprite == cardModel.cardFront)
             {
@@ -3303,7 +3303,7 @@ private void EndHand(WinCode code)
             foreach (GameObject card in dealerHand.cards)
             {
                 CardModel cardModel = card.GetComponent<CardModel>();
-                SpriteRenderer sr = card.GetComponent<SpriteRenderer>();
+                Image sr = card.GetComponent<Image>();
                 if (sr != null && sr.sprite == cardModel.cardFront)
                 {
                     dealerCard = card;
@@ -3340,12 +3340,12 @@ private void EndHand(WinCode code)
         playerCardModel.value = dealerCardModel.value;
         playerCardModel.cardFront = dealerCardModel.cardFront;
         playerCardModel.originalDeckIndex = dealerCardModel.originalDeckIndex;
-        playerCard.GetComponent<SpriteRenderer>().sprite = dealerCardModel.cardFront;
+        playerCard.GetComponent<Image>().sprite = dealerCardModel.cardFront;
         
         dealerCardModel.value = tempValue;
         dealerCardModel.cardFront = tempFront;
         dealerCardModel.originalDeckIndex = tempIndex;
-        dealerCard.GetComponent<SpriteRenderer>().sprite = tempFront;
+        dealerCard.GetComponent<Image>().sprite = tempFront;
         
         // Deselect cards
         playerCardModel.DeselectCard();
@@ -3401,12 +3401,12 @@ private void EndHand(WinCode code)
         card1.value = card2.value;
         card1.cardFront = card2.cardFront;
         card1.originalDeckIndex = card2.originalDeckIndex;
-        card1.GetComponent<SpriteRenderer>().sprite = card2.cardFront;
+        card1.GetComponent<Image>().sprite = card2.cardFront;
         
         card2.value = tempValue;
         card2.cardFront = tempFront;
         card2.originalDeckIndex = tempIndex;
-        card2.GetComponent<SpriteRenderer>().sprite = tempFront;
+        card2.GetComponent<Image>().sprite = tempFront;
         
         // Deselect cards
         card1.DeselectCard();
@@ -4277,7 +4277,7 @@ private void EndHand(WinCode code)
         Sequence escapeSequence = DOTween.Sequence();
         
         // Flash the card white to indicate The Escapist's intervention
-        SpriteRenderer spriteRenderer = cardToRemove.GetComponent<SpriteRenderer>();
+        Image spriteRenderer = cardToRemove.GetComponent<Image>();
         if (spriteRenderer != null)
         {
             Color originalColor = spriteRenderer.color;
@@ -5091,7 +5091,7 @@ public GameObject SpawnCardWithValue(CardHand targetHand, int forcedValue)
         float cardSpacing = 3.2f; // CARD_SPACING from CardHand
         float cardScale = 7.5f; // CARD_SCALE from CardHand
         
-        SpriteRenderer cardSprite = hand.card.GetComponent<SpriteRenderer>();
+        Image cardSprite = hand.card.GetComponent<Image>();
         float cardWidth = 0;
         
         if (cardSprite != null && cardSprite.sprite != null)
@@ -5221,7 +5221,7 @@ public GameObject SpawnCardWithValue(CardHand targetHand, int forcedValue)
         Sequence seductionDealSequence = DOTween.Sequence();
         
         // Scale up with pink glow
-        SpriteRenderer spriteRenderer = card.GetComponent<SpriteRenderer>();
+        Image spriteRenderer = card.GetComponent<Image>();
         if (spriteRenderer != null)
         {
             spriteRenderer.color = new Color(1f, 0.4f, 0.7f); // Start with pink color
@@ -5552,7 +5552,7 @@ public GameObject SpawnCardWithValue(CardHand targetHand, int forcedValue)
                 hasJacks = true;
                 
                 // Visual feedback - make the card appear "nullified"
-                SpriteRenderer spriteRenderer = cardObj.GetComponent<SpriteRenderer>();
+                Image spriteRenderer = cardObj.GetComponent<Image>();
                 if (spriteRenderer != null)
                 {
                     spriteRenderer.color = new Color(0.7f, 0.7f, 0.7f, 0.8f); // Gray out the card

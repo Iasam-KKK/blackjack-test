@@ -1,10 +1,11 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using DG.Tweening;
 
-public class CardModel : MonoBehaviour
+public class CardModel : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
-    SpriteRenderer spriteRenderer;
-    BoxCollider2D boxCollider;
+    Image spriteRenderer;
     public Sprite cardBack;
     public Sprite cardFront;
     public int value;
@@ -19,30 +20,16 @@ public class CardModel : MonoBehaviour
     // Card selection constants
     private const float SELECTION_RAISE_AMOUNT = 0.1f; // Small raise amount for camera setup
     public static float SELECTION_SCALE_INCREASE = 1.15f; // Scale up selected cards by 15%
-    private const float COLLIDER_SIZE_MULTIPLIER = 1.5f; // Make collider larger than sprite
 
     private void Awake() 
     { 
-        spriteRenderer = GetComponent<SpriteRenderer>();
-         
-        // Create a fresh collider
-        boxCollider = GetComponent<BoxCollider2D>();
-        if (boxCollider != null)
-        {
-            Destroy(boxCollider);
-        }
-        
-        boxCollider = gameObject.AddComponent<BoxCollider2D>();
-        boxCollider.isTrigger = false;
+        spriteRenderer = GetComponent<Image>();
     }
     
     private void Start()
     { 
         originalPosition = transform.localPosition;
         isInitialized = true;
-        
-        // Force update collider size
-        UpdateColliderSize();
         
         // Find the owning hand - we need this for card selection
         FindOwnerHand();
@@ -83,19 +70,6 @@ public class CardModel : MonoBehaviour
         Debug.LogWarning("Could not determine owner hand for card " + name);
     }
 
-    private void UpdateColliderSize()
-    {
-        // Set the collider size to match the sprite but make it larger
-        if (spriteRenderer.sprite != null && boxCollider != null)
-        {
-            // Get original sprite bounds
-            Vector2 spriteSize = spriteRenderer.sprite.bounds.size;
-            
-            // Make collider larger to ensure clicks are detected
-            boxCollider.size = spriteSize * COLLIDER_SIZE_MULTIPLIER;
-        }
-    }
-
     public void ToggleFace(bool showFace)
     {
         // Store a reference to help with face comparison
@@ -103,12 +77,9 @@ public class CardModel : MonoBehaviour
         
         // Toggle the sprite
         spriteRenderer.sprite = showFace ? cardFront : cardBack;
-        
-        // Update collider when sprite changes
-        UpdateColliderSize();
     }
      
-    private void OnMouseEnter()
+    public void OnPointerEnter(PointerEventData eventData)
     { 
         if (CanInteract())
         {
@@ -116,7 +87,7 @@ public class CardModel : MonoBehaviour
         }
     }
      
-    private void OnMouseExit()
+    public void OnPointerExit(PointerEventData eventData)
     { 
         spriteRenderer.color = Color.white;
     }
@@ -143,11 +114,11 @@ public class CardModel : MonoBehaviour
         return   isFrontFacing;
     }
 
-    private void OnMouseDown()
+    public void OnPointerClick(PointerEventData eventData)
     {
         if (!CanInteract()) return;
 
-        if (Input.GetMouseButton(0))
+        if (eventData.button == PointerEventData.InputButton.Left)
         {
             if (isSelected)
             {
@@ -186,7 +157,7 @@ public class CardModel : MonoBehaviour
                 }
             }
         }
-        else if (Input.GetMouseButton(1) && isSelected)
+        else if (eventData.button == PointerEventData.InputButton.Right && isSelected)
         {
             DeselectCard();
         }
@@ -258,7 +229,7 @@ public class CardModel : MonoBehaviour
             }
         }
     }
-    // Mutate the card’s value and (optionally) update its face sprite
+    // Mutate the card's value and (optionally) update its face sprite
     public void MutateCard(int newValue, Sprite newFrontSprite = null)
     {
         // Update the logical value
@@ -273,9 +244,6 @@ public class CardModel : MonoBehaviour
                 spriteRenderer.sprite = cardFront;
             }
         }
-
-        // Refresh collider size since sprite may change
-        UpdateColliderSize();
 
         Debug.Log($"[MutateCard] Card {name} mutated to value {newValue}");
     }

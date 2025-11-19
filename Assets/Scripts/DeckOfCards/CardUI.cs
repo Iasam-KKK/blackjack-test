@@ -1,17 +1,18 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Transform))]
 public class CardUI : MonoBehaviour
 {
-    // We'll auto-find the child named "Frame" (SpriteRenderer)
-    private SpriteRenderer frameRenderer;
+    // We'll auto-find the child named "Frame" (Image)
+    private Image frameRenderer;
 
     private void Awake()
     {
         // find "Frame" child (case-sensitive)
         Transform t = transform.Find("Frame");
         if (t != null)
-            frameRenderer = t.GetComponent<SpriteRenderer>();
+            frameRenderer = t.GetComponent<Image>();
     }
 
     private void OnEnable()
