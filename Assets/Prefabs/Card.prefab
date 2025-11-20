@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4294541982368051657}
   - component: {fileID: 4881231919081884439}
   - component: {fileID: 2131776088078759000}
+  - component: {fileID: 2236494432891581885}
   m_Layer: 5
   m_Name: Card
   m_TagString: Untagged
@@ -29,10 +30,10 @@ RectTransform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1.2, y: 1.2, z: 1.2}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1950651443353024365}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -59,7 +60,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -1352874299, guid: 0f44f9e08867a5942b64b497ea63aacb, type: 3}
+  m_Sprite: {fileID: -5604302859505958413, guid: f9723a92c5bb0484f9fb73161e866439,
+    type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -81,7 +83,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47da3651da542e842bef20759609201b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cardBack: {fileID: -1352874299, guid: 0f44f9e08867a5942b64b497ea63aacb, type: 3}
+  cardBack: {fileID: -5604302859505958413, guid: f9723a92c5bb0484f9fb73161e866439,
+    type: 3}
   cardFront: {fileID: 0}
   value: 0
   originalDeckIndex: -1
@@ -98,6 +101,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 803578f8d5126ad418e7ce448ec0c96f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CardUI
+--- !u!222 &2236494432891581885
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4920780043606772540}
+  m_CullTransparentMesh: 1
 --- !u!1 &6928742012777129845
 GameObject:
   m_ObjectHideFlags: 0
@@ -108,6 +119,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1950651443353024365}
   - component: {fileID: 2714405164746255192}
+  - component: {fileID: 7186916677261580849}
   m_Layer: 5
   m_Name: Frame
   m_TagString: Untagged
@@ -125,9 +137,9 @@ RectTransform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 9023322416733809845}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -164,3 +176,11 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!222 &7186916677261580849
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6928742012777129845}
+  m_CullTransparentMesh: 1
