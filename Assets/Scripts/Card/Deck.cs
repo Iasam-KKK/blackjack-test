@@ -121,16 +121,13 @@ public class Deck : MonoBehaviour
     public Button discardButton; 
     public Text finalMessage;
     public Text probMessage;
-    public Text playerScoreText;
-    public Text dealerScoreText;
+    // SCORE SYSTEM 2.0: Removed playerScoreText and dealerScoreText - now handled by ScoreManager
     public Button peekButton; // Eye button for peeking
     public Button transformButton; // Transformation button for card transformation
-    public Button raiseBetButton;
-    public Button lowerBetButton;
-    public Button placeBetButton; // New button to confirm bet placement
     public Button doubleDownButton; // New button for Double Down action
-    public Text balance;
-    public Text bet;
+    
+    // BETTING SYSTEM 2.0: Removed old betting UI references (raiseBetButton, lowerBetButton, placeBetButton, balance, bet)
+    // Now handled by BettingManager
     
     // UI elements for Round Flow tracking
     public Text hitsRemainingText; // Display remaining hits
@@ -159,9 +156,17 @@ public class Deck : MonoBehaviour
     
     // Boss System Integration
     public BossManager bossManager;
+    
+    // BETTING SYSTEM 2.0: Reference to BettingManager
+    public BettingManager bettingManager;
+    
+    // SCORE SYSTEM 2.0: Reference to ScoreManager
+    public ScoreManager scoreManager;
+    
+    // BETTING SYSTEM 2.0: Current bet amount (set by BettingManager or tarot cards)
+    public float CurrentBetAmount { get; set; } = 0f;
 
-    private uint _balance = Constants.InitialBalance;
-    public uint _bet;
+    // BETTING SYSTEM 2.0: Removed _balance and _bet (now handled by BettingManager and GameProgressionManager)
     private bool _isPeeking = false;
     public bool _isBetPlaced = false; // Track if bet has been placed for current round
     public bool _hasUsedPeekThisRound = false; // Track if peek has been used in current round
@@ -225,31 +230,7 @@ public class Deck : MonoBehaviour
 
 
     // Public property to access balance
-    /*public uint Balance
-    {
-        get { return _balance; }
-        set 
-        { 
-            // We don't update earnings here anymore - only track in EndHand and OnCardPurchased
-            _balance = value;
-            UpdateBalanceDisplay();
-            UpdateGoalProgress();
-            
-        }
-    }*/
-    public uint Balance
-    {
-        get { return _balance; }
-        set
-        {
-            _balance = value;
-
-            PlayerPrefs.SetInt("UserCash", (int)_balance); // Save to PlayerPrefs
-            PlayerPrefs.Save();
-
-            UpdateBalanceDisplay();
-        }
-    }
+    // BETTING SYSTEM 2.0: Removed Balance property - now using GameProgressionManager.playerHealthPercentage
 
 
     public int[] values = new int[Constants.DeckCards];
@@ -263,9 +244,7 @@ public class Deck : MonoBehaviour
 
     private void Start()
     {
-        _balance = (uint)PlayerPrefs.GetInt("UserCash", 1000); // Default to 1000 if not saved
-        bet.text = _bet.ToString() + " $";
-        UpdateBalanceDisplay();
+        // BETTING SYSTEM 2.0: Removed balance initialization - now using GameProgressionManager
 
         ShuffleCards();
         
@@ -288,8 +267,7 @@ public class Deck : MonoBehaviour
             Debug.LogWarning("BossManager not found - boss system disabled");
         }
         
-        bet.text = _bet.ToString() + " $";
-        UpdateBalanceDisplay();
+        // BETTING SYSTEM 2.0: Removed bet display initialization
         UpdateStreakUI(); // Initialize streak display with 1x flame
         
         // Initialize boss system - BUT NOT if minion encounter is active
@@ -370,14 +348,8 @@ public class Deck : MonoBehaviour
             transformButton.onClick.AddListener(TransformSelectedCards);
         }
         
-        if (placeBetButton != null)
-        {
-            placeBetButton.onClick.RemoveAllListeners();
-            placeBetButton.onClick.AddListener(PlaceBet);
-        }
-        
-        // Configure bet button hold functionality
-        SetupBetButtonHoldListeners();
+        // BETTING SYSTEM 2.0: Removed placeBetButton setup - now handled by BettingManager
+        // BETTING SYSTEM 2.0: Removed SetupBetButtonHoldListeners() - no longer needed
         
         // Subscribe to GameProgressionManager events
         if (GameProgressionManager.Instance != null)
@@ -418,9 +390,7 @@ public class Deck : MonoBehaviour
         discardButton.interactable = false;
         peekButton.interactable = false;
         transformButton.interactable = false;
-        raiseBetButton.interactable = false;
-        lowerBetButton.interactable = false;
-        placeBetButton.interactable = false;
+        // BETTING SYSTEM 2.0: Removed betting button disabling - handled by BettingManager
         
         // Disable play again button (game over means return to main menu, not next round)
         playAgainButton.interactable = false;
@@ -654,11 +624,20 @@ public class Deck : MonoBehaviour
         return handPoints == Constants.Blackjack;
     }
 
-    public int GetPlayerPoints() => 
-        GetVisibleScore(player, true);
+    // SCORE SYSTEM 2.0: Replaced with ScoreManager
+    public int GetPlayerPoints()
+    {
+        if (scoreManager != null)
+            return scoreManager.CalculatePlayerScore();
+        return GetVisibleScore(player, true); // Fallback
+    }
 
-    public int GetDealerPoints() => 
-        GetVisibleScore(dealer, false);
+    public int GetDealerPoints()
+    {
+        if (scoreManager != null)
+            return scoreManager.CalculateDealerScore();
+        return GetVisibleScore(dealer, false); // Fallback
+    }
 
     private void CalculateProbabilities()
     {
@@ -895,6 +874,9 @@ public class Deck : MonoBehaviour
         Debug.Log($"Dealt to dealer: {cardInfo.cardName} (Index: {cardIndex})");
 
         cardIndex++;
+        
+        // SCORE SYSTEM 2.0: Update scores after dealing card
+        UpdateScoreDisplays();
 
         // Notify boss system about card dealt
         if (bossManager != null && newCard != null)
@@ -935,6 +917,9 @@ public class Deck : MonoBehaviour
             }
 
             cardIndex++;
+            
+            // SCORE SYSTEM 2.0: Update scores after interception
+            UpdateScoreDisplays();
 
             if (bossManager != null && interceptedCard != null)
             {
@@ -1113,25 +1098,28 @@ public class Deck : MonoBehaviour
             return;
         }
         
-        // Check if player has enough balance to double the bet
-        if (_bet > _balance)
+        // BETTING SYSTEM 2.0: Check if player has enough health to double the bet
+        if (GameProgressionManager.Instance != null)
         {
-            finalMessage.text = "Insufficient balance to double down!";
-            Debug.LogWarning($"Cannot double down: Need ${_bet}, have ${_balance}");
-            return;
+            float currentHealth = GameProgressionManager.Instance.playerHealthPercentage;
+            if (CurrentBetAmount > currentHealth)
+            {
+                finalMessage.text = "Insufficient health to double down!";
+                Debug.LogWarning($"Cannot double down: Need {CurrentBetAmount:F0}, have {currentHealth:F0}");
+                return;
+            }
         }
         
-        Debug.Log($"Double Down: Doubling bet from ${_bet} to ${_bet * 2}");
+        Debug.Log($"Double Down: Doubling bet from {CurrentBetAmount:F0} to {(CurrentBetAmount * 2):F0}");
         
-        // Deduct additional bet from balance
-        _balance -= _bet;
-        PlayerPrefs.SetInt("UserCash", (int)_balance);
-        PlayerPrefs.Save();
-        UpdateBalanceDisplay();
+        // BETTING SYSTEM 2.0: Deduct additional bet from health
+        if (GameProgressionManager.Instance != null)
+        {
+            GameProgressionManager.Instance.DamagePlayer(CurrentBetAmount);
+        }
         
         // Double the bet amount
-        _bet *= 2;
-        bet.text = _bet.ToString() + " $";
+        CurrentBetAmount *= 2;
         
         _hasDoubledDown = true;
         
@@ -1426,7 +1414,8 @@ private void EndHand(WinCode code)
     _currentTurn = GameTurn.GameOver;
     
     FlipDealerCard();
-    uint oldBalance = _balance;
+    // BETTING SYSTEM 2.0: Track health for history instead of balance
+    float oldHealth = GameProgressionManager.Instance != null ? GameProgressionManager.Instance.playerHealthPercentage : 0f;
 
     int playerScore = GetPlayerPoints();
     int dealerScore = GetDealerPoints();
@@ -1435,54 +1424,56 @@ private void EndHand(WinCode code)
     switch (code)
     {
         case WinCode.DealerWins:
-            // Process the loss normally - The Escapist is now an active card, not passive
+            // BETTING SYSTEM 2.0: Player loses - bet was already deducted when placed
+            // Additional damage may be applied by special boss mechanics
             
             finalMessage.text = "You lose!";
             finalMessage.gameObject.SetActive(true);  
             outcomeText = "Lose";
             
-                        // Check if The Chiromancer is active and apply special betting
-            uint lossAmount = _bet;
+            // Check if The Chiromancer is active and apply special damage mechanics
+            float additionalDamage = 0f;
             if (bossManager != null && bossManager.currentBoss != null &&
                 bossManager.currentBoss.bossType == BossType.TheChiromancer)
             {
-                Debug.Log("The Chiromancer is active - applying special betting mechanics!");
+                Debug.Log("The Chiromancer is active - applying special damage mechanics!");
                 if (dealerScore == Constants.Blackjack)
                 {
-                    // Chiromancer wins with 21 - takes 2x bet
-                    lossAmount = _bet * 2;
-                    finalMessage.text += "\nChiromancer wins with 21! Takes 2x your bet!";
-                    Debug.Log("Chiromancer wins with 21 - taking 2x bet: $" + lossAmount);
+                    // Chiromancer wins with 21 - takes additional 1x bet damage (total 2x)
+                    additionalDamage = CurrentBetAmount;
+                    finalMessage.text += $"\nChiromancer wins with 21! Additional {additionalDamage:F0} damage!";
+                    Debug.Log($"Chiromancer wins with 21 - additional damage: {additionalDamage}");
                 }
                 else
                 {
-                    // Chiromancer wins normally - takes 1.5x bet
-                    lossAmount = (uint)(_bet * 1.5f);
-                    finalMessage.text += "\nChiromancer takes 1.5x your bet!";
-                    Debug.Log("Chiromancer wins normally - taking 1.5x bet: $" + lossAmount);
+                    // Chiromancer wins normally - takes additional 0.5x bet damage (total 1.5x)
+                    additionalDamage = CurrentBetAmount * 0.5f;
+                    finalMessage.text += $"\nChiromancer takes extra {additionalDamage:F0} damage!";
+                    Debug.Log($"Chiromancer wins normally - additional damage: {additionalDamage}");
+                }
+                
+                // Apply additional damage
+                if (GameProgressionManager.Instance != null && additionalDamage > 0)
+                {
+                    GameProgressionManager.Instance.DamagePlayer(additionalDamage);
                 }
             }
             
-            if (lossAmount <= _balance)
+            // Witch Doctor refund (heal back 10% of bet)
+            if (PlayerActuallyHasCard(TarotCardType.WitchDoctor) && PlayerHasActivatedCard(TarotCardType.WitchDoctor))
             {
-                Balance -= lossAmount;
-                if (PlayerActuallyHasCard(TarotCardType.WitchDoctor) && PlayerHasActivatedCard(TarotCardType.WitchDoctor))
+                float refund = CurrentBetAmount * 0.1f;
+                if (GameProgressionManager.Instance != null)
                 {
-                    int refund = Mathf.RoundToInt(_bet * 0.1f);
-                    Balance += (uint)refund;
-                    Debug.Log("Witch Doctor refunded 10% of your bet: " + refund);
+                    GameProgressionManager.Instance.HealPlayer(refund);
                 }
-            }
-            else
-            {
-                Debug.LogWarning("Loss amount greater than balance! Setting balance to 0.");
-                Balance = 0;
+                Debug.Log($"Witch Doctor refunded 10% of your bet: {refund:F1}");
             }
 
             _currentStreak = 0;
             _streakMultiplier = 0;
 
-            Debug.Log("Loss calculation: Lost Amount=$" + lossAmount + ", Earnings Impact=-$" + lossAmount);
+            Debug.Log($"Loss: Bet was {CurrentBetAmount}, Additional Damage={additionalDamage}");
             
             // Notify GameProgressionManager about player loss (SINGLE SOURCE OF TRUTH)
             if (GameProgressionManager.Instance != null)
@@ -1499,15 +1490,16 @@ private void EndHand(WinCode code)
             break;
 
         case WinCode.PlayerWins:
+            // BETTING SYSTEM 2.0: Player wins - heal back bet + winnings
             _currentStreak++;
             _streakMultiplier = Mathf.Min(_currentStreak / Constants.StreakMultiplierIncrement, Constants.MaxStreakLevel);
             float multiplier = CalculateWinMultiplier();
-            uint suitBonuses = CalculateSuitBonuses(player);
+            float suitBonuses = CalculateSuitBonusesAsPercentage(player);
 
-            uint baseProfit = _bet;
-            uint streakBonus = (uint)(baseProfit * (multiplier - 1.0f));
-            uint totalWinnings = _bet + baseProfit + streakBonus + suitBonuses;
-            uint netEarnings = baseProfit + streakBonus + suitBonuses;
+            float baseProfit = CurrentBetAmount;
+            float streakBonus = baseProfit * (multiplier - 1.0f);
+            float totalWinnings = CurrentBetAmount + baseProfit + streakBonus + suitBonuses;
+            float netHeal = baseProfit + streakBonus + suitBonuses;
 
             finalMessage.text = "You win!";
             if (_currentStreak > 1)
@@ -1516,17 +1508,21 @@ private void EndHand(WinCode code)
             }
             if (suitBonuses > 0)
             {
-                finalMessage.text += "\nSuit Bonus: +" + suitBonuses;
+                finalMessage.text += $"\nSuit Bonus: +{suitBonuses:F0}";
             }
             finalMessage.gameObject.SetActive(true); // ✅ Show result
             outcomeText = "Win";
 
-            Balance += totalWinnings;
+            // Heal player with winnings
+            if (GameProgressionManager.Instance != null)
+            {
+                GameProgressionManager.Instance.HealPlayer(totalWinnings);
+            }
 
-            Debug.Log("Win calculation: Bet=$" + _bet + ", Base Profit=$" + baseProfit +
-                     ", Streak Bonus=$" + streakBonus + ", Suit Bonuses=$" + suitBonuses +
-                     ", Total Winnings=$" + totalWinnings + ", Net Earnings=$" + netEarnings +
-                     ", Multiplier=" + multiplier.ToString("F2") + "x");
+            Debug.Log($"Win calculation: Bet={CurrentBetAmount}, Base Profit={baseProfit}, " +
+                     $"Streak Bonus={streakBonus}, Suit Bonuses={suitBonuses}, " +
+                     $"Total Heal={totalWinnings}, Net Heal={netHeal}, " +
+                     $"Multiplier={multiplier:F2}x");
             
             // Notify GameProgressionManager about player win (SINGLE SOURCE OF TRUTH)
             if (GameProgressionManager.Instance != null)
@@ -1543,13 +1539,17 @@ private void EndHand(WinCode code)
             break;
 
         case WinCode.Draw:
+            // BETTING SYSTEM 2.0: Draw - refund bet to player (heal back what was bet)
             finalMessage.text = "Draw!";
             finalMessage.gameObject.SetActive(true); // ✅ Show result
             outcomeText = "Draw";
 
-            Balance += _bet;
+            if (GameProgressionManager.Instance != null)
+            {
+                GameProgressionManager.Instance.HealPlayer(CurrentBetAmount);
+            }
 
-            Debug.Log("Draw: Refunded bet amount $" + _bet + " back to player");
+            Debug.Log($"Draw: Refunded bet amount {CurrentBetAmount} back to player");
 
             _currentStreak = 0;
             _streakMultiplier = 0;
@@ -1560,20 +1560,24 @@ private void EndHand(WinCode code)
             break;
     }
 
+    // BETTING SYSTEM 2.0: Update game history with health values
     if (gameHistoryManager != null)
     {
         string currentBossName = bossManager != null && bossManager.currentBoss != null ? bossManager.currentBoss.bossName : "Unknown Boss";
+        float newHealth = GameProgressionManager.Instance != null ? GameProgressionManager.Instance.playerHealthPercentage : 0f;
+        
+        // Convert float health to uint for history (multiply by 10 to preserve decimal)
         GameHistoryEntry historyEntry = new GameHistoryEntry(
             1, // Hand number (boss system doesn't use rounds)
             currentBossName,
             playerScore,
             dealerScore,
-            _bet,
-            oldBalance,
-            _balance,
+            (uint)(CurrentBetAmount * 10), // Convert percentage to uint (5.5% = 55)
+            (uint)(oldHealth * 10),
+            (uint)(newHealth * 10),
             outcomeText
         );
-        Debug.Log("Recording history entry: Boss=" + currentBossName + ", Outcome: " + outcomeText + ", Bet: " + _bet);
+        Debug.Log($"Recording history entry: Boss={currentBossName}, Outcome: {outcomeText}, Bet: {CurrentBetAmount:F0}");
         gameHistoryManager.AddHistoryEntry(historyEntry);
     }
     else
@@ -1583,13 +1587,10 @@ private void EndHand(WinCode code)
 
     UpdateStreakUI();
 
-    Debug.Log("Hand ended: " + code +
-              " - Old balance: " + oldBalance +
-              ", New balance: " + _balance +
-              ", Bet: " + _bet +
-              ", Balance change: " + (_balance - oldBalance) +
-              ", Current streak: " + _currentStreak +
-              ", Multiplier: " + CalculateWinMultiplier().ToString("F2") + "x");
+    float newHealth2 = GameProgressionManager.Instance != null ? GameProgressionManager.Instance.playerHealthPercentage : 0f;
+    Debug.Log($"Hand ended: {code} - Old health: {oldHealth:F1}, New health: {newHealth2:F1}, " +
+              $"Bet: {CurrentBetAmount:F0}, Health change: {(newHealth2 - oldHealth):F1}, " +
+              $"Current streak: {_currentStreak}, Multiplier: {CalculateWinMultiplier():F2}x");
 
     // Move cards from hands to discard pile (post-hand update)
     MoveHandsToDiscardPile();
@@ -1600,9 +1601,7 @@ private void EndHand(WinCode code)
     discardButton.interactable = false;
     peekButton.interactable = false;
     transformButton.interactable = false;
-    raiseBetButton.interactable = false;
-    lowerBetButton.interactable = false;
-    placeBetButton.interactable = false;
+    // BETTING SYSTEM 2.0: Removed betting button disabling - handled by BettingManager
     if (doubleDownButton != null)
     {
         doubleDownButton.interactable = false;
@@ -1610,17 +1609,21 @@ private void EndHand(WinCode code)
 
     playAgainButton.interactable = true;
 
-    _bet = 0;
-    bet.text = _bet.ToString() + " $";
-    UpdateBalanceDisplay();
+    // BETTING SYSTEM 2.0: Reset bet amount
+    CurrentBetAmount = 0f;
+    // BETTING SYSTEM 2.0: Removed bet display and balance display updates
     UpdateScoreDisplays();
 
-    // Check for game over conditions - balance or hands exhausted
-    bool isGameOver = (Balance == 0) || (bossManager != null && bossManager.IsGameOver());
+    // BETTING SYSTEM 2.0: Check for game over conditions - health depleted or boss defeated
+    bool isGameOver = false;
+    if (GameProgressionManager.Instance != null)
+    {
+        isGameOver = (GameProgressionManager.Instance.playerHealthPercentage <= 0) || (bossManager != null && bossManager.IsGameOver());
+    }
     
     if (isGameOver)
     {
-        if (Balance == 0)
+        if (GameProgressionManager.Instance != null && GameProgressionManager.Instance.playerHealthPercentage <= 0)
         {
             finalMessage.text += "\n - GAME OVER (No Money) -";
         }
@@ -1653,9 +1656,10 @@ private void EndHand(WinCode code)
 
     public void PlayAgain()
     {   
-        // Check if this is a game over scenario
+        // BETTING SYSTEM 2.0: Check if this is a game over scenario
         Text buttonText = playAgainButton.GetComponentInChildren<Text>();
-        bool isGameOver = (Balance == 0) || 
+        bool playerHealthDepleted = (GameProgressionManager.Instance != null && GameProgressionManager.Instance.playerHealthPercentage <= 0);
+        bool isGameOver = playerHealthDepleted || 
                          (bossManager != null && bossManager.IsGameOver()) ||
                          (buttonText != null && (buttonText.text == "Play Again" || buttonText.text == "Restart Game"));
         
@@ -1708,9 +1712,8 @@ private void EndHand(WinCode code)
         // Show boss transition animation
         ShowBossTransition();
         
-        // Reset bet for new round
-        _bet = 0;
-        bet.text = _bet.ToString() + " $";
+        // BETTING SYSTEM 2.0: Reset bet for new round
+        CurrentBetAmount = 0f;
         
         // Clear hand
         player.GetComponent<CardHand>().Clear();
@@ -1772,9 +1775,7 @@ private void EndHand(WinCode code)
         discardButton.interactable = false;
         peekButton.interactable = false;
         transformButton.interactable = false;
-        raiseBetButton.interactable = false;
-        lowerBetButton.interactable = false;
-        placeBetButton.interactable = false;
+        // BETTING SYSTEM 2.0: Removed betting button disabling - handled by BettingManager
         
         // Enable restart button
         playAgainButton.interactable = true;
@@ -1830,9 +1831,7 @@ private void EndHand(WinCode code)
         discardButton.interactable = false;
         peekButton.interactable = false;
         transformButton.interactable = false;
-        raiseBetButton.interactable = false;
-        lowerBetButton.interactable = false;
-        placeBetButton.interactable = false;
+        // BETTING SYSTEM 2.0: Removed betting button disabling - handled by BettingManager
     }
     
     /// <summary>
@@ -1842,8 +1841,11 @@ private void EndHand(WinCode code)
     {
         Debug.Log("Restarting game - preserving inventory");
         
-        // Reset balance to initial amount
-        Balance = Constants.InitialBalance;
+        // BETTING SYSTEM 2.0: Reset health to full
+        if (GameProgressionManager.Instance != null)
+        {
+            GameProgressionManager.Instance.RestorePlayerHealth();
+        }
         
         // Reset boss system
         if (bossManager != null)
@@ -1855,9 +1857,8 @@ private void EndHand(WinCode code)
         _currentStreak = 0;
         _streakMultiplier = 0;
         
-        // Reset bet
-        _bet = 0;
-        bet.text = _bet.ToString() + " $";
+        // BETTING SYSTEM 2.0: Reset bet
+        CurrentBetAmount = 0f;
         
         // Clear hands
         if (player != null && player.GetComponent<CardHand>() != null)
@@ -1910,7 +1911,7 @@ private void EndHand(WinCode code)
         
         // Update UI
         UpdateStreakUI();
-        UpdateBalanceDisplay();
+        // BETTING SYSTEM 2.0: Removed UpdateBalanceDisplay() - handled by BettingManager
         
         // Clear final message and reset button text
         finalMessage.text = "";
@@ -1959,9 +1960,8 @@ private void EndHand(WinCode code)
         // Wait a moment for boss initialization to complete
         yield return new WaitForSeconds(1f);
         
-        // Reset bet for new boss
-        _bet = 0;
-        bet.text = _bet.ToString() + " $";
+        // BETTING SYSTEM 2.0: Reset bet for new boss
+        CurrentBetAmount = 0f;
         
         // Clear hands
         if (player != null && player.GetComponent<CardHand>() != null)
@@ -2031,143 +2031,26 @@ private void EndHand(WinCode code)
         }
     }
 
-    public void RaiseBet()
-    {
-        RaiseBetWithMultiplier(1);
-    }
+    // BETTING SYSTEM 2.0: Removed old betting methods (RaiseBet, LowerBet, PlaceBet)
+    // Now handled by BettingManager
     
-    public void LowerBet()
+    /// <summary>
+    /// BETTING SYSTEM 2.0: Start betting round with bet amount from BettingManager
+    /// Called by BettingManager after bet is placed
+    /// </summary>
+    public void StartBettingRound(float betAmount)
     {
-        LowerBetWithMultiplier(1);
-    }
-    
-    private void RaiseBetWithMultiplier(int multiplier)
-    {
-        uint increment = Constants.BetIncrement * (uint)multiplier;
-        uint newBet = _bet + increment;
-        
-        // Apply max bet limit (min of balance and max bet)
-        uint effectiveMaxBet = System.Math.Min(Balance, _maxBet);
-        
-        if (newBet <= effectiveMaxBet)
-        {
-            _bet = newBet;
-        }
-        else if (_bet < effectiveMaxBet)
-        {
-            _bet = effectiveMaxBet; // Set to max allowed bet
-        }
-        
-        bet.text = _bet.ToString() + " $";
-        
-        // Update place bet button state - must meet minimum bet
-        if (placeBetButton != null)
-        {
-            placeBetButton.interactable = (_bet >= _minBet);
-        }
-    }
-    
-    private void LowerBetWithMultiplier(int multiplier)
-    {
-        uint decrement = Constants.BetIncrement * (uint)multiplier;
-        
-        if (_bet >= decrement + _minBet)
-        {
-            _bet -= decrement;
-        }
-        else if (_bet > _minBet)
-        {
-            _bet = _minBet; // Set to minimum bet
-        }
-        else
-        {
-            _bet = 0; // Allow 0 only if below minimum (can't place bet at 0)
-        }
-        
-        bet.text = _bet.ToString() + " $";
-        
-        // Update place bet button state - must meet minimum bet
-        if (placeBetButton != null)
-        {
-            placeBetButton.interactable = (_bet >= _minBet);
-        }
-    }
-
-    /*
-    public void PlaceBet()
-    {
-        if (_bet <= 0)
-        {
-            Debug.LogWarning("Cannot place bet: Bet amount is 0");
-            return;
-        }
-        
-        if (_bet > _balance)
-        {
-            Debug.LogWarning("Cannot place bet: Bet amount exceeds balance");
-            return;
-        }
+        // Set the current bet amount
+        CurrentBetAmount = betAmount;
         
         // Mark bet as placed
         _isBetPlaced = true;
         
-        // Disable betting buttons
-        raiseBetButton.interactable = false;
-        lowerBetButton.interactable = false;
-        placeBetButton.interactable = false;
-        
         // Clear the betting message
         finalMessage.text = "";
         
-        Debug.Log("Bet placed: $" + _bet + " - Starting game");
+        Debug.Log($"[Deck] Betting round started with bet amount: {betAmount}");
         
-        // Now start the actual game
-        StartGame();
-    }
-    */
-    public void PlaceBet()
-    {
-        if (_bet < _minBet)
-        {
-            Debug.LogWarning($"Cannot place bet: Bet amount ${_bet} is below minimum ${_minBet}");
-            finalMessage.text = $"Minimum bet is ${_minBet}!";
-            return;
-        }
-
-        if (_bet > _balance)
-        {
-            Debug.LogWarning("Cannot place bet: Bet amount exceeds balance");
-            return;
-        }
-        
-        if (_bet > _maxBet)
-        {
-            Debug.LogWarning($"Cannot place bet: Bet amount ${_bet} exceeds maximum ${_maxBet}");
-            finalMessage.text = $"Maximum bet is ${_maxBet}!";
-            return;
-        }
-
-        // Deduct the bet from the balance and save it
-        _balance -= _bet;
-        PlayerPrefs.SetInt("UserCash", (int)_balance);
-        PlayerPrefs.Save();
-        
-        // Update balance display immediately
-        UpdateBalanceDisplay();
-
-        Debug.Log("Bet placed: $" + _bet + " | New Balance: $" + _balance);
-
-        // Mark bet as placed
-        _isBetPlaced = true;
-
-        // Disable betting buttons
-        raiseBetButton.interactable = false;
-        lowerBetButton.interactable = false;
-        placeBetButton.interactable = false;
-
-        // Clear the betting message
-        finalMessage.text = "";
-
         // Start the game
         StartGame();
     }
@@ -2281,11 +2164,20 @@ private void EndHand(WinCode code)
         }
     }
     
-    // Make UpdateScoreDisplays public so it can be called from CardHand
+    // SCORE SYSTEM 2.0: Replaced with ScoreManager
     public void UpdateScoreDisplays()
     {
-        playerScoreText.text = "Score: " + GetVisibleScore(player, true);
-        dealerScoreText.text = "Score: " + GetVisibleScore(dealer, false);
+        if (scoreManager != null)
+        {
+            scoreManager.UpdateAllScores();
+        }
+        else
+        {
+            // Fallback for old system (commented out text references)
+            // playerScoreText.text = "Score: " + GetVisibleScore(player, true);
+            // dealerScoreText.text = "Score: " + GetVisibleScore(dealer, false);
+            Debug.LogWarning("[Deck] ScoreManager not assigned! Assign it in Inspector.");
+        }
     }
     
     // Make UpdateDiscardButtonState public so it can be called from CardModel
@@ -3758,14 +3650,7 @@ private void EndHand(WinCode code)
     }
 
     // Update balance display
-    private void UpdateBalanceDisplay()
-    {
-        if (balance != null)
-        {
-            balance.text = " " + _balance.ToString() + " $";
-            
-        }
-    }
+    // BETTING SYSTEM 2.0: Removed UpdateBalanceDisplay() - now handled by BettingManager
 
     // Method for the ShopManager to call when a card is purchased
     public void OnCardPurchased(uint cost)
@@ -4191,6 +4076,36 @@ private void EndHand(WinCode code)
     }
     
     /// <summary>
+    /// BETTING SYSTEM 2.0: Calculate suit bonuses as health percentage
+    /// Converts suit bonuses to percentage equivalent
+    /// </summary>
+    public float CalculateSuitBonusesAsPercentage(GameObject handOwner = null)
+    {
+        if (PlayerStats.instance == null)
+            return 0f;
+            
+        // Tarot card bonuses should ONLY apply to the player's hand, never dealer's hand
+        GameObject targetHand = player;
+        
+        // Verify we have the player object
+        if (targetHand == null)
+            return 0f;
+        
+        // Calculate bonuses - convert from currency to percentage (divide by 10 for percentage equivalent)
+        // e.g., $50 bonus = 5% health bonus
+        uint botanistBonus = CalculateBotanistBonus(targetHand);
+        uint assassinBonus = CalculateAssassinBonus(targetHand);
+        uint secretLoverBonus = CalculateSecretLoverBonus(targetHand);
+        uint jewelerBonus = CalculateJewelerBonus(targetHand);
+        uint houseKeeperBonus = CalculateHouseKeeperBonus(targetHand);
+        
+        uint totalBonus = botanistBonus + assassinBonus + secretLoverBonus + jewelerBonus + houseKeeperBonus;
+        
+        // Convert to percentage: every $10 = 1% health
+        return totalBonus / 10f;
+    }
+    
+    /// <summary>
     /// Get detailed breakdown of all suit bonuses (useful for UI display)
     /// </summary>
     public Dictionary<TarotCardType, uint> GetSuitBonusBreakdown(GameObject handOwner = null)
@@ -4490,14 +4405,21 @@ private void EndHand(WinCode code)
             doubleDownButton.interactable = false;
         }
         
-        // Enable betting buttons
-        raiseBetButton.interactable = true;
-        lowerBetButton.interactable = true;
-        placeBetButton.interactable = (_bet > 0); // Only enable if there's a bet amount
+        // BETTING SYSTEM 2.0: Enable BettingManager for new round
+        if (bettingManager != null)
+        {
+            bettingManager.EnableBetting();
+        }
+        else
+        {
+            Debug.LogWarning("[Deck] BettingManager not found! Assign it in Inspector.");
+        }
         
-        // Clear score displays
-        playerScoreText.text = "Score: 0";
-        dealerScoreText.text = "Score: 0";
+        // SCORE SYSTEM 2.0: Clear score displays via ScoreManager
+        if (scoreManager != null)
+        {
+            scoreManager.UpdateAllScores();
+        }
         probMessage.text = "";
         finalMessage.text = "Place your bet to start the round!";
         
@@ -4709,17 +4631,25 @@ private void EndHand(WinCode code)
         if (doubleDownButton == null) return;
         
         // Double Down only available on initial 2-card hand, before any hits, with sufficient balance
+        // BETTING SYSTEM 2.0: Check double down availability
         CardHand playerHand = player.GetComponent<CardHand>();
+        bool hasEnoughHealth = false;
+        if (GameProgressionManager.Instance != null)
+        {
+            hasEnoughHealth = CurrentBetAmount <= GameProgressionManager.Instance.playerHealthPercentage;
+        }
+        
         bool canDoubleDown = _isBetPlaced &&
                             _gameInProgress &&
                             _currentTurn == GameTurn.Player &&
                             !_hasDoubledDown &&
                             _hitsThisHand == 0 &&
                             playerHand.cards.Count == Constants.InitialCardsDealt &&
-                            _bet <= _balance;
+                            hasEnoughHealth;
         
         doubleDownButton.interactable = canDoubleDown;
-        Debug.Log($"Double Down button state: {canDoubleDown} (Bet: {_bet}, Balance: {_balance}, Hits: {_hitsThisHand}, Cards: {playerHand.cards.Count})");
+        float currentHealth = GameProgressionManager.Instance != null ? GameProgressionManager.Instance.playerHealthPercentage : 0f;
+        Debug.Log($"Double Down button state: {canDoubleDown} (Bet: {CurrentBetAmount:F0}, Health: {currentHealth:F0}, Hits: {_hitsThisHand}, Cards: {playerHand.cards.Count})");
     }
     
     private IEnumerator ReplaceCardWithInitialAnimation(CardModel clickedCard)
@@ -4868,6 +4798,8 @@ private void EndHand(WinCode code)
     private IEnumerator PushDealerAnimated()
     {
         yield return StartCoroutine(PushAnimated(dealer, false));
+        // SCORE SYSTEM 2.0: Update scores after animated dealer card
+        UpdateScoreDisplays();
     }
     public IEnumerator ActivateScammerEffect()
     {
@@ -5269,167 +5201,7 @@ public GameObject SpawnCardWithValue(CardHand targetHand, int forcedValue)
         Debug.Log("The Seductress intercepted card animation completed");
     }
     
-    // Setup hold functionality for bet buttons
-    private void SetupBetButtonHoldListeners()
-    {
-        if (raiseBetButton != null)
-        {
-            // Add event trigger for pointer down/up events
-            UnityEngine.EventSystems.EventTrigger raiseTrigger = raiseBetButton.gameObject.GetComponent<UnityEngine.EventSystems.EventTrigger>();
-            if (raiseTrigger == null)
-            {
-                raiseTrigger = raiseBetButton.gameObject.AddComponent<UnityEngine.EventSystems.EventTrigger>();
-            }
-            
-            // Clear existing entries
-            raiseTrigger.triggers.Clear();
-            
-            // Pointer down event
-            UnityEngine.EventSystems.EventTrigger.Entry pointerDownEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
-            pointerDownEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerDown;
-            pointerDownEntry.callback.AddListener((data) => { StartRaiseBetHold(); });
-            raiseTrigger.triggers.Add(pointerDownEntry);
-            
-            // Pointer up event
-            UnityEngine.EventSystems.EventTrigger.Entry pointerUpEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
-            pointerUpEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerUp;
-            pointerUpEntry.callback.AddListener((data) => { StopRaiseBetHold(); });
-            raiseTrigger.triggers.Add(pointerUpEntry);
-            
-            // Pointer exit event (in case pointer leaves button while held)
-            UnityEngine.EventSystems.EventTrigger.Entry pointerExitEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
-            pointerExitEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit;
-            pointerExitEntry.callback.AddListener((data) => { StopRaiseBetHold(); });
-            raiseTrigger.triggers.Add(pointerExitEntry);
-        }
-        
-        if (lowerBetButton != null)
-        {
-            // Add event trigger for pointer down/up events
-            UnityEngine.EventSystems.EventTrigger lowerTrigger = lowerBetButton.gameObject.GetComponent<UnityEngine.EventSystems.EventTrigger>();
-            if (lowerTrigger == null)
-            {
-                lowerTrigger = lowerBetButton.gameObject.AddComponent<UnityEngine.EventSystems.EventTrigger>();
-            }
-            
-            // Clear existing entries
-            lowerTrigger.triggers.Clear();
-            
-            // Pointer down event
-            UnityEngine.EventSystems.EventTrigger.Entry pointerDownEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
-            pointerDownEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerDown;
-            pointerDownEntry.callback.AddListener((data) => { StartLowerBetHold(); });
-            lowerTrigger.triggers.Add(pointerDownEntry);
-            
-            // Pointer up event
-            UnityEngine.EventSystems.EventTrigger.Entry pointerUpEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
-            pointerUpEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerUp;
-            pointerUpEntry.callback.AddListener((data) => { StopLowerBetHold(); });
-            lowerTrigger.triggers.Add(pointerUpEntry);
-            
-            // Pointer exit event (in case pointer leaves button while held)
-            UnityEngine.EventSystems.EventTrigger.Entry pointerExitEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
-            pointerExitEntry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit;
-            pointerExitEntry.callback.AddListener((data) => { StopLowerBetHold(); });
-            lowerTrigger.triggers.Add(pointerExitEntry);
-        }
-    }
-    
-    // Start holding raise bet button
-    private void StartRaiseBetHold()
-    {
-        if (!_isHoldingRaiseBet && raiseBetButton.interactable)
-        {
-            _isHoldingRaiseBet = true;
-            _raiseBetCoroutine = StartCoroutine(RaiseBetHoldCoroutine());
-        }
-    }
-    
-    // Stop holding raise bet button
-    private void StopRaiseBetHold()
-    {
-        _isHoldingRaiseBet = false;
-        if (_raiseBetCoroutine != null)
-        {
-            StopCoroutine(_raiseBetCoroutine);
-            _raiseBetCoroutine = null;
-        }
-    }
-    
-    // Start holding lower bet button
-    private void StartLowerBetHold()
-    {
-        if (!_isHoldingLowerBet && lowerBetButton.interactable)
-        {
-            _isHoldingLowerBet = true;
-            _lowerBetCoroutine = StartCoroutine(LowerBetHoldCoroutine());
-        }
-    }
-    
-    // Stop holding lower bet button
-    private void StopLowerBetHold()
-    {
-        _isHoldingLowerBet = false;
-        if (_lowerBetCoroutine != null)
-        {
-            StopCoroutine(_lowerBetCoroutine);
-            _lowerBetCoroutine = null;
-        }
-    }
-    
-    // Coroutine for raise bet hold functionality
-    private IEnumerator RaiseBetHoldCoroutine()
-    {
-        // Initial delay before starting rapid increments
-        yield return new WaitForSeconds(0.5f);
-        
-        float holdTime = 0f;
-        int multiplier = 1;
-        
-        while (_isHoldingRaiseBet && raiseBetButton.interactable)
-        {
-            RaiseBetWithMultiplier(multiplier);
-            
-            holdTime += 0.1f;
-            
-            // Increase multiplier based on hold time
-            if (holdTime > 3f) multiplier = 10;      // After 3 seconds, 10x speed
-            else if (holdTime > 2f) multiplier = 5;  // After 2 seconds, 5x speed
-            else if (holdTime > 1f) multiplier = 2;  // After 1 second, 2x speed
-            else multiplier = 1;                     // First second, normal speed
-            
-            // Faster interval as time progresses
-            float interval = holdTime > 2f ? 0.05f : 0.1f;
-            yield return new WaitForSeconds(interval);
-        }
-    }
-    
-    // Coroutine for lower bet hold functionality
-    private IEnumerator LowerBetHoldCoroutine()
-    {
-        // Initial delay before starting rapid decrements
-        yield return new WaitForSeconds(0.5f);
-        
-        float holdTime = 0f;
-        int multiplier = 1;
-        
-        while (_isHoldingLowerBet && lowerBetButton.interactable)
-        {
-            LowerBetWithMultiplier(multiplier);
-            
-            holdTime += 0.1f;
-            
-            // Increase multiplier based on hold time
-            if (holdTime > 3f) multiplier = 10;      // After 3 seconds, 10x speed
-            else if (holdTime > 2f) multiplier = 5;  // After 2 seconds, 5x speed
-            else if (holdTime > 1f) multiplier = 2;  // After 1 second, 2x speed
-            else multiplier = 1;                     // First second, normal speed
-            
-            // Faster interval as time progresses
-            float interval = holdTime > 2f ? 0.05f : 0.1f;
-            yield return new WaitForSeconds(interval);
-        }
-    }
+    // BETTING SYSTEM 2.0: Removed all button hold functionality - no longer needed
 
     /// <summary>
     /// Modify deck for The Captain boss - only Jacks and all Spades

@@ -224,31 +224,37 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         }
     }
     
-    // Try to purchase the card from the shop
+    // BETTING SYSTEM 2.0: Try to purchase the card from the shop (using health as currency)
     public void TryPurchaseCard()
     {
         uint cost = GetFinalPrice();
-        if (deck != null && deck.Balance >= cost)
+        // Convert cost to health (every $10 = 1 health point)
+        float healthCost = cost / 10f;
+        
+        if (deck != null && GameProgressionManager.Instance != null)
         {
-            // Start purchase animation sequence
-            StartCoroutine(AnimatedPurchaseSequence(cost));
-        }
-        else
-        {
-            // Not enough balance - show feedback
-            transform.DOShakePosition(0.5f, 10, 10, 90, false, true);
-            
-            if (deck != null)
+            float currentHealth = GameProgressionManager.Instance.playerHealthPercentage;
+            if (currentHealth >= healthCost)
             {
-                Debug.Log("Not enough balance to purchase card. Balance: " + deck.Balance + ", Price: " + cost);
+                // Start purchase animation sequence
+                StartCoroutine(AnimatedPurchaseSequence(cost, healthCost));
+            }
+            else
+            {
+                // Not enough health - show feedback
+                transform.DOShakePosition(0.5f, 10, 10, 90, false, true);
+                Debug.Log($"Not enough health to purchase card. Health: {currentHealth:F0}, Cost: {healthCost:F0}");
             }
         }
     }
     
-    private IEnumerator AnimatedPurchaseSequence(uint cost)
+    private IEnumerator AnimatedPurchaseSequence(uint cost, float healthCost)
     {
-        // Deduct balance immediately
-        deck.Balance -= cost;
+        // BETTING SYSTEM 2.0: Deduct health immediately
+        if (GameProgressionManager.Instance != null)
+        {
+            GameProgressionManager.Instance.DamagePlayer(healthCost);
+        }
         deck.OnCardPurchased(cost);
         
         // Ensure shopManager reference
@@ -664,14 +670,16 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                             break;
                         }
                         
-                        // Deduct half of the current bet from the player's balance
-                        int halfBet = Mathf.FloorToInt(deck._bet / 2f);
-                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - halfBet);
+                        // BETTING SYSTEM 2.0: Deduct half of the current bet from the player's health
+                        float halfBet = deck.CurrentBetAmount / 2f;
+                        if (GameProgressionManager.Instance != null)
+                        {
+                            GameProgressionManager.Instance.DamagePlayer(halfBet);
+                        }
                         
                         // Update bet to remaining half
-                        deck._bet /= 2;
-                        deck.bet.text = deck._bet.ToString() + " $";
-                        Debug.Log($"[CursedHourglass] Deducted half of the bet: -{halfBet}");
+                        deck.CurrentBetAmount /= 2;
+                        Debug.Log($"[CursedHourglass] Deducted half of the bet: -{halfBet:F0}");
 
                         // Activate the card's effect
                         Debug.Log("Cursed Hourglass triggered!");
@@ -698,11 +706,13 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 case TarotCardType.WhisperOfThePast:
                     if (!hasBeenUsedThisRound)
                     {
-                        // Deduct ¼ of the current bet
-                        int quarterBet = Mathf.FloorToInt(deck._bet * 0.75f);
-                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - quarterBet);
-                        deck.bet.text = quarterBet.ToString();  // Optional: You can keep showing the full bet here if needed
-                        Debug.Log($"[WhisperOfThePast] Deducted ¼ of the bet: -{quarterBet}");
+                        // BETTING SYSTEM 2.0: Deduct ¼ of the current bet from health
+                        float quarterBet = deck.CurrentBetAmount * 0.25f;
+                        if (GameProgressionManager.Instance != null)
+                        {
+                            GameProgressionManager.Instance.DamagePlayer(quarterBet);
+                        }
+                        Debug.Log($"[WhisperOfThePast] Deducted ¼ of the bet: -{quarterBet:F0}");
 
                         // Activate the card's effect
                         Debug.Log("[WhisperOfThePast] Removing player cards and re-dealing...");
@@ -714,11 +724,13 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 case TarotCardType.Saboteur:
                     if (!hasBeenUsedThisRound)
                     {
-                        // Deduct ¼ of the current bet
-                        int quarterBet = Mathf.FloorToInt(deck._bet * 0.75f);
-                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - quarterBet);
-                        deck.bet.text = quarterBet.ToString();  // Optional: you might want to show the full bet instead
-                        Debug.Log($"[Saboteur] Deducted ¼ of the bet: -{quarterBet}");
+                        // BETTING SYSTEM 2.0: Deduct ¼ of the current bet from health
+                        float quarterBet = deck.CurrentBetAmount * 0.25f;
+                        if (GameProgressionManager.Instance != null)
+                        {
+                            GameProgressionManager.Instance.DamagePlayer(quarterBet);
+                        }
+                        Debug.Log($"[Saboteur] Deducted ¼ of the bet: -{quarterBet:F0}");
 
                         // Activate the dealer-hand clearing effect
                         Debug.Log("[Saboteur] Removing dealer cards...");
@@ -732,9 +744,12 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     {
                         Debug.Log("Scammer card triggered!");
 
-                        int halfBet = Mathf.FloorToInt(deck._bet * 0.5f);
-                        deck.Balance = (uint)Mathf.Max(0, (int)deck.Balance - halfBet);
-                        deck.bet.text = (deck._bet - halfBet).ToString();
+                        // BETTING SYSTEM 2.0: Deduct half of the bet from health
+                        float halfBet = deck.CurrentBetAmount * 0.5f;
+                        if (GameProgressionManager.Instance != null)
+                        {
+                            GameProgressionManager.Instance.DamagePlayer(halfBet);
+                        }
 
                         deck.StartCoroutine(deck.ActivateScammerEffect());
 

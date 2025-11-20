@@ -1184,10 +1184,13 @@ public class BossManager : MonoBehaviour
     /// </summary>
     private void GrantBonusBalance(uint amount)
     {
-        if (deck != null)
+        // BETTING SYSTEM 2.0: Convert balance bonus to health heal
+        if (GameProgressionManager.Instance != null)
         {
-            deck.Balance += amount;
-            Debug.Log($"Granted bonus balance: {amount}");
+            // Convert currency to health (every $10 = 1 health point)
+            float healthBonus = amount / 10f;
+            GameProgressionManager.Instance.HealPlayer(healthBonus);
+            Debug.Log($"Granted bonus heal: {healthBonus:F0} (from {amount} balance)");
         }
     }
     
@@ -1828,14 +1831,9 @@ public class BossManager : MonoBehaviour
     }
     private void ModifyBetAmount(BossMechanic mechanic)
     {
-        if (deck != null)
-        {
-            uint originalBet = deck._bet;
-            uint modifiedBet = (uint)(originalBet * mechanic.mechanicMultiplier);
-            deck._bet = modifiedBet;
-            
-            Debug.Log($"Bet modified from {originalBet} to {modifiedBet}");
-        }
+        // BETTING SYSTEM 2.0: Bet modification now handled through BettingManager
+        // This mechanic may need to be reimplemented if needed
+        Debug.LogWarning("Bet modification mechanic needs reimplementation for new betting system");
     }
     
     /// <summary>

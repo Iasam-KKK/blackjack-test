@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 7e083be0277ab0741af76e6ccc73fe58
+guid: 7062323177ad7a144b8eddb1ff231a46
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 108338549831885932
-    second: inventory (2)_0
+      213: 7061751622126001341
+    second: PauseMenuBG_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: inventory (2)_0
+      name: PauseMenuBG_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 58
-        height: 59
+        width: 316
+        height: 346
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: c64e53a4655e08100800000000000000
-      internalID: 108338549831885932
+      spriteID: dbcdbd08fa1600260800000000000000
+      internalID: 7061751622126001341
       vertices: []
       indices: 
       edges: []

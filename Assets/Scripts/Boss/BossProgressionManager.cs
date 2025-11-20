@@ -350,16 +350,18 @@ public class BossProgressionManager : MonoBehaviour
         if (rewardState.grantsBonusBalance)
         {
             // Find Deck to add balance
-            Deck deck = FindObjectOfType<Deck>();
-            if (deck != null)
+            // BETTING SYSTEM 2.0: Convert balance reward to health heal
+            if (GameProgressionManager.Instance != null)
             {
-                deck.Balance += rewardState.bonusAmount;
-                Debug.Log($"[BossProgressionManager] Added {rewardState.bonusAmount} balance. New balance: {deck.Balance}");
+                // Convert currency to health (every $10 = 1 health point)
+                float healthBonus = rewardState.bonusAmount / 10f;
+                GameProgressionManager.Instance.HealPlayer(healthBonus);
+                Debug.Log($"[BossProgressionManager] Healed {healthBonus:F0} health (from {rewardState.bonusAmount} balance reward)");
                 return true;
             }
             else
             {
-                Debug.LogWarning("[BossProgressionManager] Deck not found - saving balance for later");
+                Debug.LogWarning("[BossProgressionManager] GameProgressionManager not found");
                 // Store balance bonus for later (when Deck is available)
                 PlayerPrefs.SetInt("PendingBalanceBonus", PlayerPrefs.GetInt("PendingBalanceBonus", 0) + (int)rewardState.bonusAmount);
                 PlayerPrefs.Save();

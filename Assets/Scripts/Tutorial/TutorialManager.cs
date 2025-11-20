@@ -233,9 +233,9 @@ public class TutorialManager : MonoBehaviour
         // Step 7: Your Balance
         tutorialSteps.Add(new TutorialStep
         {
-            title = "Your Balance",
-            description = "This shows your current money. You start with $1000. Your balance will increase when you win and decrease when you lose. Managing your money is crucial for progressing through the blind levels!",
-            highlightTarget = deckController?.balance?.gameObject,
+            title = "Your Soul (Health)",
+            description = "This shows your current soul/health. You start with 100 soul. Your health will increase when you win and decrease when you lose. Managing your health is crucial for survival!",
+            highlightTarget = deckController?.bettingManager?.balanceText?.gameObject ?? deckController?.bettingManager?.balanceTextLegacy?.gameObject,
             waitForUserInput = true,
             triggerType = TutorialTrigger.Manual
         });
@@ -244,8 +244,8 @@ public class TutorialManager : MonoBehaviour
         tutorialSteps.Add(new TutorialStep
         {
             title = "Understanding Bets",
-            description = "Before each hand, you must place a bet. This is the amount you're risking:\n• If you win, you get your bet back PLUS winnings\n• If you lose, you lose your bet amount\n• Bet wisely - don't risk more than you can afford to lose!",
-            highlightTarget = deckController?.bet?.gameObject,
+            description = "Before each hand, you must bet your soul (health). This is the amount you're risking:\n• If you win, you heal back your bet PLUS additional health\n• If you lose, your bet is lost (health already deducted)\n• Bet wisely - don't risk more health than you can afford!",
+            highlightTarget = deckController?.bettingManager?.currentBetText?.gameObject ?? deckController?.bettingManager?.currentBetTextLegacy?.gameObject,
             waitForUserInput = true,
             triggerType = TutorialTrigger.Manual
         });
@@ -254,8 +254,8 @@ public class TutorialManager : MonoBehaviour
         tutorialSteps.Add(new TutorialStep
         {
             title = "Adjusting Your Bet",
-            description = "Use these buttons to set your bet amount:\n• '+' button: Increase bet by $10\n• '-' button: Decrease bet by $10\n\nYou can't bet more than your current balance. Choose your bet amount carefully!",
-            highlightTarget = deckController?.raiseBetButton?.gameObject,
+            description = "Use these buttons to set your bet amount:\n• Quick bet buttons: 5, 10, 25, 50, 100\n• Or enter a custom amount in the input field\n\nYou can't bet more than your current health. Choose your bet amount carefully!",
+            highlightTarget = deckController?.bettingManager?.betButton10?.gameObject,
             waitForUserInput = true,
             triggerType = TutorialTrigger.Manual
         });
@@ -264,8 +264,8 @@ public class TutorialManager : MonoBehaviour
         tutorialSteps.Add(new TutorialStep
         {
             title = "Confirming Your Bet",
-            description = "After setting your bet amount, click 'Place Bet' to confirm and start the hand. Once you place a bet, the cards will be dealt and the hand begins. You can't change your bet during a hand!",
-            highlightTarget = deckController?.placeBetButton?.gameObject,
+            description = "After setting your bet amount, click 'Place Bet' to confirm and start the hand. Your health will be deducted immediately. Once you place a bet, the cards will be dealt and the hand begins. You can't change your bet during a hand!",
+            highlightTarget = deckController?.bettingManager?.placeBetButton?.gameObject,
             waitForUserInput = true,
             triggerType = TutorialTrigger.Manual
         });
