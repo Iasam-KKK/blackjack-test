@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// Manages betting system where player bets their "soul" (health percentage)
@@ -32,6 +33,54 @@ public class BettingManager : MonoBehaviour
     [Tooltip("Display current bet amount")]
     public TextMeshProUGUI currentBetText;
     public Text currentBetTextLegacy; // Fallback for legacy Text
+    
+    [Header("Tab Switcher")]
+    [Tooltip("BETS tab button")]
+    public Button betsTabButton;
+    
+    [Tooltip("OPPONENT tab button")]
+    public Button opponentTabButton;
+    
+    [Tooltip("Bets panel (shown when BETS tab is active)")]
+    public GameObject betsPanel;
+    
+    [Tooltip("Opponent panel (shown when OPPONENT tab is active)")]
+    public GameObject opponentPanel;
+    
+    [Tooltip("Canvas group for BETS tab button (for opacity control)")]
+    public CanvasGroup betsTabCanvasGroup;
+    
+    [Tooltip("Canvas group for OPPONENT tab button (for opacity control)")]
+    public CanvasGroup opponentTabCanvasGroup;
+    
+    [Tooltip("Opacity for active tab")]
+    [Range(0f, 1f)]
+    public float activeTabOpacity = 1f;
+    
+    [Tooltip("Opacity for inactive tab")]
+    [Range(0f, 1f)]
+    public float inactiveTabOpacity = 0.3f;
+    
+    [Header("Opponent Panel UI Elements")]
+    [Tooltip("Boss/Minion name text")]
+    public TextMeshProUGUI bossNameText;
+    public Text bossNameTextLegacy;
+    
+    [Tooltip("Boss/Minion portrait image")]
+    public Image bossPortraitImage;
+    
+    [Tooltip("Boss/Minion description text")]
+    public TextMeshProUGUI descriptionText;
+    public Text descriptionTextLegacy;
+    
+    [Tooltip("Boss/Minion mechanics text")]
+    public TextMeshProUGUI mechanicsText;
+    public Text mechanicsTextLegacy;
+    
+    [Tooltip("Boss/Minion mechanics icon/image")]
+    public Image mechanicsImage;
+    
+ 
     
     [Header("Betting Constraints")]
     [Tooltip("Minimum bet amount")]
@@ -92,6 +141,46 @@ public class BettingManager : MonoBehaviour
         UpdateBalanceDisplay();
         UpdateCurrentBetDisplay();
         UpdatePlaceBetButtonState();
+        
+        // Initialize tab switcher (show BETS by default) - delayed to ensure Canvas Groups are ready
+        Invoke(nameof(InitializeTabState), 0.1f);
+        
+        // Update opponent panel with current encounter data
+        UpdateOpponentPanel();
+    }
+    
+    /// <summary>
+    /// Initialize tab state after Canvas Groups are ready
+    /// </summary>
+    private void InitializeTabState()
+    {
+        // Verify Canvas Groups are assigned
+        if (betsTabCanvasGroup == null)
+        {
+            LogWarning("[BettingManager] Bets Tab Canvas Group not assigned! Add Canvas Group to BetsButton and assign it.");
+            return;
+        }
+        
+        if (opponentTabCanvasGroup == null)
+        {
+            LogWarning("[BettingManager] Opponent Tab Canvas Group not assigned! Add Canvas Group to OpponentButton and assign it.");
+            return;
+        }
+        
+        // Force initial state
+        betsTabCanvasGroup.alpha = activeTabOpacity;
+        betsTabCanvasGroup.interactable = true;
+        betsTabCanvasGroup.blocksRaycasts = true;
+        
+        opponentTabCanvasGroup.alpha = inactiveTabOpacity;
+        opponentTabCanvasGroup.interactable = true;
+        opponentTabCanvasGroup.blocksRaycasts = true;
+        
+        // Show correct panel
+        if (betsPanel != null) betsPanel.SetActive(true);
+        if (opponentPanel != null) opponentPanel.SetActive(false);
+        
+        Log("[BettingManager] Tab state initialized - BETS active");
     }
     
     /// <summary>
@@ -142,6 +231,19 @@ public class BettingManager : MonoBehaviour
         {
             betInputField.onValueChanged.RemoveAllListeners();
             betInputField.onValueChanged.AddListener(OnInputFieldChanged);
+        }
+        
+        // Tab switcher buttons
+        if (betsTabButton != null)
+        {
+            betsTabButton.onClick.RemoveAllListeners();
+            betsTabButton.onClick.AddListener(() => SwitchTab(true));
+        }
+        
+        if (opponentTabButton != null)
+        {
+            opponentTabButton.onClick.RemoveAllListeners();
+            opponentTabButton.onClick.AddListener(() => SwitchTab(false));
         }
         
         Log("[BettingManager] UI listeners set up");
@@ -378,6 +480,7 @@ public class BettingManager : MonoBehaviour
         {
             balanceTextLegacy.text = balanceString;
         }
+      
     }
     
     /// <summary>
@@ -396,6 +499,7 @@ public class BettingManager : MonoBehaviour
         {
             currentBetTextLegacy.text = betString;
         }
+         
     }
     
     /// <summary>
@@ -445,6 +549,212 @@ public class BettingManager : MonoBehaviour
     {
         maxBet = Mathf.Max(minBet, max);
         Log($"[BettingManager] Max bet set to {maxBet}");
+    }
+    
+    /// <summary>
+    /// Switch between BETS and OPPONENT tabs
+    /// </summary>
+    /// <param name="showBets">True to show BETS panel, false to show OPPONENT panel</param>
+    public void SwitchTab(bool showBets)
+    {
+        // Switch panels
+        if (betsPanel != null)
+        {
+            betsPanel.SetActive(showBets);
+        }
+        
+        if (opponentPanel != null)
+        {
+            opponentPanel.SetActive(!showBets);
+        }
+        
+        // Update tab button opacity (both stay interactable)
+        if (betsTabCanvasGroup != null)
+        {
+            betsTabCanvasGroup.alpha = showBets ? activeTabOpacity : inactiveTabOpacity;
+            betsTabCanvasGroup.interactable = true;
+            betsTabCanvasGroup.blocksRaycasts = true;
+        }
+        
+        if (opponentTabCanvasGroup != null)
+        {
+            opponentTabCanvasGroup.alpha = showBets ? inactiveTabOpacity : activeTabOpacity;
+            opponentTabCanvasGroup.interactable = true;
+            opponentTabCanvasGroup.blocksRaycasts = true;
+        }
+        
+        // Update opponent panel when switching to it
+        if (!showBets)
+        {
+            UpdateOpponentPanel();
+        }
+        
+        Log($"[BettingManager] Switched to {(showBets ? "BETS" : "OPPONENT")} tab");
+    }
+    
+    /// <summary>
+    /// Update opponent panel with current boss/minion data
+    /// </summary>
+    public void UpdateOpponentPanel()
+    {
+        if (GameProgressionManager.Instance == null)
+        {
+            LogWarning("[BettingManager] Cannot update opponent panel: GameProgressionManager.Instance is null");
+            return;
+        }
+        
+        // Check if fighting minion or boss
+        if (GameProgressionManager.Instance.isMinion && GameProgressionManager.Instance.currentMinion != null)
+        {
+            UpdateOpponentPanelForMinion(GameProgressionManager.Instance.currentMinion);
+        }
+        else if (!GameProgressionManager.Instance.isMinion && GameProgressionManager.Instance.currentBoss != null)
+        {
+            UpdateOpponentPanelForBoss(GameProgressionManager.Instance.currentBoss);
+        }
+        else
+        {
+            ClearOpponentPanel();
+        }
+    }
+    
+    /// <summary>
+    /// Update opponent panel with boss data
+    /// </summary>
+    private void UpdateOpponentPanelForBoss(BossData boss)
+    {
+        // Update name
+        if (bossNameText != null)
+        {
+            bossNameText.text = boss.bossName;
+        }
+        if (bossNameTextLegacy != null)
+        {
+            bossNameTextLegacy.text = boss.bossName;
+        }
+        
+        // Update portrait
+        if (bossPortraitImage != null && boss.bossPortrait != null)
+        {
+            bossPortraitImage.sprite = boss.bossPortrait;
+            bossPortraitImage.enabled = true;
+        }
+        
+        // Update description
+        if (descriptionText != null)
+        {
+            descriptionText.text = boss.bossDescription;
+        }
+        if (descriptionTextLegacy != null)
+        {
+            descriptionTextLegacy.text = boss.bossDescription;
+        }
+        
+        // Update mechanics
+        string mechanicsString = GetMechanicsString(boss.mechanics);
+        if (mechanicsText != null)
+        {
+            mechanicsText.text = mechanicsString;
+        }
+        if (mechanicsTextLegacy != null)
+        {
+            mechanicsTextLegacy.text = mechanicsString;
+        }
+        
+        Log($"[BettingManager] Updated opponent panel for boss: {boss.bossName}");
+    }
+    
+    /// <summary>
+    /// Update opponent panel with minion data
+    /// </summary>
+    private void UpdateOpponentPanelForMinion(MinionData minion)
+    {
+        // Update name
+        if (bossNameText != null)
+        {
+            bossNameText.text = minion.minionName;
+        }
+        if (bossNameTextLegacy != null)
+        {
+            bossNameTextLegacy.text = minion.minionName;
+        }
+        
+        // Update portrait
+        if (bossPortraitImage != null && minion.minionPortrait != null)
+        {
+            bossPortraitImage.sprite = minion.minionPortrait;
+            bossPortraitImage.enabled = true;
+        }
+        
+        // Update description
+        if (descriptionText != null)
+        {
+            descriptionText.text = minion.minionDescription;
+        }
+        if (descriptionTextLegacy != null)
+        {
+            descriptionTextLegacy.text = minion.minionDescription;
+        }
+        
+        // Update mechanics
+        string mechanicsString = GetMechanicsString(minion.mechanics);
+        if (mechanicsText != null)
+        {
+            mechanicsText.text = mechanicsString;
+        }
+        if (mechanicsTextLegacy != null)
+        {
+            mechanicsTextLegacy.text = mechanicsString;
+        }
+        
+        Log($"[BettingManager] Updated opponent panel for minion: {minion.minionName}");
+    }
+    
+    /// <summary>
+    /// Clear opponent panel when no encounter is active
+    /// </summary>
+    private void ClearOpponentPanel()
+    {
+        if (bossNameText != null) bossNameText.text = "No Active Encounter";
+        if (bossNameTextLegacy != null) bossNameTextLegacy.text = "No Active Encounter";
+        if (descriptionText != null) descriptionText.text = "";
+        if (descriptionTextLegacy != null) descriptionTextLegacy.text = "";
+        if (mechanicsText != null) mechanicsText.text = "";
+        if (mechanicsTextLegacy != null) mechanicsTextLegacy.text = "";
+        if (bossPortraitImage != null) bossPortraitImage.enabled = false;
+        
+        Log("[BettingManager] Cleared opponent panel");
+    }
+    
+  
+    
+    /// <summary>
+    /// Generate mechanics description string from list of mechanics
+    /// </summary>
+    private string GetMechanicsString(List<BossMechanic> mechanics)
+    {
+        if (mechanics == null || mechanics.Count == 0)
+        {
+            return "No special mechanics";
+        }
+        
+        List<string> mechanicDescriptions = new List<string>();
+        foreach (var mechanic in mechanics)
+        {
+            if (mechanic.mechanicType != BossMechanicType.None)
+            {
+                string description = $"• {mechanic.mechanicName}";
+                if (!string.IsNullOrEmpty(mechanic.mechanicDescription))
+                {
+                    description += $": {mechanic.mechanicDescription}";
+                }
+                mechanicDescriptions.Add(description);
+            }
+        }
+        
+        return mechanicDescriptions.Count > 0 
+            ? string.Join("\n", mechanicDescriptions) 
+            : "No special mechanics";
     }
     
     // Debug logging helpers

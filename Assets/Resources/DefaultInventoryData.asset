@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a398d4c6813546848b63af875d7932cc, type: 3}
   m_Name: DefaultInventoryData
   m_EditorClassIdentifier: 
-  storageSlotCount: 12
+  storageSlotCount: 16
   equipmentSlotCount: 3
   storageSlots:
   - slotIndex: 0
@@ -63,16 +63,32 @@ MonoBehaviour:
     isEquipmentSlot: 0
     storedCard: {fileID: 0}
     isOccupied: 0
+  - slotIndex: 11
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 11
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 11
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 11
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
   equipmentSlots:
   - slotIndex: 0
     isEquipmentSlot: 1
     storedCard: {fileID: 0}
-    isOccupied: 1
+    isOccupied: 0
   - slotIndex: 1
     isEquipmentSlot: 1
     storedCard: {fileID: 0}
-    isOccupied: 1
+    isOccupied: 0
   - slotIndex: 2
     isEquipmentSlot: 1
     storedCard: {fileID: 0}
-    isOccupied: 1
+    isOccupied: 0

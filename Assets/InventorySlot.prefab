@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 2684285600924984952}
   - component: {fileID: 3675737525054209359}
   - component: {fileID: 8824633552051448805}
-  - component: {fileID: 5376230842431975150}
+  - component: {fileID: 7943379196525645052}
   m_Layer: 0
   m_Name: InventorySlot
   m_TagString: Untagged
@@ -81,7 +81,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &5376230842431975150
+--- !u!114 &7943379196525645052
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -90,26 +90,26 @@ MonoBehaviour:
   m_GameObject: {fileID: 2032033879000538190}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0394dfab51b6f1f4497674549ecbb8f2, type: 3}
+  m_Script: {fileID: 11500000, guid: 35410871e7d4640478a5a9f767de2ec1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InventorySlotUI
-  slotBackground: {fileID: 8824633552051448805}
+  m_EditorClassIdentifier: 
+  slotBackgroundImage: {fileID: 8824633552051448805}
   cardImage: {fileID: 3170392995192831944}
-  materialBackground: {fileID: 3930143858820021487}
-  cardNameText: {fileID: 3284501885772656684}
-  durabilityText: {fileID: 5239639941235323504}
+  materialBackgroundImage: {fileID: 3930143858820021487}
+  cardNameTxt: {fileID: 3284501885772656684}
+  durabilityTxt: {fileID: 5239639941235323504}
   emptySlotIndicator: {fileID: 8032466245731616070}
-  equipmentSlotColor: {r: 0.2, g: 0.6, b: 1, a: 1}
-  storageSlotColor: {r: 0.8, g: 0.8, b: 0.8, a: 1}
-  occupiedSlotColor: {r: 1, g: 1, b: 1, a: 0.8}
-  hoverColor: {r: 1, g: 1, b: 0.5, a: 0.5}
+  selectionHighlight: {fileID: 0}
+  normalColor: {r: 0.2, g: 0.2, b: 0.2, a: 0.8}
+  selectedColor: {r: 1, g: 0.8, b: 0.2, a: 1}
+  hoverColor: {r: 0.4, g: 0.4, b: 0.4, a: 0.9}
   slotIndex: 0
-  isEquipmentSlot: 0
   slotData:
     slotIndex: 0
     isEquipmentSlot: 0
     storedCard: {fileID: 0}
     isOccupied: 0
+  isSelected: 0
 --- !u!1 &4050337381262950019
 GameObject:
   m_ObjectHideFlags: 0

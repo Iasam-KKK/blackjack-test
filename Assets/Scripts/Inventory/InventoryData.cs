@@ -5,7 +5,7 @@ using UnityEngine;
 public class InventoryData : ScriptableObject
 {
     [Header("Inventory Configuration")]
-    public int storageSlotCount = 12; // Number of storage slots
+    public int storageSlotCount = 16; // Number of storage slots
     public int equipmentSlotCount = 3; // Number of equipment slots
     
     [Header("Current Inventory State")]
