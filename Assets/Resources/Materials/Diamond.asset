@@ -15,6 +15,7 @@ MonoBehaviour:
   materialName: Diamond
   maxUses: 100
   rarityPercentage: 1
-  backgroundSprite: {fileID: 21300000, guid: f677e63fef9148649be3450c9f8b0d39, type: 3}
+  backgroundSprite: {fileID: 6586461156150141773, guid: c8992d1ee95f9554e857afd7759d3b0d,
+    type: 3}
   materialTint: {r: 1, g: 1, b: 1, a: 0}
   materialType: 7

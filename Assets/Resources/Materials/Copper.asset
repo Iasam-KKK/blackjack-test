@@ -15,6 +15,7 @@ MonoBehaviour:
   materialName: Copper
   maxUses: 4
   rarityPercentage: 15
-  backgroundSprite: {fileID: 21300000, guid: cfd074d189c74464faf63c4ffd79f173, type: 3}
+  backgroundSprite: {fileID: -4673536048321637515, guid: 1b6cd7972c3ff5b46a316c2e5342e6d1,
+    type: 3}
   materialTint: {r: 1, g: 1, b: 1, a: 0}
   materialType: 3

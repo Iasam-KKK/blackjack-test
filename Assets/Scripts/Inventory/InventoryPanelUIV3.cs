@@ -44,7 +44,7 @@ public class InventoryPanelUIV3 : MonoBehaviour
     
     [Header("Equipment Slots")]
     public Transform equipmentSlotsContainer;
-    public Image[] equipmentSlotImages; // 3 equipped card images
+    // public Image[] equipmentSlotImages; // OLD: 3 equipped card images - now using InventorySlotUIV3
     
     [Header("Action Buttons - All Cards Tab")]
     public GameObject allCardsButtonsContainer;
@@ -58,13 +58,21 @@ public class InventoryPanelUIV3 : MonoBehaviour
     public Button materialsUnequipButton;
     public Button materialsDiscardButton;
     
-    [Header("Slot Prefab")]
-    public GameObject slotPrefabV3;
+    [Header("Slot Prefabs")]
+    public GameObject slotPrefabV3; // For cards
+    public GameObject materialSlotPrefab; // For materials (optional if using static slots)
+    
+    [Header("Materials Panel")]
+    public Transform materialsContentContainer; // Where material slots will be created (optional)
+    public MaterialSlotUIV3[] staticMaterialSlots; // Use this if you have pre-created material slots in hierarchy
     
     [Header("Settings")]
     public bool hideOnStart = true;
     
     private List<InventorySlotUIV3> storageSlots = new List<InventorySlotUIV3>();
+    private List<InventorySlotUIV3> equipmentSlots = new List<InventorySlotUIV3>();
+    private List<MaterialSlotUIV3> materialSlots = new List<MaterialSlotUIV3>();
+    private MaterialSlotUIV3 selectedMaterialSlot;
     private bool isVisible = false;
     private Sprite defaultCardSprite; // Store the default/placeholder sprite
     
@@ -103,23 +111,23 @@ public class InventoryPanelUIV3 : MonoBehaviour
             discardButton.onClick.AddListener(OnDiscardClicked);
         }
         
-        // Setup Materials tab buttons (same actions)
+        // Setup Materials tab buttons (different actions for materials)
         if (materialsEquipButton != null)
         {
             materialsEquipButton.onClick.RemoveAllListeners();
-            materialsEquipButton.onClick.AddListener(OnEquipClicked);
+            materialsEquipButton.onClick.AddListener(OnMaterialEquipClicked);
         }
         
         if (materialsUnequipButton != null)
         {
             materialsUnequipButton.onClick.RemoveAllListeners();
-            materialsUnequipButton.onClick.AddListener(OnUnequipClicked);
+            materialsUnequipButton.onClick.AddListener(OnMaterialUnequipClicked);
         }
         
         if (materialsDiscardButton != null)
         {
             materialsDiscardButton.onClick.RemoveAllListeners();
-            materialsDiscardButton.onClick.AddListener(OnDiscardClicked);
+            // Discard not used for materials
         }
         
         if (allCardsTabButton != null)
@@ -154,12 +162,18 @@ public class InventoryPanelUIV3 : MonoBehaviour
             isVisible = false;
         }
         
+        // Populate equipment slots
+        PopulateEquipmentSlots();
+        
+        // Populate material slots
+        PopulateMaterialSlots();
+        
         // Initialize displays
         ClearCardDescription();
         UpdateOverviewStats();
         UpdateActionButtons();
         
-        Debug.Log("InventoryPanelUIV3 initialized with " + storageSlots.Count + " storage slots");
+        Debug.Log("InventoryPanelUIV3 initialized with " + storageSlots.Count + " storage slots, " + equipmentSlots.Count + " equipment slots, and " + materialSlots.Count + " material slots");
     }
     
     public void PopulateStorageSlots()
@@ -181,11 +195,19 @@ public class InventoryPanelUIV3 : MonoBehaviour
         storageSlots.Clear();
         
         // Get inventory data
-        if (InventoryManagerV3.Instance == null || InventoryManagerV3.Instance.inventoryData == null)
+        if (InventoryManagerV3.Instance == null)
         {
-            Debug.LogError("InventoryPanelUIV3: InventoryManagerV3 or inventoryData not found!");
+            Debug.LogError("[InventoryPanelUIV3] PopulateStorageSlots - InventoryManagerV3.Instance is NULL!");
             return;
         }
+        
+        if (InventoryManagerV3.Instance.inventoryData == null)
+        {
+            Debug.LogError("[InventoryPanelUIV3] PopulateStorageSlots - InventoryManagerV3.Instance.inventoryData is NULL! Please assign InventoryData in Inspector!");
+            return;
+        }
+        
+        Debug.Log($"[InventoryPanelUIV3] PopulateStorageSlots - Successfully found inventoryData: {InventoryManagerV3.Instance.inventoryData.name}");
         
         var inventoryData = InventoryManagerV3.Instance.inventoryData;
         
@@ -205,6 +227,177 @@ public class InventoryPanelUIV3 : MonoBehaviour
             {
                 Debug.LogError($"InventoryPanelUIV3: Slot prefab missing InventorySlotUIV3 component!");
             }
+        }
+    }
+    
+    public void PopulateEquipmentSlots()
+    {
+        if (equipmentSlotsContainer == null || slotPrefabV3 == null)
+        {
+            Debug.LogError("InventoryPanelUIV3: Missing equipment container or slot prefab!");
+            return;
+        }
+        
+        // Clear existing slots
+        foreach (var slot in equipmentSlots)
+        {
+            if (slot != null && slot.gameObject != null)
+            {
+                Destroy(slot.gameObject);
+            }
+        }
+        equipmentSlots.Clear();
+        
+        // Get inventory data
+        if (InventoryManagerV3.Instance == null || InventoryManagerV3.Instance.inventoryData == null)
+        {
+            Debug.LogError("InventoryPanelUIV3: InventoryManagerV3 or inventoryData not found!");
+            return;
+        }
+        
+        var inventoryData = InventoryManagerV3.Instance.inventoryData;
+        
+        // Create equipment slots (3 slots)
+        for (int i = 0; i < inventoryData.equipmentSlotCount; i++)
+        {
+            GameObject slotObj = Instantiate(slotPrefabV3, equipmentSlotsContainer);
+            InventorySlotUIV3 slotUI = slotObj.GetComponent<InventorySlotUIV3>();
+            
+            if (slotUI != null)
+            {
+                var slotData = InventoryManagerV3.Instance.GetEquipmentSlot(i);
+                slotUI.Initialize(i, slotData, this);
+                equipmentSlots.Add(slotUI);
+            }
+            else
+            {
+                Debug.LogError($"InventoryPanelUIV3: Slot prefab missing InventorySlotUIV3 component!");
+            }
+        }
+        
+        Debug.Log($"InventoryPanelUIV3: Created {equipmentSlots.Count} equipment slots");
+    }
+    
+    public void PopulateMaterialSlots()
+    {
+        // Method 1: Use static slots (if pre-created in hierarchy)
+        if (staticMaterialSlots != null && staticMaterialSlots.Length > 0)
+        {
+            Debug.Log($"[InventoryPanelUIV3] Using {staticMaterialSlots.Length} static material slots");
+            
+            materialSlots.Clear();
+            foreach (var slot in staticMaterialSlots)
+            {
+                if (slot != null && slot.materialData != null)
+                {
+                    slot.Initialize(slot.materialData, this);
+                    materialSlots.Add(slot);
+                    Debug.Log($"[InventoryPanelUIV3] Initialized static slot: {slot.materialData.materialName}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[InventoryPanelUIV3] Static material slot is missing MaterialData! Assign it in Inspector.");
+                }
+            }
+            
+            Debug.Log($"[InventoryPanelUIV3] Initialized {materialSlots.Count} static material slots");
+            return;
+        }
+        
+        // Method 2: Dynamically create slots (fallback)
+        if (materialsContentContainer == null || materialSlotPrefab == null)
+        {
+            Debug.LogWarning("InventoryPanelUIV3: No static material slots and missing dynamic slot setup - materials tab won't work");
+            return;
+        }
+        
+        // Clear existing material slots
+        foreach (var slot in materialSlots)
+        {
+            if (slot != null && slot.gameObject != null)
+            {
+                Destroy(slot.gameObject);
+            }
+        }
+        materialSlots.Clear();
+        
+        // Get all available materials
+        MaterialData[] allMaterials = MaterialManager.GetAllMaterials();
+        
+        if (allMaterials == null || allMaterials.Length == 0)
+        {
+            Debug.LogWarning("InventoryPanelUIV3: No materials found! Make sure MaterialData assets exist in Resources/Materials folder");
+            return;
+        }
+        
+        // Create a slot for each material
+        foreach (MaterialData material in allMaterials)
+        {
+            GameObject slotObj = Instantiate(materialSlotPrefab, materialsContentContainer);
+            MaterialSlotUIV3 slotUI = slotObj.GetComponent<MaterialSlotUIV3>();
+            
+            if (slotUI != null)
+            {
+                slotUI.Initialize(material, this);
+                materialSlots.Add(slotUI);
+            }
+            else
+            {
+                Debug.LogError($"InventoryPanelUIV3: Material slot prefab missing MaterialSlotUIV3 component!");
+            }
+        }
+        
+        Debug.Log($"InventoryPanelUIV3: Created {materialSlots.Count} dynamic material slots");
+    }
+    
+    public void OnMaterialSlotSelected(MaterialSlotUIV3 slot)
+    {
+        Debug.Log($"[InventoryPanelUIV3] Material selected: {slot.materialData.materialName}");
+        
+        // Clear previous selection
+        if (selectedMaterialSlot != null && selectedMaterialSlot != slot)
+        {
+            selectedMaterialSlot.SetSelected(false);
+        }
+        
+        selectedMaterialSlot = slot;
+        selectedMaterialSlot.SetSelected(true);
+        
+        // Update material description panel
+        UpdateSelectedMaterial(slot.materialData);
+        
+        // Update action buttons for materials tab
+        UpdateMaterialActionButtons();
+    }
+    
+    private void UpdateSelectedMaterial(MaterialData material)
+    {
+        // Update the card description panel to show material info
+        if (selectedCardImage != null && material.backgroundSprite != null)
+        {
+            selectedCardImage.sprite = material.backgroundSprite;
+            selectedCardImage.color = Color.white;
+        }
+        
+        if (selectedCardDescriptionTxt != null)
+        {
+            selectedCardDescriptionTxt.text = $"Material: {material.materialName}\n\nUses: {(material.maxUses == -1 ? "Unlimited" : material.maxUses.ToString())}";
+        }
+        
+        if (materialTxt != null)
+        {
+            materialTxt.text = material.materialName;
+        }
+        
+        if (usesTxt != null)
+        {
+            usesTxt.text = material.maxUses == -1 ? "∞" : material.maxUses.ToString();
+        }
+        
+        if (statusTxt != null)
+        {
+            statusTxt.text = "Available";
+            statusTxt.color = Color.green;
         }
     }
     
@@ -314,6 +507,9 @@ public class InventoryPanelUIV3 : MonoBehaviour
             storageSlots[i].slotData = slotData;
             storageSlots[i].UpdateDisplay();
         }
+        
+        // Also refresh equipment slots
+        RefreshEquipmentSlots();
     }
     
     public void RefreshEquipmentSlots()
@@ -323,34 +519,12 @@ public class InventoryPanelUIV3 : MonoBehaviour
             return;
         }
         
-        if (equipmentSlotImages == null || equipmentSlotImages.Length < 3)
+        // Refresh equipment slots using the same system as storage slots
+        for (int i = 0; i < equipmentSlots.Count; i++)
         {
-            return;
-        }
-        
-        var inventoryData = InventoryManagerV3.Instance.inventoryData;
-        
-        // Update each equipment slot image
-        for (int i = 0; i < 3 && i < inventoryData.equipmentSlots.Count; i++)
-        {
-            var slot = inventoryData.equipmentSlots[i];
-            var slotImage = equipmentSlotImages[i];
-            
-            if (slotImage != null)
-            {
-                if (slot.isOccupied && slot.storedCard != null && slot.storedCard.cardImage != null)
-                {
-                    slotImage.sprite = slot.storedCard.cardImage;
-                    slotImage.color = Color.white;
-                    slotImage.gameObject.SetActive(true);
-                }
-                else
-                {
-                    slotImage.sprite = null;
-                    slotImage.color = new Color(1, 1, 1, 0.3f);
-                    slotImage.gameObject.SetActive(true);
-                }
-            }
+            var slotData = InventoryManagerV3.Instance.GetEquipmentSlot(i);
+            equipmentSlots[i].slotData = slotData;
+            equipmentSlots[i].UpdateDisplay();
         }
     }
     
@@ -388,7 +562,7 @@ public class InventoryPanelUIV3 : MonoBehaviour
         // Update material
         if (materialTxt != null)
         {
-            materialTxt.text = "Material: " + card.GetMaterialDisplayName();
+            materialTxt.text = card.GetMaterialDisplayName();
         }
         
         // Update uses
@@ -397,11 +571,11 @@ public class InventoryPanelUIV3 : MonoBehaviour
             int remainingUses = card.GetRemainingUses();
             if (remainingUses == -1)
             {
-                usesTxt.text = "Uses: Unlimited";
+                usesTxt.text = "∞";
             }
             else
             {
-                usesTxt.text = $"Uses: {remainingUses}/{card.maxUses}";
+                usesTxt.text = $"{remainingUses}/{card.maxUses}";
             }
         }
         
@@ -410,12 +584,12 @@ public class InventoryPanelUIV3 : MonoBehaviour
         {
             if (slotData.isEquipmentSlot)
             {
-                statusTxt.text = "Status: Equipped";
+                statusTxt.text = "Equipped";
                 statusTxt.color = Color.yellow;
             }
             else
             {
-                statusTxt.text = "Status: In Storage";
+                statusTxt.text = "In Storage";
                 statusTxt.color = Color.white;
             }
         }
@@ -447,20 +621,20 @@ public class InventoryPanelUIV3 : MonoBehaviour
             selectedCardDescriptionTxt.text = "Select a card to view details";
         }
         
-        // Reset info to placeholders (preserve ??? if that's what you set)
-        if (materialTxt != null && !materialTxt.text.Contains("???"))
+        // Reset info to placeholders
+        if (materialTxt != null)
         {
-            materialTxt.text = "Material: ???";
+            materialTxt.text = "???";
         }
         
-        if (usesTxt != null && !usesTxt.text.Contains("???"))
+        if (usesTxt != null)
         {
-            usesTxt.text = "Uses: ???";
+            usesTxt.text = "?/?";
         }
         
-        if (statusTxt != null && !statusTxt.text.Contains("???"))
+        if (statusTxt != null)
         {
-            statusTxt.text = "Status: ???";
+            statusTxt.text = "???";
         }
         
         UpdateActionButtons();
@@ -478,25 +652,25 @@ public class InventoryPanelUIV3 : MonoBehaviour
         // Update storage count
         if (storageTxt != null)
         {
-            storageTxt.text = $"Storage: {stats.storageUsed}/{stats.storageTotal}";
+            storageTxt.text = $"{stats.storageUsed}/{stats.storageTotal}";
         }
         
         // Update equipment count
         if (equipmentTxt != null)
         {
-            equipmentTxt.text = $"Equipment: {stats.equipmentUsed}/{stats.equipmentTotal}";
+            equipmentTxt.text = $"{stats.equipmentUsed}/{stats.equipmentTotal}";
         }
         
         // Update usable cards count
         if (usableCardsTxt != null)
         {
-            usableCardsTxt.text = $"Usable Cards: {stats.usableCards}";
+            usableCardsTxt.text = $"{stats.usableCards}";
         }
         
         // Update depleted cards count
         if (depletedCardsTxt != null)
         {
-            depletedCardsTxt.text = $"Depleted Cards: {stats.unusableCards}";
+            depletedCardsTxt.text = $"{stats.unusableCards}";
         }
     }
     
@@ -590,81 +764,121 @@ public class InventoryPanelUIV3 : MonoBehaviour
         UpdateActionButtons();
     }
     
-    private void UpdateActionButtons()
+    public void UpdateActionButtons()
     {
         if (InventoryManagerV3.Instance == null)
         {
+            Debug.LogWarning("[InventoryPanelUIV3] UpdateActionButtons - InventoryManagerV3.Instance is NULL");
             return;
         }
         
-        var selectedSlot = InventoryManagerV3.Instance.GetSelectedSlot();
-        bool hasSelection = selectedSlot != null && selectedSlot.slotData != null && selectedSlot.slotData.isOccupied;
+        var currentTab = InventoryManagerV3.Instance.GetCurrentTab();
         
-        bool canEquip = hasSelection && 
-                       !selectedSlot.slotData.isEquipmentSlot && 
-                       selectedSlot.slotData.storedCard.CanBeUsed() &&
-                       InventoryManagerV3.Instance.HasEquipmentSpace();
-        
-        bool canUnequip = hasSelection && 
-                         selectedSlot.slotData.isEquipmentSlot &&
-                         InventoryManagerV3.Instance.HasStorageSpace();
-        
-        bool canDiscard = hasSelection;
-        
-        // Update All Cards tab buttons
-        if (equipButton != null)
+        if (currentTab == TabType.AllCards)
         {
-            equipButton.interactable = canEquip;
+            // Update buttons for All Cards tab (card equipping logic)
+            var selectedSlot = InventoryManagerV3.Instance.GetSelectedSlot();
+            bool hasSelection = selectedSlot != null && selectedSlot.slotData != null && selectedSlot.slotData.isOccupied;
+            
+            bool canEquip = hasSelection && 
+                           !selectedSlot.slotData.isEquipmentSlot && 
+                           selectedSlot.slotData.storedCard.CanBeUsed() &&
+                           InventoryManagerV3.Instance.HasEquipmentSpace();
+            
+            bool canUnequip = hasSelection && 
+                             selectedSlot.slotData.isEquipmentSlot &&
+                             InventoryManagerV3.Instance.HasStorageSpace();
+            
+            bool canDiscard = hasSelection;
+            
+            Debug.Log($"[InventoryPanelUIV3] UpdateActionButtons (AllCards) - HasSelection: {hasSelection}, CanEquip: {canEquip}, CanUnequip: {canUnequip}");
+            
+            if (equipButton != null) equipButton.interactable = canEquip;
+            if (unequipButton != null) unequipButton.interactable = canUnequip;
+            if (discardButton != null) discardButton.interactable = canDiscard;
         }
-        
-        if (unequipButton != null)
+        else
         {
-            unequipButton.interactable = canUnequip;
+            // Update buttons for Materials tab
+            UpdateMaterialActionButtons();
         }
+    }
+    
+    private void UpdateMaterialActionButtons()
+    {
+        // For materials tab: Equip applies material as background frame
+        bool hasMaterialSelected = selectedMaterialSlot != null;
+        bool hasCardSelected = InventoryManagerV3.Instance.GetSelectedSlot() != null &&
+                              InventoryManagerV3.Instance.GetSelectedSlot().slotData != null &&
+                              InventoryManagerV3.Instance.GetSelectedSlot().slotData.isOccupied;
         
-        if (discardButton != null)
-        {
-            discardButton.interactable = canDiscard;
-        }
+        // Can equip if either:
+        // 1. Material selected (applies to deck cards as frame)
+        // 2. Material selected + card selected (applies to specific card)
+        bool canEquip = hasMaterialSelected;
         
-        // Update Materials tab buttons (same logic for now)
+        Debug.Log($"[InventoryPanelUIV3] UpdateMaterialActionButtons - MaterialSelected: {hasMaterialSelected}, CardSelected: {hasCardSelected}, CanEquip: {canEquip}");
+        
         if (materialsEquipButton != null)
         {
             materialsEquipButton.interactable = canEquip;
         }
         
+        // Unequip and Discard not relevant for materials
         if (materialsUnequipButton != null)
         {
-            materialsUnequipButton.interactable = canUnequip;
+            materialsUnequipButton.interactable = false;
         }
         
         if (materialsDiscardButton != null)
         {
-            materialsDiscardButton.interactable = canDiscard;
+            materialsDiscardButton.interactable = false;
         }
     }
     
     private void OnEquipClicked()
     {
+        Debug.Log("[InventoryPanelUIV3] OnEquipClicked called");
+        
         if (InventoryManagerV3.Instance != null)
         {
             bool success = InventoryManagerV3.Instance.EquipSelectedCard();
-            if (success)
+            Debug.Log($"[InventoryPanelUIV3] Equip result: {success}");
+            
+            if (!success)
             {
-                Debug.Log("Card equipped successfully");
+                var selected = InventoryManagerV3.Instance.GetSelectedSlot();
+                Debug.LogWarning($"[InventoryPanelUIV3] Equip failed - Selected slot: {(selected != null ? "Yes" : "No")}, " +
+                               $"IsEquipmentSlot: {(selected?.slotData?.isEquipmentSlot)}, " +
+                               $"HasEquipmentSpace: {InventoryManagerV3.Instance.HasEquipmentSpace()}");
             }
+        }
+        else
+        {
+            Debug.LogError("[InventoryPanelUIV3] OnEquipClicked - InventoryManagerV3.Instance is NULL!");
         }
     }
     
     private void OnUnequipClicked()
     {
+        Debug.Log("[InventoryPanelUIV3] OnUnequipClicked called");
+        
         if (InventoryManagerV3.Instance != null)
         {
             bool success = InventoryManagerV3.Instance.UnequipSelectedCard();
-            if (success)
+            Debug.Log($"[InventoryPanelUIV3] Unequip result: {success}");
+            
+            if (!success)
             {
-                Debug.Log("Card unequipped successfully");
+                var selected = InventoryManagerV3.Instance.GetSelectedSlot();
+                Debug.LogWarning($"[InventoryPanelUIV3] Unequip failed - Selected slot: {(selected != null ? "Yes" : "No")}, " +
+                               $"IsEquipmentSlot: {(selected?.slotData?.isEquipmentSlot)}, " +
+                               $"HasStorageSpace: {InventoryManagerV3.Instance.HasStorageSpace()}");
             }
+        }
+        else
+        {
+            Debug.LogError("[InventoryPanelUIV3] OnUnequipClicked - InventoryManagerV3.Instance is NULL!");
         }
     }
     
@@ -678,6 +892,43 @@ public class InventoryPanelUIV3 : MonoBehaviour
             {
                 Debug.Log("Card discarded successfully");
             }
+        }
+    }
+    
+    private void OnMaterialEquipClicked()
+    {
+        Debug.Log("[InventoryPanelUIV3] OnMaterialEquipClicked called");
+        
+        if (selectedMaterialSlot == null || selectedMaterialSlot.materialData == null)
+        {
+            Debug.LogWarning("[InventoryPanelUIV3] No material selected!");
+            return;
+        }
+        
+        // Apply material as deck background frame
+        if (DeckMaterialManager.Instance != null)
+        {
+            // Find the index of this material type
+            int materialIndex = (int)selectedMaterialSlot.materialData.materialType;
+            DeckMaterialManager.Instance.EquipMaterial(materialIndex);
+            
+            Debug.Log($"[InventoryPanelUIV3] Applied material '{selectedMaterialSlot.materialData.materialName}' as deck frame");
+        }
+        else
+        {
+            Debug.LogWarning("[InventoryPanelUIV3] DeckMaterialManager.Instance not found!");
+        }
+    }
+    
+    private void OnMaterialUnequipClicked()
+    {
+        Debug.Log("[InventoryPanelUIV3] OnMaterialUnequipClicked called");
+        
+        // Remove current material frame
+        if (DeckMaterialManager.Instance != null)
+        {
+            DeckMaterialManager.Instance.EquipMaterial(-1); // -1 = no frame
+            Debug.Log("[InventoryPanelUIV3] Removed material frame from deck");
         }
     }
     

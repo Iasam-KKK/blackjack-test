@@ -1,0 +1,98 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a398d4c6813546848b63af875d7932cc, type: 3}
+  m_Name: NewInventoryData
+  m_EditorClassIdentifier: 
+  storageSlotCount: 16
+  equipmentSlotCount: 4
+  storageSlots:
+  - slotIndex: 0
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 1
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 2
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 3
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 4
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 5
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 6
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 7
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 8
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 9
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 10
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 11
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 12
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 13
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 14
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 15
+    isEquipmentSlot: 0
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  equipmentSlots:
+  - slotIndex: 0
+    isEquipmentSlot: 1
+    storedCard: {fileID: 0}
+    isOccupied: 1
+  - slotIndex: 1
+    isEquipmentSlot: 1
+    storedCard: {fileID: 0}
+    isOccupied: 1
+  - slotIndex: 2
+    isEquipmentSlot: 1
+    storedCard: {fileID: 0}
+    isOccupied: 0
+  - slotIndex: 3
+    isEquipmentSlot: 1
+    storedCard: {fileID: 0}
+    isOccupied: 0

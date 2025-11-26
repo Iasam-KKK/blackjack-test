@@ -15,6 +15,7 @@ MonoBehaviour:
   materialName: Paper
   maxUses: 1
   rarityPercentage: 30
-  backgroundSprite: {fileID: 21300000, guid: 44dc93cec8acb744bb6a973ddf1abeb4, type: 3}
+  backgroundSprite: {fileID: -1469909079130451432, guid: c8a254f3ccb7b3d41bc9cc1e65018f39,
+    type: 3}
   materialTint: {r: 0.21960786, g: 0.21960786, b: 0.21960786, a: 0}
   materialType: 0

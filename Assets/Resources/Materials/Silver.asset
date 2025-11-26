@@ -15,6 +15,7 @@ MonoBehaviour:
   materialName: Silver
   maxUses: 5
   rarityPercentage: 10
-  backgroundSprite: {fileID: 21300000, guid: 721bfbbe5deb634428712654cb251d8d, type: 3}
+  backgroundSprite: {fileID: 7081527322082503550, guid: 2ea103ac584bd7e48a8bb02e652277f8,
+    type: 3}
   materialTint: {r: 1, g: 1, b: 1, a: 0}
   materialType: 4

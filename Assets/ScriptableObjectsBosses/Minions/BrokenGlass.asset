@@ -36,5 +36,5 @@ MonoBehaviour:
   minionThemeColor: {r: 0.7, g: 0.7, b: 0.8, a: 1}
   minionMusic: {fileID: 0}
   minionDefeatSound: {fileID: 0}
-  disablesTarotCards: 1
+  disablesTarotCards: 0
   usesSpecialDeck: 0

@@ -262,9 +262,9 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         {
             shopManager = FindObjectOfType<ShopManager>();
         }
-        if (InventoryManager.Instance.shopManager == null)
+        if (InventoryManagerV3.Instance != null && InventoryManagerV3.Instance.shopManager == null)
         {
-            InventoryManager.Instance.shopManager = shopManager;
+            InventoryManagerV3.Instance.shopManager = shopManager;
         }
         
         // Add to inventory
@@ -272,14 +272,14 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         int storageSlotIndex = -1;
         int equipmentSlotIndex = -1;
         
-        if (InventoryManager.Instance != null && InventoryManager.Instance.inventoryData != null && cardData != null)
+        if (InventoryManagerV3.Instance != null && InventoryManagerV3.Instance.inventoryData != null && cardData != null)
         {
-            addedToInventory = InventoryManager.Instance.AddPurchasedCard(cardData);
+            addedToInventory = InventoryManagerV3.Instance.AddPurchasedCard(cardData);
             
             if (addedToInventory)
             {
                 // Find which storage slot it went to
-                var storageSlots = InventoryManager.Instance.inventoryData.storageSlots;
+                var storageSlots = InventoryManagerV3.Instance.inventoryData.storageSlots;
                 for (int i = 0; i < storageSlots.Count; i++)
                 {
                     if (storageSlots[i].isOccupied && storageSlots[i].storedCard == cardData)
@@ -290,7 +290,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 }
                 
                 // Check for available equipment slot
-                var equipmentSlots = InventoryManager.Instance.inventoryData.equipmentSlots;
+                var equipmentSlots = InventoryManagerV3.Instance.inventoryData.equipmentSlots;
                 for (int i = 0; i < equipmentSlots.Count; i++)
                 {
                     if (!equipmentSlots[i].isOccupied)
@@ -312,82 +312,52 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             PlayerStats.instance.ownedCards.Add(cardData);
         }
         
-        // Animate purchase if successfully added
-        if (addedToInventory && equipmentSlotIndex >= 0)
-        {
-            // Phase 1: Scale up card in shop (0.2s)
-            transform.DOScale(transform.localScale * 1.3f, 0.2f).SetEase(Ease.OutQuad);
-            yield return new WaitForSeconds(0.2f);
-            
-            // Phase 2: Move to equipment slot with arc (0.5s)
-            // Find target position (equipment slot UI position would go here)
-            // For now, just move up and fade out
-            Vector3 targetPos = transform.position + Vector3.up * 200f;
-            
-            Sequence moveSequence = DOTween.Sequence();
-            moveSequence.Append(transform.DOMove(targetPos, 0.5f).SetEase(Ease.OutQuad));
-            moveSequence.Join(transform.DOScale(transform.localScale * 0.5f, 0.5f));
-            
-            // Wait for movement
-            yield return new WaitForSeconds(0.3f);
-            
-            // Auto-equip the card while animation is finishing
-            if (storageSlotIndex >= 0)
-            {
-                bool equipped = InventoryManager.Instance.EquipCardFromStorage(storageSlotIndex, equipmentSlotIndex);
-                if (equipped)
-                {
-                    Debug.Log($"Auto-equipped purchased card: {cardData.cardName} to slot {equipmentSlotIndex}");
-                }
-            }
-            
-            // Wait for animation to complete
-            yield return new WaitForSeconds(0.2f);
-        }
-        
         // Notify shop manager
         if (shopManager != null)
         {
             shopManager.OnCardPurchased(this);
         }
         
-        // Destroy the shop card
-        Debug.Log("Purchase complete - destroying shop card");
+        // Destroy the shop card (always destroy after purchase)
+        Debug.Log($"Purchase complete - {(addedToInventory ? "card added to inventory" : "inventory full")} - destroying shop card");
         Destroy(gameObject);
+        
+        yield return null; // End coroutine
     }
     // Get final price depending on material
+    // SOUL CURRENCY: Adjusted prices for health-based economy
     public uint GetFinalPrice()
     {
-        int finalPrice = cardData.price; // Base price from TarotCardData (100)
+        int finalPrice = 30; // Reduced base price for soul currency (was 100)
 
         if (cardData.assignedMaterial != null)
         {
-            // Example: Gold makes it x3 more expensive
+            // Adjusted multipliers for soul currency - more affordable
             switch (cardData.assignedMaterial.materialType)
             {
                 case TarotMaterialType.Paper:
-                    finalPrice = cardData.price; // 100
+                    finalPrice = 30; // 3 health - Common, cheap
                     break;
                 case TarotMaterialType.Cardboard:
-                    finalPrice = cardData.price * 2; // 200
+                    finalPrice = 50; // 5 health - Uncommon
                     break;
                 case TarotMaterialType.Wood:
-                    finalPrice = cardData.price * 3; // 300
+                    finalPrice = 70; // 7 health - Rare
                     break;
                 case TarotMaterialType.Copper:
-                    finalPrice = cardData.price * 4; // 400
+                    finalPrice = 100; // 10 health - Very Rare
                     break;
                 case TarotMaterialType.Silver:
-                    finalPrice = cardData.price * 5; // 500
+                    finalPrice = 150; // 15 health - Epic
                     break;
                 case TarotMaterialType.Gold:
-                    finalPrice = cardData.price * 6; // 600
+                    finalPrice = 200; // 20 health - Legendary
                     break;
                 case TarotMaterialType.Platinum:
-                    finalPrice = cardData.price * 7; // 700
+                    finalPrice = 250; // 25 health - Mythic
                     break;
                 case TarotMaterialType.Diamond:
-                    finalPrice = cardData.price * 10; // 1000
+                    finalPrice = 300; // 30 health - Ultimate (unlimited uses)
                     break;
             }
         }
@@ -1069,9 +1039,9 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                 }
                 
             // Update durability in the central inventory system
-            if (InventoryManager.Instance != null)
+            if (InventoryManagerV3.Instance != null)
             {
-                InventoryManager.Instance.UseEquippedCard(cardData);
+                InventoryManagerV3.Instance.UseEquippedCard(cardData);
             }
             else
             {
@@ -1095,9 +1065,9 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     }
                     
                     // Remove from Inventory System
-                    if (InventoryManager.Instance != null && cardData != null)
+                    if (InventoryManagerV3.Instance != null && cardData != null)
                     {
-                        InventoryManager.Instance.RemoveUsedUpCard(cardData);
+                        InventoryManagerV3.Instance.RemoveUsedUpCard(cardData);
                     }
                     
                     // Animate the card destruction

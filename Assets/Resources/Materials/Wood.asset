@@ -15,6 +15,7 @@ MonoBehaviour:
   materialName: Wood
   maxUses: 3
   rarityPercentage: 17
-  backgroundSprite: {fileID: 21300000, guid: 7b4dc3ec9c312c34e8e7e6d936aaa427, type: 3}
+  backgroundSprite: {fileID: 7440981132975211316, guid: 6678c598e4c3445429c727891acd21fb,
+    type: 3}
   materialTint: {r: 1, g: 1, b: 1, a: 0}
   materialType: 2

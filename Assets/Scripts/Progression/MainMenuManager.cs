@@ -20,7 +20,7 @@ public class MainMenuManager : MonoBehaviour
     public Button tutorialSettingsCloseButton;
 
     [Header("Inventory")]
-    public InventoryPanelUI inventoryPanelUI; // Reference to inventory panel
+    public InventoryPanelUIV3 inventoryPanelUIV3; // Reference to V3 inventory panel
 
     [Header("Audio")]
     public AudioSource buttonClickSound;
@@ -124,13 +124,13 @@ public class MainMenuManager : MonoBehaviour
     {
         PlayButtonSound();
         
-        if (inventoryPanelUI != null)
+        if (inventoryPanelUIV3 != null)
         {
-            inventoryPanelUI.ToggleInventory();
+            inventoryPanelUIV3.ToggleInventory();
         }
         else
         {
-            Debug.LogWarning("Inventory Panel UI not assigned in Main Menu Manager!");
+            Debug.LogWarning("Inventory Panel UIV3 not assigned in Main Menu Manager!");
         }
     }
 

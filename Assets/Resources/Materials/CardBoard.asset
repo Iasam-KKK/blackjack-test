@@ -15,6 +15,7 @@ MonoBehaviour:
   materialName: CardBoard
   maxUses: 2
   rarityPercentage: 19
-  backgroundSprite: {fileID: 21300000, guid: 0d19ffec487365e4b875721dbbb13844, type: 3}
+  backgroundSprite: {fileID: -4294124116237113263, guid: d0d15c7701abc2949a264bbabdb0ff0a,
+    type: 3}
   materialTint: {r: 1, g: 1, b: 1, a: 0}
   materialType: 1

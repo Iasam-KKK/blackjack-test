@@ -15,6 +15,7 @@ MonoBehaviour:
   materialName: Platinium
   maxUses: 7
   rarityPercentage: 3
-  backgroundSprite: {fileID: 21300000, guid: 15b46e439998e3f44a6c1b6612c4ee4b, type: 3}
+  backgroundSprite: {fileID: -7316551590515498952, guid: b61de46acb2192b45b36324b2e941daa,
+    type: 3}
   materialTint: {r: 1, g: 1, b: 1, a: 0}
   materialType: 6
