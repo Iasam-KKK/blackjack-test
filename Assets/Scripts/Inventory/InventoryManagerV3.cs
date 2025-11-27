@@ -172,9 +172,14 @@ public class InventoryManagerV3 : InventoryManager
             
             if (inventoryPanelV3 != null)
             {
+                // Immediate refresh
                 inventoryPanelV3.RefreshAllSlots();
                 inventoryPanelV3.RefreshEquipmentSlots();
                 inventoryPanelV3.UpdateOverviewStats();
+                
+                // Also do a delayed refresh to ensure UI updates properly
+                StartCoroutine(DelayedUIRefresh());
+                
                 Debug.Log($"[InventoryManagerV3] V3 UI refreshed successfully");
             }
             else
@@ -193,10 +198,46 @@ public class InventoryManagerV3 : InventoryManager
         return success;
     }
     
+    /// <summary>
+    /// Delayed UI refresh to ensure updates take effect
+    /// </summary>
+    private IEnumerator DelayedUIRefresh()
+    {
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForSeconds(0.1f);
+        
+        if (inventoryPanelV3 != null)
+        {
+            inventoryPanelV3.RefreshAllSlots();
+            inventoryPanelV3.RefreshEquipmentSlots();
+            inventoryPanelV3.UpdateOverviewStats();
+            
+            // Force canvas update to ensure visual refresh
+            Canvas.ForceUpdateCanvases();
+            
+            Debug.Log("[InventoryManagerV3] Delayed UI refresh completed with forced canvas update");
+        }
+    }
+    
     private void ShowCardAddedNotification(TarotCardData card)
     {
         // Simple debug notification - can be enhanced with UI toast later
         Debug.Log($"✓ '{card.cardName}' added to inventory!");
+    }
+    
+    /// <summary>
+    /// Force a complete inventory UI refresh (public method for external calls)
+    /// </summary>
+    public void ForceCompleteUIRefresh()
+    {
+        if (inventoryPanelV3 != null)
+        {
+            Debug.Log("[InventoryManagerV3] ForceCompleteUIRefresh called");
+            inventoryPanelV3.RefreshAllSlots();
+            inventoryPanelV3.RefreshEquipmentSlots();
+            inventoryPanelV3.UpdateOverviewStats();
+            Canvas.ForceUpdateCanvases();
+        }
     }
     
     public override bool EquipCardFromStorage(int storageSlotIndex, int equipmentSlotIndex = -1)

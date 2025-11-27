@@ -1,10 +1,22 @@
 fileFormatVersion: 2
-guid: 5bf8e9c78f078d7439f8413c82d7604e
+guid: bc108689e21d59149b3aa05e2064b55e
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8593961221688250768
-    second: The Martyr_0
+      213: -4222610417959069182
+    second: ShopClose_0
+  - first:
+      213: 5364021023350508720
+    second: ShopClose_1
+  - first:
+      213: -1478974837823897610
+    second: ShopClose_2
+  - first:
+      213: 9166056157974900496
+    second: ShopClose_3
+  - first:
+      213: 3414086795679738117
+    second: ShopClose_4
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +125,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: The Martyr_0
+      name: ShopClose_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 520
-        height: 788
+        x: 18
+        y: 14
+        width: 16
+        height: 23
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +140,96 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 091d538c232e34770800000000000000
-      internalID: 8593961221688250768
+      spriteID: 20a9fac72364665c0800000000000000
+      internalID: -4222610417959069182
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ShopClose_1
+      rect:
+        serializedVersion: 2
+        x: 71
+        y: 12
+        width: 17
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0bcc88073b4d07a40800000000000000
+      internalID: 5364021023350508720
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ShopClose_2
+      rect:
+        serializedVersion: 2
+        x: 86
+        y: 12
+        width: 18
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6fff3cf8830a97be0800000000000000
+      internalID: -1478974837823897610
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ShopClose_3
+      rect:
+        serializedVersion: 2
+        x: 104
+        y: 12
+        width: 18
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 01f2067038f543f70800000000000000
+      internalID: 9166056157974900496
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ShopClose_4
+      rect:
+        serializedVersion: 2
+        x: 122
+        y: 12
+        width: 16
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 509a7d02ad5416f20800000000000000
+      internalID: 3414086795679738117
       vertices: []
       indices: 
       edges: []
@@ -148,7 +248,11 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      The Martyr_0: 8593961221688250768
+      ShopClose_0: -4222610417959069182
+      ShopClose_1: 5364021023350508720
+      ShopClose_2: -1478974837823897610
+      ShopClose_3: 9166056157974900496
+      ShopClose_4: 3414086795679738117
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

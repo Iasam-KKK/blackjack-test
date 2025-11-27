@@ -423,11 +423,16 @@ public class InventoryPanelUIV3 : MonoBehaviour
             Debug.LogError("ShowInventory(): inventoryPanelV3 is NULL! Please assign it in the Inspector.");
         }
         
-        // Refresh displays
+        // Force immediate refresh of all displays
+        Debug.Log("[InventoryPanelUIV3] Forcing full UI refresh on ShowInventory");
         RefreshAllSlots();
         RefreshEquipmentSlots();
         UpdateOverviewStats();
         UpdateActionButtons();
+        
+        // Force canvas update to ensure visual refresh
+        Canvas.ForceUpdateCanvases();
+        Debug.Log("[InventoryPanelUIV3] ShowInventory refresh complete");
     }
     
     public void HideInventory()
@@ -497,19 +502,36 @@ public class InventoryPanelUIV3 : MonoBehaviour
     {
         if (InventoryManagerV3.Instance == null || InventoryManagerV3.Instance.inventoryData == null)
         {
+            Debug.LogWarning("[InventoryPanelUIV3] Cannot refresh slots - InventoryManager or inventoryData is null");
             return;
         }
+        
+        Debug.Log($"[InventoryPanelUIV3] RefreshAllSlots called - refreshing {storageSlots.Count} storage slots");
         
         // Refresh storage slots
         for (int i = 0; i < storageSlots.Count; i++)
         {
+            if (storageSlots[i] == null)
+            {
+                Debug.LogWarning($"[InventoryPanelUIV3] Storage slot {i} is null!");
+                continue;
+            }
+            
             var slotData = InventoryManagerV3.Instance.GetStorageSlot(i);
             storageSlots[i].slotData = slotData;
             storageSlots[i].UpdateDisplay();
+            
+            // Debug log for occupied slots
+            if (slotData != null && slotData.isOccupied)
+            {
+                Debug.Log($"[InventoryPanelUIV3] Slot {i} refreshed with card: {slotData.storedCard?.cardName}");
+            }
         }
         
         // Also refresh equipment slots
         RefreshEquipmentSlots();
+        
+        Debug.Log("[InventoryPanelUIV3] RefreshAllSlots complete");
     }
     
     public void RefreshEquipmentSlots()
@@ -780,16 +802,33 @@ public class InventoryPanelUIV3 : MonoBehaviour
             var selectedSlot = InventoryManagerV3.Instance.GetSelectedSlot();
             bool hasSelection = selectedSlot != null && selectedSlot.slotData != null && selectedSlot.slotData.isOccupied;
             
-            bool canEquip = hasSelection && 
-                           !selectedSlot.slotData.isEquipmentSlot && 
-                           selectedSlot.slotData.storedCard.CanBeUsed() &&
-                           InventoryManagerV3.Instance.HasEquipmentSpace();
+            bool canEquip = false;
+            bool canUnequip = false;
+            bool canDiscard = false;
             
-            bool canUnequip = hasSelection && 
-                             selectedSlot.slotData.isEquipmentSlot &&
-                             InventoryManagerV3.Instance.HasStorageSpace();
-            
-            bool canDiscard = hasSelection;
+            if (hasSelection)
+            {
+                var slotData = selectedSlot.slotData;
+                bool isStorageSlot = !slotData.isEquipmentSlot;
+                bool cardUsable = slotData.storedCard != null && slotData.storedCard.CanBeUsed();
+                bool hasEquipSpace = InventoryManagerV3.Instance.HasEquipmentSpace();
+                bool hasStorageSpace = InventoryManagerV3.Instance.HasStorageSpace();
+                
+                canEquip = isStorageSlot && cardUsable && hasEquipSpace;
+                canUnequip = !isStorageSlot && hasStorageSpace;
+                canDiscard = true;
+                
+                Debug.Log($"[InventoryPanelUIV3] UpdateActionButtons - Slot: {selectedSlot.slotIndex}, " +
+                         $"isEquipmentSlot: {slotData.isEquipmentSlot}, " +
+                         $"cardUsable: {cardUsable}, " +
+                         $"hasEquipSpace: {hasEquipSpace}, " +
+                         $"hasStorageSpace: {hasStorageSpace}, " +
+                         $"canEquip: {canEquip}, canUnequip: {canUnequip}");
+            }
+            else
+            {
+                Debug.Log("[InventoryPanelUIV3] UpdateActionButtons - No valid selection");
+            }
             
             Debug.Log($"[InventoryPanelUIV3] UpdateActionButtons (AllCards) - HasSelection: {hasSelection}, CanEquip: {canEquip}, CanUnequip: {canUnequip}");
             

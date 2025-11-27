@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
+using DG.Tweening;
 
 public class InventorySlotUIV3 : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
@@ -28,6 +29,7 @@ public class InventorySlotUIV3 : MonoBehaviour, IPointerClickHandler, IPointerEn
     
     private InventoryPanelUIV3 parentPanel;
     private bool isHovered;
+    private Tween hoverShakeTween;
     
     public void Initialize(int index, InventorySlotData data, InventoryPanelUIV3 parent)
     {
@@ -189,6 +191,13 @@ public class InventorySlotUIV3 : MonoBehaviour, IPointerClickHandler, IPointerEn
             if (selected)
             {
                 transform.localScale = Vector3.one * selectedScale;
+                // Stop hover shake when selected
+                if (hoverShakeTween != null && hoverShakeTween.IsActive())
+                {
+                    hoverShakeTween.Kill();
+                    hoverShakeTween = null;
+                }
+                transform.DORotate(Vector3.zero, 0.2f).SetEase(Ease.OutQuad);
             }
             else if (!isHovered)
             {
@@ -223,6 +232,21 @@ public class InventorySlotUIV3 : MonoBehaviour, IPointerClickHandler, IPointerEn
             transform.localScale = Vector3.one * 1.05f;
         }
         
+        // Subtle shake effect on hover using DOTween
+        if (hoverShakeTween != null && hoverShakeTween.IsActive())
+        {
+            hoverShakeTween.Kill();
+        }
+        
+        // Only shake if slot has a card
+        if (slotData != null && slotData.isOccupied && slotData.storedCard != null)
+        {
+            // Subtle shake: small rotation shake, 0.3s duration, 10 loops
+            hoverShakeTween = transform.DOShakeRotation(0.3f, strength: 2f, vibrato: 5, randomness: 30f, fadeOut: true)
+                .SetLoops(-1, LoopType.Restart)
+                .SetEase(Ease.OutQuad);
+        }
+        
         // Show tooltip if card exists
         if (slotData != null && slotData.isOccupied && slotData.storedCard != null)
         {
@@ -233,6 +257,16 @@ public class InventorySlotUIV3 : MonoBehaviour, IPointerClickHandler, IPointerEn
     public void OnPointerExit(PointerEventData eventData)
     {
         isHovered = false;
+        
+        // Stop hover shake animation
+        if (hoverShakeTween != null && hoverShakeTween.IsActive())
+        {
+            hoverShakeTween.Kill();
+            hoverShakeTween = null;
+        }
+        
+        // Smoothly return to original rotation
+        transform.DORotate(Vector3.zero, 0.2f).SetEase(Ease.OutQuad);
         
         // Reset color if not selected
         if (slotBackgroundImage != null && !isSelected)
@@ -285,6 +319,17 @@ public class InventorySlotUIV3 : MonoBehaviour, IPointerClickHandler, IPointerEn
         }
         
         TooltipManager.Instance.ShowTooltip(tooltipText, transform.position);
+    }
+    
+    private void OnDestroy()
+    {
+        // Clean up any tooltip references
+        // Kill any active tweens
+        if (hoverShakeTween != null && hoverShakeTween.IsActive())
+        {
+            hoverShakeTween.Kill();
+        }
+        transform.DOKill();
     }
 }
 

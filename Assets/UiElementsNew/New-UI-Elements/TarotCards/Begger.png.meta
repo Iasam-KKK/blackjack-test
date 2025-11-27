@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 5bf8e9c78f078d7439f8413c82d7604e
+guid: 32d824866fac034488cbb4140d314272
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8593961221688250768
-    second: The Martyr_0
+      213: -6815802671623443856
+    second: Begger_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: The Martyr_0
+      name: Begger_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 520
-        height: 788
+        width: 260
+        height: 394
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 091d538c232e34770800000000000000
-      internalID: 8593961221688250768
+      spriteID: 07ae9b2f4976961a0800000000000000
+      internalID: -6815802671623443856
       vertices: []
       indices: 
       edges: []
@@ -138,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -147,8 +147,7 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable:
-      The Martyr_0: 8593961221688250768
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
