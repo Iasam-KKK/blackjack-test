@@ -369,16 +369,34 @@ public class ShopItemSlotV2 : MonoBehaviour, IPointerClickHandler, IPointerEnter
         // If purchase was successful, destroy this slot
         if (purchaseSuccessful)
         {
+            Debug.Log($"[ShopItemSlotV2] Purchase successful - preparing to destroy slot for {itemData}");
+            
+            // Stop any animations
+            if (hoverShakeTween != null && hoverShakeTween.IsActive())
+            {
+                hoverShakeTween.Kill();
+            }
+            transform.DOKill();
+            
             // Notify shop manager to clear selection if this was selected
-            if (isSelected)
+            if (isSelected && shopManager != null)
             {
                 shopManager.OnItemPurchased(this);
             }
             
-            // Destroy the slot - grid layout will auto-arrange remaining items
-            Destroy(gameObject);
+            // Clean up button listener
+            if (purchaseButton != null)
+            {
+                purchaseButton.onClick.RemoveAllListeners();
+            }
             
-            Debug.Log($"[ShopItemSlotV2] Slot destroyed after successful purchase");
+            // Destroy the slot - grid layout will auto-arrange remaining items
+            Debug.Log($"[ShopItemSlotV2] Destroying slot GameObject: {gameObject.name}");
+            Destroy(gameObject);
+        }
+        else
+        {
+            Debug.LogWarning($"[ShopItemSlotV2] Purchase failed - slot not destroyed");
         }
     }
     

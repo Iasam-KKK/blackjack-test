@@ -6,7 +6,7 @@ public class InventoryData : ScriptableObject
 {
     [Header("Inventory Configuration")]
     public int storageSlotCount = 16; // Number of storage slots
-    public int equipmentSlotCount = 3; // Number of equipment slots
+    public int equipmentSlotCount = 4; // Number of equipment slots
     
     [Header("Current Inventory State")]
     public List<InventorySlotData> storageSlots = new List<InventorySlotData>();
@@ -37,6 +37,15 @@ public class InventoryData : ScriptableObject
             for (int i = 0; i < equipmentSlotCount; i++)
             {
                 equipmentSlots.Add(new InventorySlotData(i, true));
+            }
+        }
+        
+        // FIX: Fix any data inconsistencies in existing equipment slots
+        foreach (var slot in equipmentSlots)
+        {
+            if (slot != null)
+            {
+                slot.FixSlotState();
             }
         }
     }
@@ -86,17 +95,70 @@ public class InventoryData : ScriptableObject
     // Move card from storage to equipment
     public bool MoveCardToEquipment(int storageSlotIndex, int equipmentSlotIndex)
     {
-        if (storageSlotIndex < 0 || storageSlotIndex >= storageSlots.Count) return false;
-        if (equipmentSlotIndex < 0 || equipmentSlotIndex >= equipmentSlots.Count) return false;
+        if (storageSlotIndex < 0 || storageSlotIndex >= storageSlots.Count)
+        {
+            Debug.LogError($"[InventoryData] MoveCardToEquipment: Invalid storage slot index {storageSlotIndex} (count: {storageSlots.Count})");
+            return false;
+        }
+        if (equipmentSlotIndex < 0 || equipmentSlotIndex >= equipmentSlots.Count)
+        {
+            Debug.LogError($"[InventoryData] MoveCardToEquipment: Invalid equipment slot index {equipmentSlotIndex} (count: {equipmentSlots.Count})");
+            return false;
+        }
         
         var storageSlot = storageSlots[storageSlotIndex];
         var equipmentSlot = equipmentSlots[equipmentSlotIndex];
         
-        if (!storageSlot.isOccupied || equipmentSlot.isOccupied) return false;
-        if (!storageSlot.storedCard.CanBeUsed()) return false; // Can't equip used up cards
+        if (storageSlot == null || equipmentSlot == null)
+        {
+            Debug.LogError($"[InventoryData] MoveCardToEquipment: Null slot - storage={storageSlot == null}, equipment={equipmentSlot == null}");
+            return false;
+        }
+        
+        // FIX: Fix any data inconsistencies in equipment slot first
+        equipmentSlot.FixSlotState();
+        
+        // Check storage slot
+        bool storageOccupied = storageSlot.isOccupied && storageSlot.storedCard != null;
+        if (!storageOccupied)
+        {
+            Debug.LogWarning($"[InventoryData] MoveCardToEquipment: Storage slot {storageSlotIndex} is not occupied (isOccupied={storageSlot.isOccupied}, card={storageSlot.storedCard != null})");
+            return false;
+        }
+        
+        // Check equipment slot - must be empty (check both flag AND card)
+        bool equipmentOccupied = equipmentSlot.isOccupied && equipmentSlot.storedCard != null;
+        if (equipmentOccupied)
+        {
+            Debug.LogWarning($"[InventoryData] MoveCardToEquipment: Equipment slot {equipmentSlotIndex} is already occupied (isOccupied={equipmentSlot.isOccupied}, card={equipmentSlot.storedCard?.cardName ?? "null"})");
+            return false;
+        }
+        
+        // Check if card can be used
+        if (!storageSlot.storedCard.CanBeUsed())
+        {
+            Debug.LogWarning($"[InventoryData] MoveCardToEquipment: Card {storageSlot.storedCard.cardName} cannot be used (used up)");
+            return false;
+        }
         
         TarotCardData card = storageSlot.RemoveCard();
-        return equipmentSlot.StoreCard(card);
+        if (card == null)
+        {
+            Debug.LogError($"[InventoryData] MoveCardToEquipment: RemoveCard returned null from storage slot {storageSlotIndex}");
+            return false;
+        }
+        
+        bool storeSuccess = equipmentSlot.StoreCard(card);
+        if (!storeSuccess)
+        {
+            Debug.LogError($"[InventoryData] MoveCardToEquipment: Failed to store card in equipment slot {equipmentSlotIndex} (isOccupied={equipmentSlot.isOccupied}, card={equipmentSlot.storedCard != null})");
+            // Try to restore card to storage
+            storageSlot.StoreCard(card);
+            return false;
+        }
+        
+        Debug.Log($"[InventoryData] MoveCardToEquipment: Successfully moved {card.cardName} from storage {storageSlotIndex} to equipment {equipmentSlotIndex}");
+        return true;
     }
     
     // Get all equipped cards that can be used

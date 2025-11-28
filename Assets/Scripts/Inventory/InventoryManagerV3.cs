@@ -8,6 +8,7 @@ public class InventoryManagerV3 : InventoryManager
     
     [Header("V3 UI References")]
     public InventoryPanelUIV3 inventoryPanelV3;
+    public TarotWindowUI tarotWindowUI;
     
     [Header("V3 State Management")]
     private InventorySlotUIV3 selectedSlot;
@@ -84,6 +85,13 @@ public class InventoryManagerV3 : InventoryManager
         else
         {
             Debug.LogError("[InventoryManagerV3] InventoryPanelUIV3 not found! Cannot initialize inventory UI!");
+        }
+        
+        // Find tarot window UI if not assigned
+        if (tarotWindowUI == null)
+        {
+            tarotWindowUI = FindObjectOfType<TarotWindowUI>();
+            Debug.Log($"[InventoryManagerV3] Searched for TarotWindowUI: {(tarotWindowUI != null ? "Found" : "Not Found")}");
         }
     }
     
@@ -252,6 +260,21 @@ public class InventoryManagerV3 : InventoryManager
             ClearSelection();
         }
         
+        // Notify tarot window
+        if (success && tarotWindowUI != null)
+        {
+            tarotWindowUI.Refresh();
+        }
+        else if (success && tarotWindowUI == null)
+        {
+            // Try to find it
+            tarotWindowUI = FindObjectOfType<TarotWindowUI>();
+            if (tarotWindowUI != null)
+            {
+                tarotWindowUI.Refresh();
+            }
+        }
+        
         return success;
     }
     
@@ -267,6 +290,21 @@ public class InventoryManagerV3 : InventoryManager
             ClearSelection();
         }
         
+        // Notify tarot window
+        if (success && tarotWindowUI != null)
+        {
+            tarotWindowUI.Refresh();
+        }
+        else if (success && tarotWindowUI == null)
+        {
+            // Try to find it
+            tarotWindowUI = FindObjectOfType<TarotWindowUI>();
+            if (tarotWindowUI != null)
+            {
+                tarotWindowUI.Refresh();
+            }
+        }
+        
         return success;
     }
     
@@ -280,6 +318,21 @@ public class InventoryManagerV3 : InventoryManager
             inventoryPanelV3.RefreshEquipmentSlots();
             inventoryPanelV3.UpdateOverviewStats();
             ClearSelection();
+        }
+        
+        // Notify tarot window
+        if (tarotWindowUI != null)
+        {
+            tarotWindowUI.Refresh();
+        }
+        else
+        {
+            // Try to find it
+            tarotWindowUI = FindObjectOfType<TarotWindowUI>();
+            if (tarotWindowUI != null)
+            {
+                tarotWindowUI.Refresh();
+            }
         }
     }
     

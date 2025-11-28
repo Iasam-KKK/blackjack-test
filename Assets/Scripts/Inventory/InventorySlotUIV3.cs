@@ -210,6 +210,12 @@ public class InventorySlotUIV3 : MonoBehaviour, IPointerClickHandler, IPointerEn
     {
         if (parentPanel == null) return;
         
+        // Don't allow selecting empty slots
+        if (slotData == null || !slotData.isOccupied || slotData.storedCard == null)
+        {
+            return;
+        }
+        
         if (eventData.button == PointerEventData.InputButton.Left)
         {
             parentPanel.OnSlotSelected(this);

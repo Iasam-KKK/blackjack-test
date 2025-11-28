@@ -538,16 +538,32 @@ public class InventoryPanelUIV3 : MonoBehaviour
     {
         if (InventoryManagerV3.Instance == null || InventoryManagerV3.Instance.inventoryData == null)
         {
+            Debug.LogWarning("[InventoryPanelUIV3] RefreshEquipmentSlots - InventoryManagerV3 or inventoryData not found!");
             return;
         }
         
-        // Refresh equipment slots using the same system as storage slots
-        for (int i = 0; i < equipmentSlots.Count; i++)
+        var inventoryData = InventoryManagerV3.Instance.inventoryData;
+        
+        // Update each equipment slot UI with current data
+        for (int i = 0; i < equipmentSlots.Count && i < inventoryData.equipmentSlots.Count; i++)
         {
-            var slotData = InventoryManagerV3.Instance.GetEquipmentSlot(i);
-            equipmentSlots[i].slotData = slotData;
-            equipmentSlots[i].UpdateDisplay();
+            if (equipmentSlots[i] != null)
+            {
+                var slotData = inventoryData.equipmentSlots[i];
+                
+                // CRITICAL: Check if slot is actually occupied (both flag AND card exists)
+                bool actuallyOccupied = slotData != null && slotData.isOccupied && slotData.storedCard != null;
+                
+                // Update slot data
+                equipmentSlots[i].slotData = slotData;
+                equipmentSlots[i].UpdateDisplay();
+                
+                Debug.Log($"[InventoryPanelUIV3] Refreshed equipment slot {i}: isOccupied={slotData.isOccupied}, actuallyOccupied={actuallyOccupied}, card={(slotData.storedCard != null ? slotData.storedCard.cardName : "null")}");
+            }
         }
+        
+        // Force action buttons update to reflect correct equipment space
+        UpdateActionButtons();
     }
     
     public void UpdateSelectedCard(InventorySlotData slotData)
@@ -809,14 +825,37 @@ public class InventoryPanelUIV3 : MonoBehaviour
             if (hasSelection)
             {
                 var slotData = selectedSlot.slotData;
-                bool isStorageSlot = !slotData.isEquipmentSlot;
-                bool cardUsable = slotData.storedCard != null && slotData.storedCard.CanBeUsed();
-                bool hasEquipSpace = InventoryManagerV3.Instance.HasEquipmentSpace();
-                bool hasStorageSpace = InventoryManagerV3.Instance.HasStorageSpace();
                 
-                canEquip = isStorageSlot && cardUsable && hasEquipSpace;
-                canUnequip = !isStorageSlot && hasStorageSpace;
-                canDiscard = true;
+                // CRITICAL: Check if slot is actually occupied (both flag AND card exists)
+                bool actuallyOccupied = slotData.isOccupied && slotData.storedCard != null;
+                
+                // Declare variables outside if/else for use in debug log
+                bool isStorageSlot = false;
+                bool cardUsable = false;
+                bool hasEquipSpace = false;
+                bool hasStorageSpace = false;
+                
+                if (!actuallyOccupied)
+                {
+                    // Empty slot selected - clear selection
+                    Debug.LogWarning("[InventoryPanelUIV3] Empty slot selected - clearing selection");
+                    InventoryManagerV3.Instance.ClearSelection();
+                    hasSelection = false;
+                    canEquip = false;
+                    canUnequip = false;
+                    canDiscard = false;
+                }
+                else
+                {
+                    isStorageSlot = !slotData.isEquipmentSlot;
+                    cardUsable = slotData.storedCard != null && slotData.storedCard.CanBeUsed();
+                    hasEquipSpace = InventoryManagerV3.Instance.HasEquipmentSpace();
+                    hasStorageSpace = InventoryManagerV3.Instance.HasStorageSpace();
+                    
+                    canEquip = isStorageSlot && cardUsable && hasEquipSpace;
+                    canUnequip = !isStorageSlot && hasStorageSpace;
+                    canDiscard = true;
+                }
                 
                 Debug.Log($"[InventoryPanelUIV3] UpdateActionButtons - Slot: {selectedSlot.slotIndex}, " +
                          $"isEquipmentSlot: {slotData.isEquipmentSlot}, " +

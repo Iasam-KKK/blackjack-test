@@ -151,15 +151,28 @@ public class InventoryManager : MonoBehaviour
         {
             for (int i = 0; i < inventoryData.equipmentSlots.Count; i++)
             {
-                if (!inventoryData.equipmentSlots[i].isOccupied)
+                var slot = inventoryData.equipmentSlots[i];
+                // Check both isOccupied flag AND if storedCard is actually null
+                bool actuallyOccupied = slot.isOccupied && slot.storedCard != null;
+                if (!actuallyOccupied)
                 {
                     equipmentSlotIndex = i;
+                    Debug.Log($"[InventoryManager] EquipCardFromStorage: Found available equipment slot {i} (isOccupied={slot.isOccupied}, card={slot.storedCard != null})");
                     break;
                 }
             }
         }
         
-        if (equipmentSlotIndex == -1) return false; // No available equipment slots
+        if (equipmentSlotIndex == -1)
+        {
+            Debug.LogWarning($"[InventoryManager] EquipCardFromStorage: No available equipment slots found. Checking all slots:");
+            for (int i = 0; i < inventoryData.equipmentSlots.Count; i++)
+            {
+                var slot = inventoryData.equipmentSlots[i];
+                Debug.LogWarning($"[InventoryManager] Equipment slot {i}: isOccupied={slot.isOccupied}, card={(slot.storedCard != null ? slot.storedCard.cardName : "null")}");
+            }
+            return false; // No available equipment slots
+        }
         
         bool success = inventoryData.MoveCardToEquipment(storageSlotIndex, equipmentSlotIndex);
         if (success)
@@ -306,13 +319,48 @@ public class InventoryManager : MonoBehaviour
     // Check if there are available equipment slots
     public bool HasEquipmentSpace()
     {
-        if (inventoryData == null) return false;
+        if (inventoryData == null)
+        {
+            Debug.LogWarning("[InventoryManager] HasEquipmentSpace: inventoryData is null");
+            return false;
+        }
+        
+        if (inventoryData.equipmentSlots == null || inventoryData.equipmentSlots.Count == 0)
+        {
+            Debug.LogWarning("[InventoryManager] HasEquipmentSpace: equipmentSlots is null or empty");
+            return false;
+        }
+        
+        int emptySlots = 0;
+        int occupiedSlots = 0;
         
         foreach (var slot in inventoryData.equipmentSlots)
         {
-            if (!slot.isOccupied) return true;
+            if (slot == null)
+            {
+                Debug.LogWarning("[InventoryManager] HasEquipmentSpace: Found null slot in equipmentSlots");
+                continue;
+            }
+            
+            // FIX: Fix any data inconsistencies first
+            slot.FixSlotState();
+            
+            // Check both isOccupied flag AND if storedCard is actually null
+            bool actuallyOccupied = slot.isOccupied && slot.storedCard != null;
+            
+            if (actuallyOccupied)
+            {
+                occupiedSlots++;
+            }
+            else
+            {
+                emptySlots++;
+            }
         }
-        return false;
+        
+        Debug.Log($"[InventoryManager] HasEquipmentSpace: {emptySlots} empty, {occupiedSlots} occupied out of {inventoryData.equipmentSlots.Count} total");
+        
+        return emptySlots > 0;
     }
     
     // Get storage slot data for UI

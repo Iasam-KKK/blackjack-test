@@ -22,7 +22,16 @@ public class InventorySlotData
     // Store a card in this slot
     public bool StoreCard(TarotCardData card)
     {
-        if (isOccupied || card == null) return false;
+        if (card == null) return false;
+        
+        // FIX: If isOccupied is true but storedCard is null, clear it first (data inconsistency fix)
+        if (isOccupied && storedCard == null)
+        {
+            Debug.LogWarning($"[InventorySlotData] Slot {slotIndex} has isOccupied=true but storedCard=null. Fixing inconsistency.");
+            isOccupied = false;
+        }
+        
+        if (isOccupied) return false; // Slot is actually occupied
         
         storedCard = card;
         isOccupied = true;
@@ -43,12 +52,33 @@ public class InventorySlotData
     // Check if the slot can accept a card
     public bool CanAcceptCard(TarotCardData card)
     {
-        if (card == null || isOccupied) return false;
+        if (card == null) return false;
+        
+        // FIX: Check both isOccupied AND storedCard (handle data inconsistency)
+        bool actuallyOccupied = isOccupied && storedCard != null;
+        if (actuallyOccupied) return false;
         
         // Equipment slots can only accept cards with remaining durability
         if (isEquipmentSlot && !card.CanBeUsed()) return false;
         
         return true;
+    }
+    
+    /// <summary>
+    /// Fix slot state if there's a data inconsistency (isOccupied=true but storedCard=null)
+    /// </summary>
+    public void FixSlotState()
+    {
+        if (isOccupied && storedCard == null)
+        {
+            Debug.LogWarning($"[InventorySlotData] Fixing slot {slotIndex} - isOccupied=true but storedCard=null");
+            isOccupied = false;
+        }
+        else if (!isOccupied && storedCard != null)
+        {
+            Debug.LogWarning($"[InventorySlotData] Fixing slot {slotIndex} - isOccupied=false but storedCard exists");
+            isOccupied = true;
+        }
     }
     
     // Get display info for the slot
