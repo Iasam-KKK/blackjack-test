@@ -9,9 +9,15 @@ public class MainMenuManager : MonoBehaviour
     public Button tutorialButton;      // New tutorial button
     public Button inventoryButton;     // New inventory button
     public Button settingsButton;
+    public Button optionsButton;       // Options button to open options panel
     public Button quitButton;
     // public TextMeshProUGUI titleText;
     public GameObject settingsPanel;
+
+    [Header("Options Panel")]
+    public GameObject optionsPanel;    // Options panel GameObject
+    public Button optionsCloseButton;  // Close button inside options panel
+    public Button resetProgressButton; // Reset progress button inside options panel
 
     [Header("Tutorial Settings Panel")]
     public GameObject tutorialSettingsPanel; // Panel for tutorial options
@@ -40,6 +46,9 @@ public class MainMenuManager : MonoBehaviour
         if (settingsButton != null)
             settingsButton.onClick.AddListener(OnSettingsButtonClicked);
         
+        if (optionsButton != null)
+            optionsButton.onClick.AddListener(OnOptionsButtonClicked);
+        
         if (quitButton != null)
             quitButton.onClick.AddListener(OnQuitButtonClicked);
 
@@ -50,12 +59,22 @@ public class MainMenuManager : MonoBehaviour
         if (tutorialSettingsCloseButton != null)
             tutorialSettingsCloseButton.onClick.AddListener(CloseTutorialSettings);
 
+        // Setup options panel
+        if (optionsCloseButton != null)
+            optionsCloseButton.onClick.AddListener(CloseOptionsPanel);
+        
+        if (resetProgressButton != null)
+            resetProgressButton.onClick.AddListener(OnResetProgressClicked);
+
         // Make sure panels are closed initially
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
         
         if (tutorialSettingsPanel != null)
             tutorialSettingsPanel.SetActive(false);
+        
+        if (optionsPanel != null)
+            optionsPanel.SetActive(false);
 
         // Initialize tutorial settings
         InitializeTutorialSettings();
@@ -144,6 +163,19 @@ public class MainMenuManager : MonoBehaviour
         if (settingsPanel != null)
         {
             settingsPanel.SetActive(!settingsPanel.activeSelf);
+        }
+    }
+
+    /// <summary>
+    /// Called when Options button is clicked
+    /// </summary>
+    public void OnOptionsButtonClicked()
+    {
+        PlayButtonSound();
+        
+        if (optionsPanel != null)
+        {
+            optionsPanel.SetActive(true);
         }
     }
 
@@ -241,6 +273,115 @@ public class MainMenuManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Close options panel
+    /// </summary>
+    public void CloseOptionsPanel()
+    {
+        PlayButtonSound();
+        
+        if (optionsPanel != null)
+            optionsPanel.SetActive(false);
+    }
+
+    /// <summary>
+    /// Called when Reset Progress button is clicked
+    /// </summary>
+    public void OnResetProgressClicked()
+    {
+        PlayButtonSound();
+        
+        // Clear all PlayerPrefs
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
+        
+        // Clear runtime inventory data
+        ClearInventoryData();
+        
+        Debug.Log("All progress and PlayerPrefs have been reset.");
+        
+        // Close options panel after reset
+        if (optionsPanel != null)
+            optionsPanel.SetActive(false);
+    }
+
+    /// <summary>
+    /// Clear all inventory data from runtime ScriptableObject
+    /// </summary>
+    private void ClearInventoryData()
+    {
+        // Use InventoryManagerV3 if available
+        if (InventoryManagerV3.Instance != null && InventoryManagerV3.Instance.inventoryData != null)
+        {
+            var inventoryData = InventoryManagerV3.Instance.inventoryData;
+            
+            // Clear all storage slots
+            foreach (var slot in inventoryData.storageSlots)
+            {
+                if (slot != null && slot.isOccupied)
+                {
+                    slot.RemoveCard();
+                }
+            }
+            
+            // Clear all equipment slots
+            foreach (var slot in inventoryData.equipmentSlots)
+            {
+                if (slot != null && slot.isOccupied)
+                {
+                    slot.RemoveCard();
+                }
+            }
+            
+            // Force refresh inventory UI if it's open
+            if (InventoryManagerV3.Instance.inventoryPanelV3 != null)
+            {
+                InventoryManagerV3.Instance.inventoryPanelV3.RefreshAllSlots();
+            }
+            
+            Debug.Log("Inventory data cleared from runtime.");
+        }
+        // Fallback to InventoryManager if V3 is not available
+        else if (InventoryManager.Instance != null && InventoryManager.Instance.inventoryData != null)
+        {
+            var inventoryData = InventoryManager.Instance.inventoryData;
+            
+            // Clear all storage slots
+            foreach (var slot in inventoryData.storageSlots)
+            {
+                if (slot != null && slot.isOccupied)
+                {
+                    slot.RemoveCard();
+                }
+            }
+            
+            // Clear all equipment slots
+            foreach (var slot in inventoryData.equipmentSlots)
+            {
+                if (slot != null && slot.isOccupied)
+                {
+                    slot.RemoveCard();
+                }
+            }
+            
+            Debug.Log("Inventory data cleared from runtime (using InventoryManager).");
+        }
+        
+        // Clear PlayerStats ownedCards
+        if (PlayerStats.instance != null)
+        {
+            PlayerStats.instance.ownedCards.Clear();
+            Debug.Log("PlayerStats ownedCards cleared.");
+        }
+        
+        // Reset game progression if available
+        if (GameProgressionManager.Instance != null)
+        {
+            GameProgressionManager.Instance.ResetProgression();
+            Debug.Log("Game progression reset.");
+        }
+    }
+
+    /// <summary>
     /// Play button click sound effect
     /// </summary>
     private void PlayButtonSound()
@@ -282,6 +423,9 @@ public class MainMenuManager : MonoBehaviour
         if (settingsButton != null)
             settingsButton.onClick.RemoveListener(OnSettingsButtonClicked);
         
+        if (optionsButton != null)
+            optionsButton.onClick.RemoveListener(OnOptionsButtonClicked);
+        
         if (quitButton != null)
             quitButton.onClick.RemoveListener(OnQuitButtonClicked);
 
@@ -290,5 +434,11 @@ public class MainMenuManager : MonoBehaviour
 
         if (tutorialEnabledToggle != null)
             tutorialEnabledToggle.onValueChanged.RemoveListener(OnTutorialEnabledChanged);
+
+        if (optionsCloseButton != null)
+            optionsCloseButton.onClick.RemoveListener(CloseOptionsPanel);
+
+        if (resetProgressButton != null)
+            resetProgressButton.onClick.RemoveListener(OnResetProgressClicked);
     }
 } 

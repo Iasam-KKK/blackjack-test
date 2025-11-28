@@ -158,7 +158,48 @@ public class InventoryData : ScriptableObject
         }
         
         Debug.Log($"[InventoryData] MoveCardToEquipment: Successfully moved {card.cardName} from storage {storageSlotIndex} to equipment {equipmentSlotIndex}");
+        
+        // Compact storage slots to fill empty gaps
+        CompactStorageSlots();
+        
         return true;
+    }
+    
+    /// <summary>
+    /// Compact storage slots by shifting all cards to fill empty slots
+    /// This ensures no gaps in the storage inventory
+    /// </summary>
+    public void CompactStorageSlots()
+    {
+        // Collect all cards from storage slots
+        List<TarotCardData> cards = new List<TarotCardData>();
+        foreach (var slot in storageSlots)
+        {
+            if (slot != null && slot.isOccupied && slot.storedCard != null)
+            {
+                cards.Add(slot.storedCard);
+            }
+        }
+        
+        // Clear all storage slots
+        foreach (var slot in storageSlots)
+        {
+            if (slot != null)
+            {
+                slot.RemoveCard();
+            }
+        }
+        
+        // Re-add cards starting from index 0, filling empty slots
+        for (int i = 0; i < cards.Count && i < storageSlots.Count; i++)
+        {
+            if (storageSlots[i] != null)
+            {
+                storageSlots[i].StoreCard(cards[i]);
+            }
+        }
+        
+        Debug.Log($"[InventoryData] CompactStorageSlots: Rearranged {cards.Count} cards to fill empty slots");
     }
     
     // Get all equipped cards that can be used

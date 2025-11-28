@@ -175,8 +175,8 @@ MonoBehaviour:
     y: 0
     width: 1293
     height: 649
-  m_MinSize: {x: 201, y: 226}
-  m_MaxSize: {x: 4001, y: 4026}
+  m_MinSize: {x: 200, y: 200}
+  m_MaxSize: {x: 4000, y: 4000}
   m_ActualView: {fileID: 5}
   m_Panes:
   - {fileID: 5}
@@ -656,11 +656,11 @@ MonoBehaviour:
       displayed: 0
       id: Scene View/Open Tile Palette
       index: 2
-      contents: '{"m_Layout":4,"m_Collapsed":false,"m_Floating":false,"m_FloatingSnapOffset":{"x":0.0,"y":0.0},"m_SnapOffsetDelta":{"x":24.0,"y":0.0},"m_FloatingSnapCorner":0,"m_Size":{"x":0.0,"y":0.0},"m_SizeOverridden":false}'
+      contents: '{"m_Layout":4,"m_Collapsed":false,"m_Floating":false,"m_FloatingSnapOffset":{"x":24.0,"y":0.0},"m_SnapOffsetDelta":{"x":0.0,"y":0.0},"m_FloatingSnapCorner":0,"m_Size":{"x":0.0,"y":0.0},"m_SizeOverridden":false}'
       floating: 0
       collapsed: 0
-      snapOffset: {x: 0, y: 0}
-      snapOffsetDelta: {x: 24, y: 0}
+      snapOffset: {x: 24, y: 0}
+      snapOffsetDelta: {x: 0, y: 0}
       snapCorner: 0
       layout: 4
       size: {x: 0, y: 0}
@@ -776,9 +776,9 @@ MonoBehaviour:
   m_AudioPlay: 0
   m_DebugDrawModesUseInteractiveLightBakingData: 0
   m_Position:
-    m_Target: {x: 654.8608, y: 181.27493, z: -1.6177938}
+    m_Target: {x: 627.35767, y: 312.5769, z: -0.4944999}
     speed: 2
-    m_Value: {x: 654.8608, y: 181.27493, z: -1.6177938}
+    m_Value: {x: 627.35767, y: 312.5769, z: -0.4944999}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -828,9 +828,9 @@ MonoBehaviour:
     speed: 2
     m_Value: {x: 0, y: 0, z: 0, w: 1}
   m_Size:
-    m_Target: 268.53735
+    m_Target: 156.2072
     speed: 2
-    m_Value: 268.53735
+    m_Value: 156.2072
   m_Ortho:
     m_Target: 1
     speed: 2
@@ -883,8 +883,8 @@ MonoBehaviour:
     y: 649
     width: 1293
     height: 644
-  m_MinSize: {x: 201, y: 226}
-  m_MaxSize: {x: 4001, y: 4026}
+  m_MinSize: {x: 200, y: 200}
+  m_MaxSize: {x: 4000, y: 4000}
   m_ActualView: {fileID: 2}
   m_Panes:
   - {fileID: 2}
@@ -909,8 +909,8 @@ MonoBehaviour:
     y: 0
     width: 316
     height: 1293
-  m_MinSize: {x: 202, y: 226}
-  m_MaxSize: {x: 4002, y: 4026}
+  m_MinSize: {x: 200, y: 200}
+  m_MaxSize: {x: 4000, y: 4000}
   m_ActualView: {fileID: 8}
   m_Panes:
   - {fileID: 8}
@@ -958,7 +958,7 @@ MonoBehaviour:
       scrollPos: {x: 0, y: 0}
       m_SelectedIDs: 
       m_LastClickedID: 0
-      m_ExpandedIDs: 9c15fdff921cfdff2448fdffbc48fdff96b4fdffeeb6fdff72ccfdffbccdfdff60f8fdffb2f9fdff5006feffe418feff261efeff7827feffcc27fefff82afeff1a2bfeff742cfeff9e54feffba54feffdc54feff1e5afeff0463feff6663feffa077feffac0effff9017fffffc18ffff6431ffff6c6fffff08b0ffff7eb2ffff4cbbffff52bbffff54bbffff56bbffff9ccfffff20dbffff1cfbffffb0d80000aae5050038160600cc1906000e1a0600341f06001e230600ae230600cc290600f22e0600dc3206006c330600b69106004a9506008c950600ba9a0600a49e0600349f06006abb0600febe060040bf06006ec4060058c80600e8c8060072190700061d0700481d07006e22070058260700e82607005c2f07003233070058380700423c0700d23c07001a3f0700f042070016480700004c0700904c0700789707002cb007000ccc070006ce070032d10700e0ae080006b40800
+      m_ExpandedIDs: 9c15fdff921cfdff2448fdffbc48fdff96b4fdffeeb6fdff72ccfdffbccdfdff60f8fdffb2f9fdff5006feffe418feff261efeff7827feffcc27fefff82afeff1a2bfeff742cfeff9e54feffba54feffdc54feff1e5afeff0463feff6663feffa077feffb27cfeffa694feffb096feff9a9ffeffa49ffeff84a5feffb8bdfeff7ae9feff84e9fefff4eefeff34f8feff96fcfeff820bffffac0effff9017fffffc18ffff4e22ffff802bffffd62bffff6431ffff7437ffff9a6affffc46cffff6c6fffff9683ffff848cffff3890ffff569effff38a7ffff5aa8ffff08b0ffff60b0ffff8cb0ffffe4b0ffff7eb2ffff30b6ffff4cbbffff52bbffff54bbffff56bbffffb2c8ffffdec8ffffe6c8fffff0c8ffff1cc9ffff88ceffff9ccfffffcad7ffff20dbffff88f0ffff2ef3ffff44f5ffff3ef7ffff78f9ffff1cfbffff74aa0000b6af0000b0d80000582d02009c320200443302009a520200de5702008658020078620200bc670200668c0200aa91020052920200369c02007aa1020022a2020080e60200c4eb02006cec020078f70200bcfc02009c6003007cc90300c8ce03001edf03006ae4030012e503000eef03005af4030002f50300fe3804004a3e0400f23e04004464040090690400227a04006e7f0400168004003a8a0400868f0400acc4040086c5040024c80400aae5050038160600cc1906000e1a0600341f06001e230600ae230600cc290600f22e0600dc3206006c330600b69106004a9506008c950600ba9a0600a49e0600349f06006abb0600febe060040bf06006ec4060058c80600e8c8060072190700061d0700481d07006e22070058260700e82607005c2f07003233070058380700423c0700d23c07001a3f0700f042070016480700004c0700904c0700789707002cb007000ccc070006ce070032d10700e0ae080006b40800
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -1000,7 +1000,7 @@ MonoBehaviour:
     serializedVersion: 2
     x: 1609
     y: 0
-    width: 347
+    width: 395
     height: 1293
   m_MinSize: {x: 232, y: 276}
   m_MaxSize: {x: 10002, y: 10026}
@@ -1033,7 +1033,7 @@ MonoBehaviour:
     serializedVersion: 2
     x: 1609
     y: 79
-    width: 345
+    width: 393
     height: 1267
   m_SerializedDataModeController:
     m_DataMode: 0
@@ -1057,7 +1057,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/Scenes
+    - Assets/UiElementsNew/New-UI-Elements/bets&opponentpanel
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -1065,18 +1065,18 @@ MonoBehaviour:
     m_ImportLogFlags: 0
     m_FilterByTypeIntersection: 0
   m_ViewMode: 1
-  m_StartGridSize: 16
+  m_StartGridSize: 67
   m_LastFolders:
-  - Assets/Scenes
-  m_LastFoldersGridSize: -1
+  - Assets/UiElementsNew/New-UI-Elements/bets&opponentpanel
+  m_LastFoldersGridSize: 67
   m_LastProjectPath: D:\Black-Jack\blackjack-test
   m_LockTracker:
     m_IsLocked: 1
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
-    m_SelectedIDs: b0a40000
-    m_LastClickedID: 42160
-    m_ExpandedIDs: 0000000030a4000032a4000034a4000000ca9a3bffffff7f
+    m_SelectedIDs: baa40000
+    m_LastClickedID: 42170
+    m_ExpandedIDs: 000000006aa400006ca400006ea400009ea4000000ca9a3bffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1105,7 +1105,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 0000000030a4000032a4000034a4000000ca9a3bffffff7f
+    m_ExpandedIDs: 000000006aa400006ca400006ea40000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1137,15 +1137,15 @@ MonoBehaviour:
     m_ExpandedInstanceIDs: 
     m_RenameOverlay:
       m_UserAcceptedRename: 0
-      m_Name: Blackjack
-      m_OriginalName: Blackjack
+      m_Name: MainMenu
+      m_OriginalName: MainMenu
       m_EditFieldRect:
         serializedVersion: 2
         x: 0
         y: 0
         width: 0
         height: 0
-      m_UserData: 52914
+      m_UserData: 42292
       m_IsWaitingForDelay: 0
       m_IsRenaming: 0
       m_OriginalEventType: 0
@@ -1160,7 +1160,7 @@ MonoBehaviour:
       m_ResourceFile: 
     m_NewAssetIndexInList: -1
     m_ScrollPosition: {x: 0, y: 0}
-    m_GridSize: 16
+    m_GridSize: 67
   m_SkipHiddenPackages: 0
   m_DirectoriesAreaWidth: 220
 --- !u!114 &11
@@ -1178,9 +1178,9 @@ MonoBehaviour:
   m_Children: []
   m_Position:
     serializedVersion: 2
-    x: 1956
+    x: 2004
     y: 0
-    width: 604
+    width: 556
     height: 1293
   m_MinSize: {x: 275, y: 50}
   m_MaxSize: {x: 4000, y: 4000}
@@ -1211,9 +1211,9 @@ MonoBehaviour:
     m_TextWithWhitespace: "Inspector\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 1956
+    x: 2004
     y: 79
-    width: 603
+    width: 555
     height: 1267
   m_SerializedDataModeController:
     m_DataMode: 0
