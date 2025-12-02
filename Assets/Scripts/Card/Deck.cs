@@ -140,6 +140,12 @@ public class Deck : MonoBehaviour
     public Transform actionCardsPanel; // Panel to hold action card slots
     public GameObject actionCardPrefab; // Prefab for action cards
     public ActionCardData[] availableActionCards; // Array of available action cards
+    
+    // Deck Inspector System
+    public PlayerDeck playerDeck;                    // Player's 30-card deck
+    public DeckInspectorPanel deckInspectorPanel;   // Deck inspector UI panel
+    public Button deckInspectorButton;              // Button to open deck inspector
+    
     // New Boss Panel (replaces old blind panel system)
     public NewBossPanel newBossPanel;
     
@@ -346,6 +352,19 @@ public class Deck : MonoBehaviour
         {
             transformButton.onClick.RemoveAllListeners();
             transformButton.onClick.AddListener(TransformSelectedCards);
+        }
+        
+        // Deck Inspector button setup
+        if (deckInspectorButton != null)
+        {
+            deckInspectorButton.onClick.RemoveAllListeners();
+            deckInspectorButton.onClick.AddListener(ToggleDeckInspector);
+        }
+        
+        // Initialize PlayerDeck if not assigned
+        if (playerDeck == null)
+        {
+            playerDeck = FindObjectOfType<PlayerDeck>();
         }
         
         // BETTING SYSTEM 2.0: Removed placeBetButton setup - now handled by BettingManager
@@ -2269,6 +2288,43 @@ private void EndHand(WinCode code)
     }
     
     // Peek at dealer's card functionality
+    /// <summary>
+    /// Toggle the deck inspector panel visibility
+    /// </summary>
+    public void ToggleDeckInspector()
+    {
+        if (deckInspectorPanel != null)
+        {
+            deckInspectorPanel.TogglePanel();
+        }
+        else
+        {
+            Debug.LogWarning("[Deck] DeckInspectorPanel not assigned!");
+        }
+    }
+    
+    /// <summary>
+    /// Open the deck inspector panel
+    /// </summary>
+    public void OpenDeckInspector()
+    {
+        if (deckInspectorPanel != null)
+        {
+            deckInspectorPanel.OpenPanel();
+        }
+    }
+    
+    /// <summary>
+    /// Close the deck inspector panel
+    /// </summary>
+    public void CloseDeckInspector()
+    {
+        if (deckInspectorPanel != null)
+        {
+            deckInspectorPanel.ClosePanel();
+        }
+    }
+    
     public void PeekAtDealerCard()
     {
         Debug.Log("PeekAtDealerCard method called");

@@ -1,46 +1,46 @@
 fileFormatVersion: 2
-guid: c2e553df96b207747b470f7b4a33e4b2
+guid: 233bbd9d623e2ce4b8c15060332e8900
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -9123153413859943875
-    second: basecardText_0
+      213: 2823032947500000514
+    second: basecard text_0
   - first:
-      213: -4524025305102209710
-    second: basecardText_1
+      213: 8858874491391579539
+    second: basecard text_1
   - first:
-      213: -3414329067104537294
-    second: basecardText_2
+      213: 2181101606648122383
+    second: basecard text_2
   - first:
-      213: -1229608887506596318
-    second: basecardText_3
+      213: -5016802349939230900
+    second: basecard text_3
   - first:
-      213: -6245487633000409231
-    second: basecardText_4
+      213: -7418671359316510123
+    second: basecard text_4
   - first:
-      213: -6156432309087651978
-    second: basecardText_5
+      213: 7925113071365871485
+    second: basecard text_5
   - first:
-      213: -4928375797078715699
-    second: basecardText_6
+      213: 4571246100210997944
+    second: basecard text_6
   - first:
-      213: -8219906615850527679
-    second: basecardText_7
+      213: -7236756538940092542
+    second: basecard text_7
   - first:
-      213: 6126987637475767724
-    second: basecardText_8
+      213: -3952963977276547114
+    second: basecard text_8
   - first:
-      213: -2898938401101027962
-    second: basecardText_9
+      213: 284928925873838557
+    second: basecard text_9
   - first:
-      213: -3258286642594882803
-    second: basecardText_10
+      213: 6800831968789190665
+    second: basecard text_10
   - first:
-      213: 2420411435670097614
-    second: basecardText_11
+      213: -2623008300747600885
+    second: basecard text_11
   - first:
-      213: 4812788177618416749
-    second: basecardText_12
+      213: -622166726706984981
+    second: basecard text_12
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -82,7 +82,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -149,13 +149,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: basecardText_0
+      name: basecard text_0
       rect:
         serializedVersion: 2
-        x: 74
-        y: 41
-        width: 84
-        height: 28
+        x: 36
+        y: 20
+        width: 44
+        height: 15
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -164,20 +164,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d3a5c7f7e4c046180800000000000000
-      internalID: -9123153413859943875
+      spriteID: 20526f8328d6d2720800000000000000
+      internalID: 2823032947500000514
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_1
+      name: basecard text_1
       rect:
         serializedVersion: 2
-        x: 107
-        y: 61
-        width: 26
-        height: 19
+        x: 53
+        y: 30
+        width: 14
+        height: 11
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -186,20 +186,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 25d218e44fe6731c0800000000000000
-      internalID: -4524025305102209710
+      spriteID: 3951a21e96b01fa70800000000000000
+      internalID: 8858874491391579539
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_2
+      name: basecard text_2
       rect:
         serializedVersion: 2
-        x: 126
+        x: 62
         y: 0
-        width: 379
-        height: 82
+        width: 191
+        height: 42
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -208,20 +208,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 23571f8adcddd90d0800000000000000
-      internalID: -3414329067104537294
+      spriteID: f0c8b43fa54d44e10800000000000000
+      internalID: 2181101606648122383
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_3
+      name: basecard text_3
       rect:
         serializedVersion: 2
-        x: 209
-        y: 35
-        width: 30
-        height: 47
+        x: 104
+        y: 17
+        width: 16
+        height: 25
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -230,20 +230,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 22e81874b3d8feee0800000000000000
-      internalID: -1229608887506596318
+      spriteID: c47f687c7dcb06ab0800000000000000
+      internalID: -5016802349939230900
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_4
+      name: basecard text_4
       rect:
         serializedVersion: 2
-        x: 239
-        y: 35
-        width: 28
-        height: 47
+        x: 119
+        y: 17
+        width: 15
+        height: 25
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -252,20 +252,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 1775ae976129359a0800000000000000
-      internalID: -6245487633000409231
+      spriteID: 55a339a54b59b0990800000000000000
+      internalID: -7418671359316510123
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_5
+      name: basecard text_5
       rect:
         serializedVersion: 2
-        x: 267
-        y: 35
-        width: 26
-        height: 47
+        x: 133
+        y: 17
+        width: 14
+        height: 25
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -274,20 +274,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 677b71dde65ff8aa0800000000000000
-      internalID: -6156432309087651978
+      spriteID: d77519f6958abfd60800000000000000
+      internalID: 7925113071365871485
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_6
+      name: basecard text_6
       rect:
         serializedVersion: 2
-        x: 303
-        y: 35
-        width: 29
-        height: 47
+        x: 151
+        y: 17
+        width: 16
+        height: 25
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -296,20 +296,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: dc29d7ff254ea9bb0800000000000000
-      internalID: -4928375797078715699
+      spriteID: 8ba57ffcb14507f30800000000000000
+      internalID: 4571246100210997944
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_7
+      name: basecard text_7
       rect:
         serializedVersion: 2
-        x: 331
-        y: 35
-        width: 29
-        height: 47
+        x: 165
+        y: 17
+        width: 16
+        height: 25
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -318,20 +318,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 144985bdb760ded80800000000000000
-      internalID: -8219906615850527679
+      spriteID: 28f8d721540e19b90800000000000000
+      internalID: -7236756538940092542
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_8
+      name: basecard text_8
       rect:
         serializedVersion: 2
-        x: 362
-        y: 35
-        width: 30
-        height: 47
+        x: 180
+        y: 17
+        width: 17
+        height: 25
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -340,20 +340,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ca5f3fa4bce670550800000000000000
-      internalID: 6126987637475767724
+      spriteID: 6df1484d4304429c0800000000000000
+      internalID: -3952963977276547114
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_9
+      name: basecard text_9
       rect:
         serializedVersion: 2
-        x: 393
-        y: 35
-        width: 29
-        height: 47
+        x: 196
+        y: 17
+        width: 16
+        height: 25
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -362,20 +362,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 68562a822e6e4c7d0800000000000000
-      internalID: -2898938401101027962
+      spriteID: dd991f4395544f300800000000000000
+      internalID: 284928925873838557
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_10
+      name: basecard text_10
       rect:
         serializedVersion: 2
-        x: 422
-        y: 35
-        width: 27
-        height: 47
+        x: 210
+        y: 17
+        width: 16
+        height: 25
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -384,20 +384,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d0b5bbbcf8d38c2d0800000000000000
-      internalID: -3258286642594882803
+      spriteID: 908dccca4a8616e50800000000000000
+      internalID: 6800831968789190665
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_11
+      name: basecard text_11
       rect:
         serializedVersion: 2
-        x: 473
-        y: 41
-        width: 84
-        height: 28
+        x: 236
+        y: 20
+        width: 43
+        height: 15
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -406,20 +406,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ecec8697067079120800000000000000
-      internalID: 2420411435670097614
+      spriteID: b0cc90709d3399bd0800000000000000
+      internalID: -2623008300747600885
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: basecardText_12
+      name: basecard text_12
       rect:
         serializedVersion: 2
-        x: 498
-        y: 61
-        width: 26
-        height: 19
+        x: 248
+        y: 30
+        width: 15
+        height: 11
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -428,8 +428,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d64352a29557ac240800000000000000
-      internalID: 4812788177618416749
+      spriteID: be7009f88ae9d57f0800000000000000
+      internalID: -622166726706984981
       vertices: []
       indices: 
       edges: []
@@ -438,7 +438,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -447,20 +447,7 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable:
-      basecardText_0: -9123153413859943875
-      basecardText_1: -4524025305102209710
-      basecardText_10: -3258286642594882803
-      basecardText_11: 2420411435670097614
-      basecardText_12: 4812788177618416749
-      basecardText_2: -3414329067104537294
-      basecardText_3: -1229608887506596318
-      basecardText_4: -6245487633000409231
-      basecardText_5: -6156432309087651978
-      basecardText_6: -4928375797078715699
-      basecardText_7: -8219906615850527679
-      basecardText_8: 6126987637475767724
-      basecardText_9: -2898938401101027962
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
