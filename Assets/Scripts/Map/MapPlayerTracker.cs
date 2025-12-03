@@ -26,6 +26,24 @@ namespace Map
             if (Locked) return;
 
             // Debug.Log("Selected node: " + mapNode.Node.point);
+            
+            // Check if this is a replayable node (can be selected regardless of current position)
+            bool isReplayable = GameProgressionManager.Instance != null && 
+                               GameProgressionManager.Instance.IsNodeInstanceReplayable(mapNode.Node.nodeInstanceId);
+            
+            if (isReplayable)
+            {
+                // Allow replaying any defeated node that's in the path or first layer
+                bool isInPath = mapManager.CurrentMap.path.Any(p => p.Equals(mapNode.Node.point));
+                bool isFirstLayer = mapNode.Node.point.y == 0;
+                
+                if (isInPath || isFirstLayer)
+                {
+                    Debug.Log($"[MapPlayerTracker] Replaying node: {mapNode.Node.nodeInstanceId}");
+                    SendPlayerToNode(mapNode);
+                    return;
+                }
+            }
 
             if (mapManager.CurrentMap.path.Count == 0)
             {
@@ -50,8 +68,30 @@ namespace Map
         private void SendPlayerToNode(MapNode mapNode)
         {
             Locked = lockAfterSelecting;
-            mapManager.CurrentMap.path.Add(mapNode.Node.point);
-            mapManager.SaveMap();
+            
+            // Check if this is a battle node (Minion or Boss) - we delay path updates for these
+            bool isBattleNode = mapNode.Node.nodeType == NodeType.Minion || mapNode.Node.nodeType == NodeType.Boss;
+            
+            // Check if replaying a defeated node
+            bool isReplaying = GameProgressionManager.Instance != null && 
+                              GameProgressionManager.Instance.IsNodeInstanceReplayable(mapNode.Node.nodeInstanceId);
+            
+            if (isBattleNode && !isReplaying)
+            {
+                // For battle nodes: Add to path but track as pending (can be reverted if battle interrupted)
+                mapManager.CurrentMap.path.Add(mapNode.Node.point);
+                mapManager.SaveMap();
+                
+                Debug.Log($"[MapPlayerTracker] Battle node added to path as pending: {mapNode.Node.point}");
+            }
+            else if (!isBattleNode)
+            {
+                // For non-battle nodes: Add to path immediately (no risk of interruption)
+                mapManager.CurrentMap.path.Add(mapNode.Node.point);
+                mapManager.SaveMap();
+            }
+            // For replay nodes: Don't modify the path at all
+            
             view.SetAttainableNodes();
             view.SetLineColors();
             mapNode.ShowSwirlAnimation();
@@ -123,27 +163,39 @@ namespace Map
         
         // Check if this specific node instance is already defeated
         bool isDefeated = GameProgressionManager.Instance.IsNodeInstanceDefeated(mapNode.Node.nodeInstanceId);
-        Debug.Log($"[MapPlayerTracker] Is node instance {mapNode.Node.nodeInstanceId} defeated? {isDefeated}");
+        bool isReplayable = GameProgressionManager.Instance.IsNodeInstanceReplayable(mapNode.Node.nodeInstanceId);
+        Debug.Log($"[MapPlayerTracker] Is node instance {mapNode.Node.nodeInstanceId} defeated? {isDefeated}, replayable? {isReplayable}");
         
-        if (isDefeated)
+        // Allow entering if: not defeated OR (defeated AND replayable)
+        bool isReplaying = isDefeated && isReplayable;
+        if (isDefeated && !isReplayable)
         {
-            Debug.LogWarning($"[MapPlayerTracker] Node instance {mapNode.Node.nodeInstanceId} already defeated");
+            Debug.LogWarning($"[MapPlayerTracker] Node instance {mapNode.Node.nodeInstanceId} already defeated and not replayable");
             Instance.Locked = false;
             return;
+        }
+        
+        if (isReplaying)
+        {
+            Debug.Log($"[MapPlayerTracker] REPLAYING minion battle: {minionData.minionName}");
         }
         
         // Store the current map state so we can return to it
         Debug.Log("[MapPlayerTracker] Storing map return state");
         PlayerPrefs.SetString("ReturnToMap", "true");
         PlayerPrefs.SetString("CurrentNodeType", "Minion");
+        PlayerPrefs.SetString("IsReplayingNode", isReplaying ? "true" : "false");
         PlayerPrefs.Save();
+        
+        // Serialize the pending node point for path cleanup on interrupted battles
+        string pendingNodePoint = isReplaying ? "" : $"{mapNode.Node.point.x},{mapNode.Node.point.y}";
         
         // Start minion encounter via GameProgressionManager
         Debug.Log("[MapPlayerTracker] Clearing selected boss");
         GameProgressionManager.Instance.ClearSelectedBoss();
         
         Debug.Log($"[MapPlayerTracker] Starting minion encounter for {minionData.minionName}");
-        GameProgressionManager.Instance.StartMinionEncounter(minionData, bossType, mapNode.Node.nodeInstanceId);
+        GameProgressionManager.Instance.StartMinionEncounter(minionData, bossType, mapNode.Node.nodeInstanceId, pendingNodePoint);
         Debug.Log($"[MapPlayerTracker] Minion encounter started via GameProgressionManager");
         
         // Load the blackjack scene
@@ -183,15 +235,24 @@ namespace Map
         
         Debug.Log($"Starting boss battle: {bossType}");
         
-        // Store the current map state
-        PlayerPrefs.SetString("ReturnToMap", "true");
-        PlayerPrefs.SetString("CurrentNodeType", "Boss");
-        PlayerPrefs.Save();
-        
         // Use GameProgressionManager (SINGLE SOURCE OF TRUTH)
-        if (GameProgressionManager.Instance != null)
+        if (GameProgressionManager.Instance == null)
         {
-            // Check if boss is unlocked (either globally OR by defeating 2+ minions)
+            Debug.LogError("[MapPlayerTracker] GameProgressionManager.Instance is null!");
+            Instance.Locked = false;
+            return;
+        }
+        
+        // Check if this specific boss node instance is already defeated and replayable
+        bool isDefeated = GameProgressionManager.Instance.IsNodeInstanceDefeated(mapNode.Node.nodeInstanceId);
+        bool isReplayable = GameProgressionManager.Instance.IsNodeInstanceReplayable(mapNode.Node.nodeInstanceId);
+        bool isReplaying = isDefeated && isReplayable;
+        
+        Debug.Log($"[MapPlayerTracker] Boss node {mapNode.Node.nodeInstanceId} - defeated: {isDefeated}, replayable: {isReplayable}");
+        
+        // Check if boss is unlocked (either globally OR by defeating 2+ minions) - skip for replays
+        if (!isReplaying)
+        {
             bool isGloballyUnlocked = GameProgressionManager.Instance.IsBossUnlocked(bossType);
             bool isUnlockedByMinions = GameProgressionManager.Instance.IsBossUnlockedByMinions(bossType);
             
@@ -203,25 +264,32 @@ namespace Map
             }
             
             Debug.Log($"Boss {bossType} is unlocked - Global: {isGloballyUnlocked}, ByMinions: {isUnlockedByMinions}");
-            
-            // Get boss data and start encounter
-            BossData bossData = GameProgressionManager.Instance.GetBossData(bossType);
-            if (bossData != null)
-            {
-                GameProgressionManager.Instance.SelectBoss(bossType);
-                GameProgressionManager.Instance.StartBossEncounter(bossData);
-                Debug.Log($"[MapPlayerTracker] Boss encounter started via GameProgressionManager: {bossType}");
-            }
-            else
-            {
-                Debug.LogError($"[MapPlayerTracker] Boss data not found for {bossType}");
-                Instance.Locked = false;
-                return;
-            }
         }
         else
         {
-            Debug.LogError("[MapPlayerTracker] GameProgressionManager.Instance is null!");
+            Debug.Log($"[MapPlayerTracker] REPLAYING boss battle: {bossType}");
+        }
+        
+        // Store the current map state
+        PlayerPrefs.SetString("ReturnToMap", "true");
+        PlayerPrefs.SetString("CurrentNodeType", "Boss");
+        PlayerPrefs.SetString("IsReplayingNode", isReplaying ? "true" : "false");
+        PlayerPrefs.Save();
+        
+        // Serialize the pending node point for path cleanup on interrupted battles
+        string pendingNodePoint = isReplaying ? "" : $"{mapNode.Node.point.x},{mapNode.Node.point.y}";
+        
+        // Get boss data and start encounter
+        BossData bossData = GameProgressionManager.Instance.GetBossData(bossType);
+        if (bossData != null)
+        {
+            GameProgressionManager.Instance.SelectBoss(bossType);
+            GameProgressionManager.Instance.StartBossEncounter(bossData, mapNode.Node.nodeInstanceId, pendingNodePoint);
+            Debug.Log($"[MapPlayerTracker] Boss encounter started via GameProgressionManager: {bossType}");
+        }
+        else
+        {
+            Debug.LogError($"[MapPlayerTracker] Boss data not found for {bossType}");
             Instance.Locked = false;
             return;
         }

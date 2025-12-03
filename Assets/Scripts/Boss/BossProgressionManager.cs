@@ -6,6 +6,9 @@ using UnityEngine;
 /// <summary>
 /// Manages boss progression, unlocks, and reward states across the game
 /// Persists data using JSON instead of PlayerPrefs
+/// 
+/// NOTE: This manager now delegates core progression methods to GameProgressionManager
+/// to ensure consistency. Reward functionality remains unique to this manager.
 /// </summary>
 public class BossProgressionManager : MonoBehaviour
 {
@@ -26,6 +29,11 @@ public class BossProgressionManager : MonoBehaviour
     public Action<BossData> OnBossUnlocked;
     public Action<BossRewardState> OnRewardClaimed;
     public Action OnProgressionUpdated;
+    
+    /// <summary>
+    /// Whether to use GameProgressionManager as the source of truth for core progression
+    /// </summary>
+    private bool useGameProgressionManager => GameProgressionManager.Instance != null;
     
     private void Awake()
     {
@@ -136,18 +144,25 @@ public class BossProgressionManager : MonoBehaviour
             return;
         }
         
-        // Add to defeated list
+        // Delegate to GameProgressionManager if available (SINGLE SOURCE OF TRUTH)
+        if (useGameProgressionManager)
+        {
+            GameProgressionManager.Instance.MarkBossDefeated(bossType);
+            Debug.Log($"[BossProgressionManager] Delegated MarkBossDefeated to GameProgressionManager");
+        }
+        
+        // Also update local state for backwards compatibility
         if (!progressionData.defeatedBosses.Contains(bossType.ToString()))
         {
             progressionData.defeatedBosses.Add(bossType.ToString());
-            Debug.Log($"[BossProgressionManager] Boss {bossType} marked as defeated");
+            Debug.Log($"[BossProgressionManager] Boss {bossType} marked as defeated (local)");
         }
         
         // Find boss data
         BossData defeatedBoss = GetBossData(bossType);
         if (defeatedBoss != null)
         {
-            // Unlock rewards for this boss
+            // Unlock rewards for this boss (unique to BossProgressionManager)
             UnlockBossRewards(defeatedBoss);
             
             // Unlock next boss
@@ -167,12 +182,20 @@ public class BossProgressionManager : MonoBehaviour
     /// </summary>
     public void UnlockBoss(BossType bossType)
     {
+        // Delegate to GameProgressionManager if available
+        if (useGameProgressionManager)
+        {
+            GameProgressionManager.Instance.UnlockBoss(bossType);
+            Debug.Log($"[BossProgressionManager] Delegated UnlockBoss to GameProgressionManager");
+        }
+        
+        // Also update local state for backwards compatibility
         string bossKey = bossType.ToString();
         
         if (!progressionData.unlockedBosses.Contains(bossKey))
         {
             progressionData.unlockedBosses.Add(bossKey);
-            Debug.Log($"[BossProgressionManager] Boss {bossType} unlocked");
+            Debug.Log($"[BossProgressionManager] Boss {bossType} unlocked (local)");
             
             BossData bossData = GetBossData(bossType);
             if (bossData != null)
@@ -465,6 +488,11 @@ public class BossProgressionManager : MonoBehaviour
     /// </summary>
     public bool IsBossUnlocked(BossType bossType)
     {
+        // Delegate to GameProgressionManager if available
+        if (useGameProgressionManager)
+        {
+            return GameProgressionManager.Instance.IsBossUnlocked(bossType);
+        }
         return progressionData.unlockedBosses.Contains(bossType.ToString());
     }
     
@@ -473,6 +501,11 @@ public class BossProgressionManager : MonoBehaviour
     /// </summary>
     public bool IsBossDefeated(BossType bossType)
     {
+        // Delegate to GameProgressionManager if available
+        if (useGameProgressionManager)
+        {
+            return GameProgressionManager.Instance.IsBossDefeated(bossType);
+        }
         return progressionData.defeatedBosses.Contains(bossType.ToString());
     }
     
@@ -644,6 +677,14 @@ public class BossProgressionManager : MonoBehaviour
     /// </summary>
     public void MarkMinionDefeated(BossType bossType, string minionName)
     {
+        // Delegate to GameProgressionManager if available (SINGLE SOURCE OF TRUTH)
+        if (useGameProgressionManager)
+        {
+            GameProgressionManager.Instance.MarkMinionDefeated(bossType, minionName);
+            Debug.Log($"[BossProgressionManager] Delegated MarkMinionDefeated to GameProgressionManager");
+        }
+        
+        // Also update local state for backwards compatibility
         string bossKey = bossType.ToString();
         ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
         
@@ -676,6 +717,12 @@ public class BossProgressionManager : MonoBehaviour
     /// </summary>
     public bool IsMinionDefeated(BossType bossType, string minionName)
     {
+        // Delegate to GameProgressionManager if available
+        if (useGameProgressionManager)
+        {
+            return GameProgressionManager.Instance.IsMinionDefeated(minionName, bossType);
+        }
+        
         string bossKey = bossType.ToString();
         ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
         
@@ -689,6 +736,12 @@ public class BossProgressionManager : MonoBehaviour
     /// </summary>
     public bool IsBossUnlockedInAct(BossType bossType)
     {
+        // Delegate to GameProgressionManager if available
+        if (useGameProgressionManager)
+        {
+            return GameProgressionManager.Instance.IsBossUnlockedByMinions(bossType);
+        }
+        
         string bossKey = bossType.ToString();
         ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
         
@@ -702,6 +755,12 @@ public class BossProgressionManager : MonoBehaviour
     /// </summary>
     public int GetMinionDefeatedCount(BossType bossType)
     {
+        // Delegate to GameProgressionManager if available
+        if (useGameProgressionManager)
+        {
+            return GameProgressionManager.Instance.GetMinionDefeatedCount(bossType);
+        }
+        
         string bossKey = bossType.ToString();
         ActState act = progressionData.actStates.Find(a => a.bossType == bossKey);
         

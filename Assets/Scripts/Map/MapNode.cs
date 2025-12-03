@@ -10,7 +10,8 @@ namespace Map
     {
         Locked,
         Visited,
-        Attainable
+        Attainable,
+        Replayable // Node that was defeated but can be replayed
     }
 }
 
@@ -111,6 +112,27 @@ namespace Map
                         image.DOColor(MapView.Instance.visitedColor, 0.5f).SetLoops(-1, LoopType.Yoyo);
                     }
                     
+                    break;
+                case NodeStates.Replayable:
+                    // Pulsate with gold/orange color to indicate replay is available
+                    Color replayColor = MapView.Instance.replayableColor;
+                    if (sr != null)
+                    {
+                        sr.color = MapView.Instance.visitedColor;
+                        sr.DOKill();
+                        sr.DOColor(replayColor, 0.7f).SetLoops(-1, LoopType.Yoyo);
+                    }
+                    
+                    if (image != null)
+                    {
+                        image.color = MapView.Instance.visitedColor;
+                        image.DOKill();
+                        image.DOColor(replayColor, 0.7f).SetLoops(-1, LoopType.Yoyo);
+                    }
+                    
+                    // Show the visited circle to indicate completion
+                    if (visitedCircle != null) visitedCircle.gameObject.SetActive(true);
+                    if (circleImage != null) circleImage.gameObject.SetActive(true);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(state), state, null);

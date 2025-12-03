@@ -401,8 +401,9 @@ public class BettingManager : MonoBehaviour
         
         Log($"[BettingManager] Placing bet: {currentBetAmount} | Current health: {currentHealth:F1}");
         
-        // Deduct bet from player health (bet amount is the same as percentage)
-        GameProgressionManager.Instance.DamagePlayer(currentBetAmount);
+        // Deduct bet from player health WITHOUT triggering game over
+        // Game over should only happen when player LOSES the hand, not when placing the bet
+        GameProgressionManager.Instance.DeductBet(currentBetAmount);
         
         Log($"[BettingManager] Health after bet: {GameProgressionManager.Instance.playerHealthPercentage:F1}");
         

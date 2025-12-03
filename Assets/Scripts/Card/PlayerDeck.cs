@@ -118,7 +118,11 @@ public class PlayerDeck : MonoBehaviour
             Deck mainDeck = FindObjectOfType<Deck>();
             if (mainDeck != null && mainDeck.faces != null)
             {
-                cardSprites = mainDeck.faces;
+                // Make a COPY of the array to avoid issues with deck shuffling
+                // The main Deck shuffles its faces array in place, so we need our own copy
+                // to maintain the original index order (A,2,3...J,Q,K per suit)
+                cardSprites = new Sprite[mainDeck.faces.Length];
+                System.Array.Copy(mainDeck.faces, cardSprites, mainDeck.faces.Length);
             }
         }
     }
@@ -314,6 +318,9 @@ public class PlayerDeck : MonoBehaviour
         drawPile.RemoveAt(0);
         card.isDealt = true;
         
+        // Add to discard pile so it can be reshuffled later
+        discardPile.Add(card);
+        
         OnDeckChanged?.Invoke();
         return card;
     }
@@ -342,6 +349,27 @@ public class PlayerDeck : MonoBehaviour
         discardPile.Clear();
         
         ShuffleDeck();
+    }
+    
+    /// <summary>
+    /// Reset all cards to undealt state and reshuffle (for new game/act)
+    /// </summary>
+    public void ResetAllCardsDealtState()
+    {
+        foreach (var card in allCards)
+        {
+            card.isDealt = false;
+        }
+        
+        // Rebuild draw pile from all cards
+        drawPile.Clear();
+        discardPile.Clear();
+        drawPile.AddRange(allCards);
+        
+        ShuffleDeck();
+        
+        Debug.Log("[PlayerDeck] All cards reset to undealt state and reshuffled");
+        OnDeckChanged?.Invoke();
     }
     
     // ============ COUNTING METHODS FOR UI ============
@@ -420,16 +448,99 @@ public class PlayerDeck : MonoBehaviour
     /// </summary>
     public List<PlayerDeckCard> GetCardsForDisplay(DeckFilterType filter)
     {
+        List<PlayerDeckCard> cards;
+        
         switch (filter)
         {
             case DeckFilterType.Remaining:
-                return drawPile.ToList();
+                // Show all cards - the UI will gray out dealt cards using isDealt flag
+                cards = allCards.ToList();
+                break;
             case DeckFilterType.FullDeck:
-                return allCards.ToList();
+                cards = allCards.ToList();
+                break;
             case DeckFilterType.ActionCards:
-                return allCards.Where(c => c.isActionCard).ToList();
+                cards = allCards.Where(c => c.isActionCard).ToList();
+                break;
             default:
-                return drawPile.ToList();
+                cards = allCards.ToList();
+                break;
+        }
+        
+        // Sort cards in blackjack order: K, Q, J, A, 10, 9, 8, 7, 6, 5, 4, 3, 2, then action cards, then empty slots
+        return SortCardsForDisplay(cards);
+    }
+    
+    /// <summary>
+    /// Sort cards in proper blackjack display order:
+    /// 1. Face cards (K, Q, J) - sorted by rank descending
+    /// 2. Aces
+    /// 3. Numbered cards (10-2) - sorted by value descending
+    /// 4. Action cards
+    /// 5. Empty/blank slots
+    /// Within each category, cards are sorted by suit (Spades, Hearts, Clubs, Diamonds)
+    /// </summary>
+    private List<PlayerDeckCard> SortCardsForDisplay(List<PlayerDeckCard> cards)
+    {
+        return cards.OrderBy(c => GetSortPriority(c))
+                    .ThenBy(c => GetSuitOrder(c.suit))
+                    .ToList();
+    }
+    
+    /// <summary>
+    /// Get sort priority for a card (lower = appears first)
+    /// </summary>
+    private int GetSortPriority(PlayerDeckCard card)
+    {
+        // Empty/blank slots go last
+        if (card.isBlankSlot)
+            return 1000;
+        
+        // Action cards go second to last
+        if (card.isActionCard)
+            return 900;
+        
+        // Regular cards sorted by rank
+        // K (13) = priority 0
+        // Q (12) = priority 1
+        // J (11) = priority 2
+        // A (1) = priority 3
+        // 10 = priority 4
+        // 9 = priority 5
+        // ... down to
+        // 2 = priority 12
+        
+        switch (card.value)
+        {
+            case 13: return 0;   // King
+            case 12: return 1;   // Queen
+            case 11: return 2;   // Jack
+            case 1:  return 3;   // Ace
+            case 10: return 4;
+            case 9:  return 5;
+            case 8:  return 6;
+            case 7:  return 7;
+            case 6:  return 8;
+            case 5:  return 9;
+            case 4:  return 10;
+            case 3:  return 11;
+            case 2:  return 12;
+            default: return 500; // Unknown values
+        }
+    }
+    
+    /// <summary>
+    /// Get suit order (for secondary sorting within same rank)
+    /// </summary>
+    private int GetSuitOrder(CardSuit suit)
+    {
+        switch (suit)
+        {
+            case CardSuit.Spades:   return 0;
+            case CardSuit.Hearts:   return 1;
+            case CardSuit.Clubs:    return 2;
+            case CardSuit.Diamonds: return 3;
+            default: return 4;
         }
     }
 }

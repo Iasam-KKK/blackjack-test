@@ -19,6 +19,10 @@ public class DeckCardSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
     public Sprite emptySlotSprite;          // Sprite to show when no card
     public Color emptyColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
     
+    [Header("Dealt/Used State")]
+    public Color dealtColor = new Color(0.4f, 0.4f, 0.4f, 0.5f);  // Grayed out look for dealt cards
+    public Color normalColor = Color.white;                        // Normal card color
+    
     [Header("Hover Effects")]
     public float hoverScale = 1.1f;         // Scale on hover
     public float hoverDuration = 0.2f;      // Animation duration
@@ -48,7 +52,7 @@ public class DeckCardSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
     /// <summary>
     /// Set this slot to display a specific card
     /// </summary>
-    public void SetCard(PlayerDeckCard card)
+    public void SetCard(PlayerDeckCard card, bool showDealtAsGrayed = true)
     {
         currentCard = card;
         isEmpty = false;
@@ -58,7 +62,15 @@ public class DeckCardSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
             if (card.cardSprite != null)
             {
                 cardImage.sprite = card.cardSprite;
-                cardImage.color = Color.white;
+                // Apply dealt/disabled color only if showDealtAsGrayed is true and card is dealt
+                if (showDealtAsGrayed && card.isDealt)
+                {
+                    cardImage.color = dealtColor;
+                }
+                else
+                {
+                    cardImage.color = normalColor;
+                }
             }
             else
             {
@@ -74,10 +86,10 @@ public class DeckCardSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
             emptyText.gameObject.SetActive(false);
         }
         
-        // Show dealt overlay if card has been dealt (for full deck view)
+        // Optional: Also use overlay if assigned (can be used in addition to color change)
         if (dealtOverlay != null)
         {
-            dealtOverlay.SetActive(card.isDealt);
+            dealtOverlay.SetActive(showDealtAsGrayed && card.isDealt);
         }
     }
     
@@ -186,5 +198,10 @@ public class DeckCardSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
             inspectorPanel.ShowActionCardDescription($"Action Card Selected\n{currentCard.displayName}");
         }
     }
+    
+    private void OnDestroy()
+    {
+        transform.DOKill();
+        if (borderImage != null) borderImage.DOKill();
+    }
 }
-

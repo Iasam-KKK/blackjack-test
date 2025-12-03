@@ -408,6 +408,10 @@ public class DeckInspectorPanel : MonoBehaviour
         // Get cards to display based on current filter
         List<PlayerDeckCard> cardsToDisplay = playerDeck.GetCardsForDisplay(currentFilter);
         
+        // Determine if we should show dealt cards as grayed out
+        // Only gray out dealt cards in "Remaining" view, show true colors in "Full Deck" view
+        bool showDealtAsGrayed = (currentFilter == DeckFilterType.Remaining);
+        
         // Ensure we have enough card slots
         EnsureCardSlots(cardsToDisplay.Count);
         
@@ -416,7 +420,7 @@ public class DeckInspectorPanel : MonoBehaviour
         {
             if (i < cardsToDisplay.Count)
             {
-                cardSlots[i].SetCard(cardsToDisplay[i]);
+                cardSlots[i].SetCard(cardsToDisplay[i], showDealtAsGrayed);
                 cardSlots[i].gameObject.SetActive(true);
             }
             else

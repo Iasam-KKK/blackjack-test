@@ -515,6 +515,9 @@ public class Deck : MonoBehaviour
         #else
             FisherYatesShuffle();
         #endif
+        
+        // Note: PlayerDeck is now separate and handles its own shuffling
+        Debug.Log("[Deck] Main deck (dealer) shuffled");
     }
  
     private void FisherYatesShuffle()
@@ -1131,10 +1134,10 @@ public class Deck : MonoBehaviour
         
         Debug.Log($"Double Down: Doubling bet from {CurrentBetAmount:F0} to {(CurrentBetAmount * 2):F0}");
         
-        // BETTING SYSTEM 2.0: Deduct additional bet from health
+        // BETTING SYSTEM 2.0: Deduct additional bet from health (without triggering game over - that happens on loss)
         if (GameProgressionManager.Instance != null)
         {
-            GameProgressionManager.Instance.DamagePlayer(CurrentBetAmount);
+            GameProgressionManager.Instance.DeductBet(CurrentBetAmount);
         }
         
         // Double the bet amount
@@ -4949,81 +4952,6 @@ private void EndHand(WinCode code)
 
     private IEnumerator PushAnimated(GameObject handOwner, bool isPlayer)
     {
-        // Check if auto-reshuffle is needed before dealing
-        CheckAutoReshuffle();
-        
-        // Check if we're reaching the end of the deck and need to reshuffle
-        if (cardIndex >= values.Length - 1)
-        {
-            Debug.Log((isPlayer ? "Player" : "Dealer") + " drawing - Deck is almost empty, force reshuffling...");
-            ShuffleCards();
-            cardIndex = 0;
-        }
-
-        // Check if The Seductress should intercept this card before it goes to the player
-        if (isPlayer && bossManager != null && bossManager.currentBoss != null && 
-            bossManager.currentBoss.bossType == BossType.TheSeductress)
-        {
-            CardInfo cardInfo = new CardInfo(originalIndices[cardIndex], values[cardIndex], faces[cardIndex], faces);
-            bool isKingOrJack = (cardInfo.suitIndex == 10 || cardInfo.suitIndex == 12); // Jack=10, King=12
-            
-            Debug.Log($"Seductress animated check: {cardInfo.cardName} (suitIndex: {cardInfo.suitIndex}) - isKingOrJack: {isKingOrJack}");
-            
-            if (isKingOrJack)
-            {
-                Debug.Log($"The Seductress intercepts {cardInfo.cardName} during animated deal!");
-                
-                // Deal the card to the dealer instead with animation
-                CardHand dealerHand = dealer.GetComponent<CardHand>();
-                
-                if (dealerHand.cards.Count >= Constants.MaxCardsInHand)
-                {
-                    Debug.LogWarning("Maximum card limit reached for dealer (" + Constants.MaxCardsInHand + ")");
-                    yield break;
-                }
-                
-                GameObject interceptedCard = dealerHand.CreateCard(faces[cardIndex], values[cardIndex], true, originalIndices[cardIndex]);
-                cardIndex++;
-                
-                if (interceptedCard != null)
-                {
-                    // Calculate final position for dealer
-                    Vector3 finalPosition = CalculateFinalCardPosition(dealerHand, dealerHand.cards.Count - 1);
-                    
-                    // Animate to dealer position with special seduction effect
-                    yield return StartCoroutine(AnimateSeductressInterceptedCard(interceptedCard, finalPosition));
-                    
-                    // Arrange dealer cards
-                    dealerHand.ArrangeCardsInWindow();
-                    
-                    // Apply The Seductress mechanic
-                    var mechanic = bossManager.currentBoss.GetMechanic(BossMechanicType.SeductressIntercept);
-                    if (mechanic != null)
-                    {
-                        yield return bossManager.HandleSeductressInterception(interceptedCard, cardInfo, true);
-                    }
-                    
-                    // Notify boss system
-                    if (bossManager != null)
-                    {
-                        bossManager.OnCardDealt(interceptedCard, false); // Treat as dealer card
-                    }
-                }
-                
-                yield break; // Card was intercepted, don't deal to player
-            }
-        }
-        else if (isPlayer)
-        {
-            // Debug why interception didn't trigger for player cards
-            if (bossManager == null)
-                Debug.Log("BossManager is null during animated deal!");
-            else if (bossManager.currentBoss == null)
-                Debug.Log("Current boss is null during animated deal!");
-            else
-                Debug.Log($"Current boss during animated deal is {bossManager.currentBoss.bossName} (type: {bossManager.currentBoss.bossType})");
-        }
-
         CardHand hand = handOwner.GetComponent<CardHand>();
         
         // Check if hand can accept more cards
@@ -5033,20 +4961,127 @@ private void EndHand(WinCode code)
             yield break;
         }
         
-        // Create the card without automatic positioning for animation
-        GameObject newCard = hand.CreateCard(faces[cardIndex], values[cardIndex], true, originalIndices[cardIndex]);
+        // === PLAYER DRAWS FROM PlayerDeck ===
+        if (isPlayer && playerDeck != null)
+        {
+            // Check if PlayerDeck needs reshuffle
+            if (playerDeck.RemainingCards == 0)
+            {
+                Debug.Log("[Deck] PlayerDeck is empty, reshuffling...");
+                playerDeck.ReshuffleDiscardPile();
+            }
+            
+            // Draw from PlayerDeck
+            PlayerDeckCard playerCard = playerDeck.DrawCard();
+            
+            if (playerCard == null)
+            {
+                Debug.LogWarning("[Deck] Failed to draw card from PlayerDeck!");
+                yield break;
+            }
+            
+            // Check if The Seductress should intercept this card
+            if (bossManager != null && bossManager.currentBoss != null && 
+                bossManager.currentBoss.bossType == BossType.TheSeductress)
+            {
+                bool isKingOrJack = (playerCard.value == 11 || playerCard.value == 13); // Jack=11, King=13
+                
+                Debug.Log($"Seductress check: {playerCard.displayName} - isKingOrJack: {isKingOrJack}");
+                
+                if (isKingOrJack)
+                {
+                    Debug.Log($"The Seductress intercepts {playerCard.displayName} during animated deal!");
+                    
+                    // Deal the card to the dealer instead
+                    CardHand dealerHand = dealer.GetComponent<CardHand>();
+                    
+                    if (dealerHand.cards.Count >= Constants.MaxCardsInHand)
+                    {
+                        Debug.LogWarning("Maximum card limit reached for dealer (" + Constants.MaxCardsInHand + ")");
+                        yield break;
+                    }
+                    
+                    // Create intercepted card for dealer using PlayerDeck card data
+                    GameObject interceptedCard = dealerHand.CreateCard(playerCard.cardSprite, playerCard.GetBlackjackValue(), true, playerCard.id);
+                    
+                    if (interceptedCard != null)
+                    {
+                        Vector3 finalPosition = CalculateFinalCardPosition(dealerHand, dealerHand.cards.Count - 1);
+                        yield return StartCoroutine(AnimateSeductressInterceptedCard(interceptedCard, finalPosition));
+                        dealerHand.ArrangeCardsInWindow();
+                        
+                        // Create CardInfo for boss mechanic
+                        CardInfo cardInfo = new CardInfo(playerCard.id, playerCard.GetBlackjackValue(), playerCard.cardSprite, faces);
+                        
+                        var mechanic = bossManager.currentBoss.GetMechanic(BossMechanicType.SeductressIntercept);
+                        if (mechanic != null)
+                        {
+                            yield return bossManager.HandleSeductressInterception(interceptedCard, cardInfo, true);
+                        }
+                        
+                        bossManager.OnCardDealt(interceptedCard, false);
+                    }
+                    
+                    yield break; // Card was intercepted
+                }
+            }
+            
+            // Create card for player using PlayerDeck card data
+            GameObject newCard = hand.CreateCard(playerCard.cardSprite, playerCard.GetBlackjackValue(), true, playerCard.id);
+            
+            Debug.Log($"[Deck] Player drew: {playerCard.displayName} (Value: {playerCard.GetBlackjackValue()})");
+            
+            if (newCard != null)
+            {
+                Vector3 finalPosition = CalculateFinalCardPosition(hand, hand.cards.Count - 1);
+                yield return StartCoroutine(AnimateCardDealing(newCard, finalPosition));
+                hand.ArrangeCardsInWindow();
+                
+                // Notify boss system
+                if (bossManager != null)
+                {
+                    bossManager.OnCardDealt(newCard, true);
+                }
+            }
+            
+            yield break; // Done with player card
+        }
+        
+        // === DEALER DRAWS FROM MAIN DECK ===
+        // Check if auto-reshuffle is needed before dealing
+        CheckAutoReshuffle();
+        
+        // Check if we're reaching the end of the deck and need to reshuffle
+        if (cardIndex >= values.Length - 1)
+        {
+            Debug.Log("Dealer drawing - Deck is almost empty, force reshuffling...");
+            ShuffleCards();
+            cardIndex = 0;
+        }
+        
+        // Create the card for dealer from main deck
+        GameObject dealerCard = hand.CreateCard(faces[cardIndex], values[cardIndex], true, originalIndices[cardIndex]);
+        
+        Debug.Log($"[Deck] Dealer drew card at index {cardIndex}");
+        
         cardIndex++;
         
-        if (newCard != null)
+        if (dealerCard != null)
         {
             // Calculate final position before animation
             Vector3 finalPosition = CalculateFinalCardPosition(hand, hand.cards.Count - 1);
             
             // Animate the card from deck position to its final position
-            yield return StartCoroutine(AnimateCardDealing(newCard, finalPosition));
+            yield return StartCoroutine(AnimateCardDealing(dealerCard, finalPosition));
             
             // Arrange all cards after animation completes
             hand.ArrangeCardsInWindow();
+            
+            // Notify boss system about dealer card
+            if (bossManager != null)
+            {
+                bossManager.OnCardDealt(dealerCard, false);
+            }
         }
     }
 public GameObject SpawnCardWithValue(CardHand targetHand, int forcedValue)

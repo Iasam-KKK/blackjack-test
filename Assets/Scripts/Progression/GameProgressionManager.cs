@@ -196,6 +196,16 @@ public class GameProgressionManager : MonoBehaviour
     
     public void DamagePlayer(float damage)
     {
+        DamagePlayer(damage, triggerGameOverOnZero: true);
+    }
+    
+    /// <summary>
+    /// Damage the player with optional game over trigger
+    /// </summary>
+    /// <param name="damage">Amount of damage</param>
+    /// <param name="triggerGameOverOnZero">If false, won't trigger game over even if health reaches 0 (used for betting)</param>
+    public void DamagePlayer(float damage, bool triggerGameOverOnZero)
+    {
         float previousHealth = playerHealthPercentage;
         playerHealthPercentage = Mathf.Max(0f, playerHealthPercentage - damage);
         
@@ -207,8 +217,30 @@ public class GameProgressionManager : MonoBehaviour
         SaveProgression();
         OnPlayerHealthChanged?.Invoke(playerHealthPercentage);
         
-        if (playerHealthPercentage <= 0f && previousHealth > 0f)
+        if (triggerGameOverOnZero && playerHealthPercentage <= 0f && previousHealth > 0f)
         {
+            TriggerGameOver();
+        }
+    }
+    
+    /// <summary>
+    /// Deduct a bet from player health WITHOUT triggering game over
+    /// Game over should only happen when the player actually LOSES a hand
+    /// </summary>
+    public void DeductBet(float betAmount)
+    {
+        DamagePlayer(betAmount, triggerGameOverOnZero: false);
+        Debug.Log($"[GameProgressionManager] Bet deducted: {betAmount}. Health is now {playerHealthPercentage}%. Game over NOT triggered.");
+    }
+    
+    /// <summary>
+    /// Check if player should trigger game over (called after losing a hand)
+    /// </summary>
+    public void CheckGameOverAfterLoss()
+    {
+        if (playerHealthPercentage <= 0f)
+        {
+            Debug.Log("[GameProgressionManager] Player has 0 health after losing - triggering game over");
             TriggerGameOver();
         }
     }
@@ -255,7 +287,7 @@ public class GameProgressionManager : MonoBehaviour
     // ENCOUNTER MANAGEMENT (Minion/Boss)
     // ============================================================================
     
-    public void StartMinionEncounter(MinionData minion, BossType bossType, string nodeInstanceId = "")
+    public void StartMinionEncounter(MinionData minion, BossType bossType, string nodeInstanceId = "", string pendingNodePoint = "")
     {
         Debug.Log($"[GameProgressionManager] StartMinionEncounter called with minion: {minion?.minionName}, bossType: {bossType}, nodeInstanceId: {nodeInstanceId}");
         
@@ -280,10 +312,20 @@ public class GameProgressionManager : MonoBehaviour
         isMinion = true;
         currentNodeInstanceId = nodeInstanceId;
         
+        // Persist in-progress encounter state for interrupted battles
+        progressionData.inProgressNodeInstanceId = nodeInstanceId;
+        progressionData.inProgressEncounterType = "Minion";
+        progressionData.inProgressMinionName = minion.minionName;
+        progressionData.inProgressBossType = bossType.ToString();
+        progressionData.inProgressEncounterHealth = currentEncounterHealth;
+        progressionData.pendingNodePoint = pendingNodePoint;
+        SaveProgression();
+        
         Debug.Log($"[GameProgressionManager] Minion encounter started: {minion.minionName}");
         Debug.Log($"  Health: {currentEncounterHealth}/{minion.maxHealth}");
         Debug.Log($"  Boss Type: {bossType}");
         Debug.Log($"  Node Instance ID: {nodeInstanceId}");
+        Debug.Log($"  Pending Node Point: {pendingNodePoint}");
         Debug.Log($"  Portrait: {(minion.minionPortrait != null ? minion.minionPortrait.name : "NULL")}");
         Debug.Log($"  Mechanics: {minion.mechanics.Count}");
         Debug.Log($"[GameProgressionManager] Encounter state set - isEncounterActive: {isEncounterActive}, isMinion: {isMinion}");
@@ -358,7 +400,7 @@ public class GameProgressionManager : MonoBehaviour
         return isValid;
     }
     
-    public void StartBossEncounter(BossData boss)
+    public void StartBossEncounter(BossData boss, string nodeInstanceId = "", string pendingNodePoint = "")
     {
         if (boss == null)
         {
@@ -372,9 +414,21 @@ public class GameProgressionManager : MonoBehaviour
         currentEncounterHealth = boss.maxHealth;
         isEncounterActive = true;
         isMinion = false;
+        currentNodeInstanceId = nodeInstanceId;
+        
+        // Persist in-progress encounter state for interrupted battles
+        progressionData.inProgressNodeInstanceId = nodeInstanceId;
+        progressionData.inProgressEncounterType = "Boss";
+        progressionData.inProgressMinionName = "";
+        progressionData.inProgressBossType = boss.bossType.ToString();
+        progressionData.inProgressEncounterHealth = currentEncounterHealth;
+        progressionData.pendingNodePoint = pendingNodePoint;
+        SaveProgression();
         
         Debug.Log($"[GameProgressionManager] Boss encounter started: {boss.bossName}");
         Debug.Log($"  Health: {currentEncounterHealth}/{boss.maxHealth}");
+        Debug.Log($"  Node Instance ID: {nodeInstanceId}");
+        Debug.Log($"  Pending Node Point: {pendingNodePoint}");
         
         OnEncounterHealthChanged?.Invoke(currentEncounterHealth);
     }
@@ -416,12 +470,16 @@ public class GameProgressionManager : MonoBehaviour
         
         Debug.Log($"[GameProgressionManager] Player loses round!");
         
-        // Damage player health
-        DamagePlayer(damagePerLoss);
+        // Damage player health (but don't auto-trigger game over, we'll check manually)
+        DamagePlayer(damagePerLoss, triggerGameOverOnZero: false);
         
-        // Note: Game over is already triggered in DamagePlayer() if health <= 0
-        // Do NOT complete the encounter here - let TriggerGameOver() handle it
-        // If player is still alive, continue the encounter
+        // Check for game over AFTER the damage is applied
+        // This handles the case where player bet all their health and then lost
+        if (playerHealthPercentage <= 0f)
+        {
+            Debug.Log("[GameProgressionManager] Player health depleted after losing round - triggering game over");
+            TriggerGameOver();
+        }
     }
     
     private void CompleteMinionEncounter(bool playerWon)
@@ -435,11 +493,15 @@ public class GameProgressionManager : MonoBehaviour
             MarkMinionDefeated(currentBossType, currentMinion.minionName);
             OnMinionDefeated?.Invoke(currentMinion);
             
-            // Mark the specific node instance as defeated
+            // Mark the specific node instance as defeated and replayable
             if (!string.IsNullOrEmpty(currentNodeInstanceId))
             {
                 MarkNodeInstanceDefeated(currentNodeInstanceId);
+                MarkNodeInstanceReplayable(currentNodeInstanceId);
             }
+            
+            // Confirm the pending node in the map path (it's now legitimately completed)
+            ConfirmPendingNodeInPath();
             
             // Log minion statistics after defeat
             LogMinionStatistics();
@@ -462,6 +524,16 @@ public class GameProgressionManager : MonoBehaviour
             MarkBossDefeated(currentBoss.bossType);
             CompleteAct(currentBoss.bossType);
             OnBossDefeated?.Invoke(currentBoss);
+            
+            // Mark the specific node instance as defeated and replayable
+            if (!string.IsNullOrEmpty(currentNodeInstanceId))
+            {
+                MarkNodeInstanceDefeated(currentNodeInstanceId);
+                MarkNodeInstanceReplayable(currentNodeInstanceId);
+            }
+            
+            // Confirm the pending node in the map path (it's now legitimately completed)
+            ConfirmPendingNodeInPath();
         }
         
         ResetEncounter();
@@ -479,7 +551,50 @@ public class GameProgressionManager : MonoBehaviour
         isMinion = false;
         currentNodeInstanceId = "";
         
+        // Clear in-progress encounter state
+        ClearInProgressEncounter();
+        
         Debug.Log("[GameProgressionManager] Encounter reset");
+    }
+    
+    /// <summary>
+    /// Clear the in-progress encounter state from persistent data
+    /// </summary>
+    private void ClearInProgressEncounter()
+    {
+        progressionData.inProgressNodeInstanceId = "";
+        progressionData.inProgressEncounterType = "";
+        progressionData.inProgressMinionName = "";
+        progressionData.inProgressBossType = "";
+        progressionData.inProgressEncounterHealth = 0;
+        progressionData.pendingNodePoint = "";
+        SaveProgression();
+        Debug.Log("[GameProgressionManager] In-progress encounter state cleared");
+    }
+    
+    /// <summary>
+    /// Check if there's an interrupted encounter from a previous session
+    /// </summary>
+    public bool HasInterruptedEncounter()
+    {
+        return !string.IsNullOrEmpty(progressionData.inProgressNodeInstanceId);
+    }
+    
+    /// <summary>
+    /// Get the pending node point that needs to be removed from the map path
+    /// </summary>
+    public string GetPendingNodePoint()
+    {
+        return progressionData.pendingNodePoint;
+    }
+    
+    /// <summary>
+    /// Clear only the pending node point (after map cleanup)
+    /// </summary>
+    public void ClearPendingNodePoint()
+    {
+        progressionData.pendingNodePoint = "";
+        SaveProgression();
     }
     
     /// <summary>
@@ -963,6 +1078,57 @@ public class GameProgressionManager : MonoBehaviour
         Debug.Log("[GameProgressionManager] All defeated node instances cleared");
     }
     
+    /// <summary>
+    /// Mark a node instance as replayable (can be replayed after defeat)
+    /// </summary>
+    public void MarkNodeInstanceReplayable(string nodeInstanceId)
+    {
+        if (!progressionData.replayableNodeInstances.Contains(nodeInstanceId))
+        {
+            progressionData.replayableNodeInstances.Add(nodeInstanceId);
+            SaveProgression();
+            Debug.Log($"[GameProgressionManager] Node instance marked as replayable: {nodeInstanceId}");
+        }
+    }
+    
+    /// <summary>
+    /// Check if a node instance is replayable
+    /// </summary>
+    public bool IsNodeInstanceReplayable(string nodeInstanceId)
+    {
+        return progressionData.replayableNodeInstances.Contains(nodeInstanceId);
+    }
+    
+    /// <summary>
+    /// Get all replayable node instances
+    /// </summary>
+    public List<string> GetReplayableNodeInstances()
+    {
+        return new List<string>(progressionData.replayableNodeInstances);
+    }
+    
+    /// <summary>
+    /// Confirm the pending node in the map path (called after victory)
+    /// This clears the pending node point since the battle was completed successfully
+    /// </summary>
+    private void ConfirmPendingNodeInPath()
+    {
+        if (!string.IsNullOrEmpty(progressionData.pendingNodePoint))
+        {
+            Debug.Log($"[GameProgressionManager] Confirming pending node in path: {progressionData.pendingNodePoint}");
+            progressionData.pendingNodePoint = "";
+            SaveProgression();
+        }
+    }
+    
+    /// <summary>
+    /// Check if a node is being replayed (already defeated but player chose to replay)
+    /// </summary>
+    public bool IsReplayingNode(string nodeInstanceId)
+    {
+        return IsNodeInstanceDefeated(nodeInstanceId) && IsNodeInstanceReplayable(nodeInstanceId);
+    }
+    
     // ============================================================================
     // PERSISTENCE
     // ============================================================================
@@ -1055,6 +1221,9 @@ public class GameProgressionManager : MonoBehaviour
             playerHealthPercentage = progressionData.playerHealthPercentage;
             
             Debug.Log($"[GameProgressionManager] Progression loaded - {progressionData.defeatedBosses.Count} bosses defeated, Player health: {playerHealthPercentage}%");
+            
+            // Handle interrupted encounters from previous sessions
+            HandleInterruptedEncounter();
         }
         catch (Exception e)
         {
@@ -1062,6 +1231,40 @@ public class GameProgressionManager : MonoBehaviour
             progressionData = new GameProgressionData();
             InitializeFirstBoss();
         }
+    }
+    
+    /// <summary>
+    /// Handle interrupted encounters from previous sessions
+    /// If the game was closed during a battle, the encounter state needs to be reset
+    /// The map path cleanup will be handled by MapManager when the map scene loads
+    /// </summary>
+    private void HandleInterruptedEncounter()
+    {
+        if (!HasInterruptedEncounter())
+        {
+            return;
+        }
+        
+        Debug.Log($"[GameProgressionManager] Detected interrupted encounter:");
+        Debug.Log($"  Node Instance ID: {progressionData.inProgressNodeInstanceId}");
+        Debug.Log($"  Encounter Type: {progressionData.inProgressEncounterType}");
+        Debug.Log($"  Minion Name: {progressionData.inProgressMinionName}");
+        Debug.Log($"  Boss Type: {progressionData.inProgressBossType}");
+        Debug.Log($"  Pending Node Point: {progressionData.pendingNodePoint}");
+        
+        // Don't clear the in-progress state yet - MapManager needs the pendingNodePoint
+        // to clean up the map path. The state will be cleared after map cleanup.
+        // However, we should reset the runtime encounter state
+        
+        currentMinion = null;
+        currentBoss = null;
+        currentEncounterHealth = 0;
+        isEncounterActive = false;
+        isMinion = false;
+        currentNodeInstanceId = "";
+        
+        Debug.Log("[GameProgressionManager] Runtime encounter state reset for interrupted encounter");
+        Debug.Log("[GameProgressionManager] Map path cleanup will be handled by MapManager");
     }
     
     private void InitializeFirstBoss()
@@ -1075,7 +1278,15 @@ public class GameProgressionManager : MonoBehaviour
     {
         progressionData = new GameProgressionData();
         playerHealthPercentage = maxHealthPercentage;
-        ResetEncounter();
+        
+        // Reset runtime encounter state without triggering another save
+        currentMinion = null;
+        currentBoss = null;
+        currentEncounterHealth = 0;
+        isEncounterActive = false;
+        isMinion = false;
+        currentNodeInstanceId = "";
+        
         InitializeFirstBoss();
         SaveProgression();
         
@@ -1111,6 +1322,17 @@ public class GameProgressionData
     
     // Node instance tracking
     public List<string> defeatedNodeInstances = new List<string>();
+    
+    // In-progress encounter tracking (for interrupted battles)
+    public string inProgressNodeInstanceId = "";
+    public string inProgressEncounterType = ""; // "Minion" or "Boss"
+    public string inProgressMinionName = "";
+    public string inProgressBossType = "";
+    public int inProgressEncounterHealth = 0;
+    public string pendingNodePoint = ""; // Serialized Vector2Int for map path cleanup
+    
+    // Replayability tracking
+    public List<string> replayableNodeInstances = new List<string>();
     
     // Metadata
     public string lastUpdated = "";

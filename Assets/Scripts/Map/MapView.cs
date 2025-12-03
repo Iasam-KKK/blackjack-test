@@ -47,6 +47,8 @@ namespace Map
         public Color32 lineVisitedColor = Color.white;
         [Tooltip("Unavailable path color")]
         public Color32 lineLockedColor = Color.gray;
+        [Tooltip("Replayable node color (defeated but can be replayed)")]
+        public Color32 replayableColor = new Color32(255, 180, 50, 255); // Golden/orange color
 
         protected GameObject firstParent;
         protected GameObject mapParent;
@@ -163,16 +165,7 @@ namespace Map
                 // we have not started traveling on this map yet, set entire first layer as attainable:
                 foreach (MapNode node in MapNodes.Where(n => n.Node.point.y == 0))
                 {
-                    // Check if node is already defeated
-                    if (GameProgressionManager.Instance != null && 
-                        GameProgressionManager.Instance.IsNodeInstanceDefeated(node.Node.nodeInstanceId))
-                    {
-                        node.SetState(NodeStates.Visited); // Show as completed
-                    }
-                    else
-                    {
-                        node.SetState(NodeStates.Attainable);
-                    }
+                    SetNodeVisualState(node, isInPath: false);
                 }
             }
             else
@@ -182,7 +175,9 @@ namespace Map
                 {
                     MapNode mapNode = GetNode(point);
                     if (mapNode != null)
-                        mapNode.SetState(NodeStates.Visited);
+                    {
+                        SetNodeVisualState(mapNode, isInPath: true);
+                    }
                 }
 
                 Vector2Int currentPoint = mapManager.CurrentMap.path[mapManager.CurrentMap.path.Count - 1];
@@ -194,17 +189,67 @@ namespace Map
                     MapNode mapNode = GetNode(point);
                     if (mapNode != null)
                     {
-                        // Check if node is already defeated
-                        if (GameProgressionManager.Instance != null && 
-                            GameProgressionManager.Instance.IsNodeInstanceDefeated(mapNode.Node.nodeInstanceId))
-                        {
-                            mapNode.SetState(NodeStates.Visited); // Show as completed
-                        }
-                        else
-                        {
-                            mapNode.SetState(NodeStates.Attainable);
-                        }
+                        SetNodeVisualState(mapNode, isInPath: false);
                     }
+                }
+            }
+            
+            // Also mark all replayable nodes throughout the map (even if not currently attainable)
+            SetReplayableNodesVisual();
+        }
+        
+        /// <summary>
+        /// Set the visual state for a node based on its progression status
+        /// </summary>
+        private void SetNodeVisualState(MapNode node, bool isInPath)
+        {
+            if (GameProgressionManager.Instance == null)
+            {
+                node.SetState(isInPath ? NodeStates.Visited : NodeStates.Attainable);
+                return;
+            }
+            
+            bool isDefeated = GameProgressionManager.Instance.IsNodeInstanceDefeated(node.Node.nodeInstanceId);
+            bool isReplayable = GameProgressionManager.Instance.IsNodeInstanceReplayable(node.Node.nodeInstanceId);
+            
+            if (isDefeated && isReplayable)
+            {
+                // Defeated and replayable - show with special color
+                node.SetState(NodeStates.Replayable);
+            }
+            else if (isDefeated)
+            {
+                // Defeated but not replayable (shouldn't normally happen with new system)
+                node.SetState(NodeStates.Visited);
+            }
+            else if (isInPath)
+            {
+                // In the path but not defeated (shouldn't normally happen)
+                node.SetState(NodeStates.Visited);
+            }
+            else
+            {
+                // Not defeated, not in path - attainable
+                node.SetState(NodeStates.Attainable);
+            }
+        }
+        
+        /// <summary>
+        /// Mark all replayable nodes in the map with the replayable visual state
+        /// This allows players to see which nodes they can replay even if not currently navigable
+        /// </summary>
+        private void SetReplayableNodesVisual()
+        {
+            if (GameProgressionManager.Instance == null) return;
+            
+            foreach (MapNode node in MapNodes)
+            {
+                bool isReplayable = GameProgressionManager.Instance.IsNodeInstanceReplayable(node.Node.nodeInstanceId);
+                
+                // Only update nodes that are in the path (visited) and are replayable
+                if (isReplayable && mapManager.CurrentMap.path.Any(p => p.Equals(node.Node.point)))
+                {
+                    node.SetState(NodeStates.Replayable);
                 }
             }
         }
