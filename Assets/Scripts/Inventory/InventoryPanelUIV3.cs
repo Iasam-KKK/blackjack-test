@@ -76,6 +76,11 @@ public class InventoryPanelUIV3 : MonoBehaviour
     private bool isVisible = false;
     private Sprite defaultCardSprite; // Store the default/placeholder sprite
     
+    /// <summary>
+    /// Check if the inventory panel is currently visible
+    /// </summary>
+    public bool IsInventoryOpen => isVisible;
+    
     public void Initialize()
     {
         Debug.Log("InventoryPanelUIV3.Initialize() called");

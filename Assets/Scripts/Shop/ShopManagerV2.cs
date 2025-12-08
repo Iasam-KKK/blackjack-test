@@ -595,6 +595,29 @@ public class ShopManagerV2 : MonoBehaviour
     }
     
     /// <summary>
+    /// Check if the shop is currently open
+    /// </summary>
+    public bool IsShopOpen()
+    {
+        return shopPanelV2 != null && shopPanelV2.activeSelf;
+    }
+    
+    /// <summary>
+    /// Toggle the shop open/closed
+    /// </summary>
+    public void ToggleShop()
+    {
+        if (IsShopOpen())
+        {
+            CloseShop();
+        }
+        else
+        {
+            OpenShop();
+        }
+    }
+    
+    /// <summary>
     /// Calculate final price based on material type
     /// </summary>
     private int GetTarotCardPrice(TarotCardData cardData)
