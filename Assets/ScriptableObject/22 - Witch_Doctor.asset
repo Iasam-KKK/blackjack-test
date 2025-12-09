@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3dab666e5dc8c504aad31dbedeb22634, type: 3}
-  m_Name: 10 - The Spy
+  m_Name: 22 - Witch_Doctor
   m_EditorClassIdentifier: 
-  cardName: The Spy
-  cardImage: {fileID: -4745331791431480123, guid: 237dc4ec586b9624d82b7debeba61e3e,
+  cardName: Witch_Doctor
+  cardImage: {fileID: 2683079996988674796, guid: 17695531259681d48928922ec090dcb1,
     type: 3}
   price: 100
-  description: Allows to peek at the next enemy card (show and hide)
+  description: Rescues 10% of your bet if you lose
   assignedMaterial: {fileID: 11400000, guid: ce48707311da09e469848e1b5c9f8341, type: 2}
   currentUses: 0
   maxUses: 1
-  cardType: 17
+  cardType: 3
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

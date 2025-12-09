@@ -13,8 +13,7 @@ MonoBehaviour:
   m_Name: 7 - The Blind Seer
   m_EditorClassIdentifier: 
   cardName: The Blind Seer
-  cardImage: {fileID: -7680044491934644273, guid: a232c89a6d2edac449232c197d03221a,
-    type: 3}
+  cardImage: {fileID: 21300000, guid: a232c89a6d2edac449232c197d03221a, type: 3}
   price: 100
   description: Allows to see the next the cards to be played from the enemy's hand
     (show and hide)

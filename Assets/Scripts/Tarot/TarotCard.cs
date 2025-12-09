@@ -59,6 +59,13 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             }
         }
         
+        // Register this card's data in the static registry for save/load purposes
+        // This ensures that when cards are loaded from save, they can find the original sprite
+        if (cardData != null && cardData.cardImage != null)
+        {
+            InventoryManager.RegisterCardData(cardData);
+        }
+        
         // Just update display - don't reset material durability
         UpdateCardDisplay();
     }

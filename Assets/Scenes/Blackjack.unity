@@ -13960,7 +13960,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.008375696, y: 0.2747233}
   m_AnchorMax: {x: 0.20300001, y: 0.9054753}
-  m_AnchoredPosition: {x: 8.700073, y: -0.40000153}
+  m_AnchoredPosition: {x: 8.700104, y: -0.40000153}
   m_SizeDelta: {x: 17.4775, y: 2.5699}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &532673294
@@ -19528,7 +19528,7 @@ MonoBehaviour:
   layoutGroup: {fileID: 1531083840}
   cardWidth: 190.42
   cardHeight: 261.7
-  overlapSpacing: -170
+  overlapSpacing: -150
   slotsText: {fileID: 0}
 --- !u!1 &724014677
 GameObject:
@@ -22049,8 +22049,8 @@ MonoBehaviour:
   m_Padding:
     m_Left: 10
     m_Right: 0
-    m_Top: 10
-    m_Bottom: 0
+    m_Top: 40
+    m_Bottom: 80
   m_ChildAlignment: 4
   m_StartCorner: 0
   m_StartAxis: 0
@@ -24019,6 +24019,18 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c092c6236930b1c4d94393e30d01b8c1, type: 2}
   - {fileID: 11400000, guid: 891b57bcd7f2c8a479c7688df4b2974a, type: 2}
   - {fileID: 11400000, guid: 2efe2e45bbefb9c458739a6ddd280426, type: 2}
+  - {fileID: 11400000, guid: d003767f53ec2d648bfdf775fe084e8c, type: 2}
+  - {fileID: 11400000, guid: 4e94c26676d0f7945b70567fac991f6d, type: 2}
+  - {fileID: 11400000, guid: e488145a8594a6c4bb31618fe4637f0e, type: 2}
+  - {fileID: 11400000, guid: 09e25554cce79fa4fb1412db5c5a7a99, type: 2}
+  - {fileID: 11400000, guid: 8a7a37f2ca8b4db4db1e920c191eb42e, type: 2}
+  - {fileID: 11400000, guid: c57ce7253a56d7f40b6b6087ac8a3990, type: 2}
+  - {fileID: 11400000, guid: bb16682f29cd6474f9e94e0468782994, type: 2}
+  - {fileID: 11400000, guid: 60f2f8bc90b8ef04d8b3b1f1f1643759, type: 2}
+  - {fileID: 11400000, guid: 5442240706ef8a04c9640e7e3d8abd6f, type: 2}
+  - {fileID: 11400000, guid: 9278e0b3de17110478c3a2613f8693d2, type: 2}
+  - {fileID: 11400000, guid: a7f1a26317aba334d9d8369b955c3bc6, type: 2}
+  - {fileID: 11400000, guid: 33e40666cba225e4dae3ca9d1262b49b, type: 2}
   availableActionCards: []
   deck: {fileID: 113795718}
   closeButton: {fileID: 275248797}
@@ -42421,7 +42433,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 4
-  m_Spacing: -170
+  m_Spacing: -150
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 0

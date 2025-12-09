@@ -10,17 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3dab666e5dc8c504aad31dbedeb22634, type: 3}
-  m_Name: 10 - The Spy
+  m_Name: 21 - TheEscapist
   m_EditorClassIdentifier: 
-  cardName: The Spy
-  cardImage: {fileID: -4745331791431480123, guid: 237dc4ec586b9624d82b7debeba61e3e,
+  cardName: The Escapist
+  cardImage: {fileID: -3614679453696818719, guid: ce91a08202e25c643a894894803d8075,
     type: 3}
   price: 100
-  description: Allows to peek at the next enemy card (show and hide)
+  description: Prevents losing by destroying the last card hit, but self destroying
+    regardless of material
   assignedMaterial: {fileID: 11400000, guid: ce48707311da09e469848e1b5c9f8341, type: 2}
   currentUses: 0
   maxUses: 1
-  cardType: 17
+  cardType: 26
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

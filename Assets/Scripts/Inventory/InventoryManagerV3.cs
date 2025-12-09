@@ -93,6 +93,36 @@ public class InventoryManagerV3 : InventoryManager
             tarotWindowUI = FindObjectOfType<TarotWindowUI>();
             Debug.Log($"[InventoryManagerV3] Searched for TarotWindowUI: {(tarotWindowUI != null ? "Found" : "Not Found")}");
         }
+        
+        // Schedule a delayed scan to register any cards in the scene
+        // This helps populate the registry for save/load sprite lookup
+        StartCoroutine(DelayedCardScan());
+    }
+    
+    /// <summary>
+    /// Delayed card scan to populate registry after scene is fully loaded
+    /// </summary>
+    private IEnumerator DelayedCardScan()
+    {
+        // Wait for scene to fully initialize
+        yield return new WaitForSeconds(1.0f);
+        
+        // Scan and register any cards found in scene
+        ScanAndRegisterSceneCards();
+        
+        // Refresh UI in case any cards had placeholder sprites that can now be updated
+        if (inventoryPanelV3 != null)
+        {
+            inventoryPanelV3.RefreshAllSlots();
+            inventoryPanelV3.RefreshEquipmentSlots();
+        }
+        
+        if (tarotWindowUI != null)
+        {
+            tarotWindowUI.Refresh();
+        }
+        
+        Debug.Log("[InventoryManagerV3] Delayed card scan and UI refresh completed");
     }
     
     // V3 Specific Methods

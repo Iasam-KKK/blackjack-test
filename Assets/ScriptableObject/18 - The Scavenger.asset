@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3dab666e5dc8c504aad31dbedeb22634, type: 3}
-  m_Name: 10 - The Spy
+  m_Name: 18 - The Scavenger
   m_EditorClassIdentifier: 
-  cardName: The Spy
-  cardImage: {fileID: -4745331791431480123, guid: 237dc4ec586b9624d82b7debeba61e3e,
+  cardName: The Scavenger
+  cardImage: {fileID: -8545050679128101215, guid: 756cbfcca8c31af4bb0544657bdd4411,
     type: 3}
   price: 100
-  description: Allows to peek at the next enemy card (show and hide)
+  description: Removes all cards played from your side lower than 7 in value
   assignedMaterial: {fileID: 11400000, guid: ce48707311da09e469848e1b5c9f8341, type: 2}
   currentUses: 0
   maxUses: 1
-  cardType: 17
+  cardType: 11
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

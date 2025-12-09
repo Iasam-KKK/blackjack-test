@@ -69,6 +69,12 @@ public class InventorySlotUIV3 : MonoBehaviour, IPointerClickHandler, IPointerEn
     
     private void ShowCard(TarotCardData card)
     {
+        // Register card data for save/load sprite lookup
+        if (card.cardImage != null)
+        {
+            InventoryManager.RegisterCardData(card);
+        }
+        
         // Show card components
         if (cardImage != null)
         {

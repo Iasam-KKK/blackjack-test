@@ -8,6 +8,12 @@ public class InventoryManager : MonoBehaviour
 {
     public static InventoryManager Instance { get; private set; }
     
+    // Static registry to cache TarotCardData by type - survives scene loads
+    private static Dictionary<TarotCardType, TarotCardData> cardDataRegistry = new Dictionary<TarotCardType, TarotCardData>();
+    
+    // Track cards that need sprite refresh after shop loads
+    private static List<TarotCardData> cardsNeedingSpriteRefresh = new List<TarotCardData>();
+    
     [Header("Inventory Configuration")]
     public InventoryData inventoryData; // Reference to the ScriptableObject
     
@@ -114,6 +120,12 @@ public class InventoryManager : MonoBehaviour
     public virtual bool AddPurchasedCard(TarotCardData card)
     {
         if (card == null) return false;
+        
+        // Register the card data for future lookups (in case we need to reload from save)
+        if (card.cardImage != null)
+        {
+            RegisterCardData(card);
+        }
         
         bool success = inventoryData.AddCardToStorage(card);
         if (success)
@@ -977,14 +989,17 @@ public class InventoryManager : MonoBehaviour
     {
         // Create TarotCardData from save data
         TarotCardData card = saveData.ToTarotCardData();
+        bool foundOriginalSprite = false;
         
-        // Method 1: Try to find original card data from Resources folder first
+        // Method 1: Try to find original card data from registry or Resources
         TarotCardData originalCard = FindOriginalCardDataFromResources(saveData.cardType);
-        if (originalCard != null)
+        if (originalCard != null && originalCard.cardImage != null)
         {
             card.cardImage = originalCard.cardImage;
             card.description = originalCard.description;
             card.price = originalCard.price;
+            foundOriginalSprite = true;
+            Debug.Log($"[InventoryManager] Found original sprite for {card.cardName} from registry/resources");
         }
         else
         {
@@ -992,22 +1007,32 @@ public class InventoryManager : MonoBehaviour
             TarotCard[] existingCards = FindObjectsOfType<TarotCard>();
             foreach (var existingCard in existingCards)
             {
-                if (existingCard.cardData != null && existingCard.cardData.cardType == saveData.cardType)
+                if (existingCard.cardData != null && existingCard.cardData.cardType == saveData.cardType 
+                    && existingCard.cardData.cardImage != null)
                 {
                     card.cardImage = existingCard.cardData.cardImage;
                     card.description = existingCard.cardData.description;
                     card.price = existingCard.cardData.price;
+                    
+                    // Register this card for future lookups
+                    RegisterCardData(existingCard.cardData);
+                    foundOriginalSprite = true;
+                    Debug.Log($"[InventoryManager] Found original sprite for {card.cardName} from scene cards");
                     break;
                 }
             }
         }
         
-        // If no sprite found, use placeholder
-        if (card.cardImage == null)
+        // If no sprite found, use placeholder but mark for later refresh
+        if (!foundOriginalSprite || card.cardImage == null)
         {
             card.cardImage = CreatePlaceholderSprite();
             card.description = "Inventory card";
             card.price = 100;
+            
+            // Mark this card for sprite refresh when original data becomes available
+            MarkCardForSpriteRefresh(card);
+            Debug.Log($"[InventoryManager] Using placeholder sprite for {card.cardName} - marked for refresh");
         }
         
         // Always use correct material based on saved material type
@@ -1031,12 +1056,21 @@ public class InventoryManager : MonoBehaviour
     
     private TarotCardData FindOriginalCardDataFromResources(TarotCardType cardType)
     {
+        // Method 0: Check our static registry first (most reliable)
+        if (cardDataRegistry.ContainsKey(cardType) && cardDataRegistry[cardType] != null)
+        {
+            Debug.Log($"[InventoryManager] Found card {cardType} in registry cache");
+            return cardDataRegistry[cardType];
+        }
+        
         // Try to load from Resources folder first
         TarotCardData[] allCards = Resources.LoadAll<TarotCardData>("");
         foreach (var card in allCards)
         {
             if (card.cardType == cardType)
             {
+                // Cache it for future use
+                RegisterCardData(card);
                 return card;
             }
         }
@@ -1047,6 +1081,8 @@ public class InventoryManager : MonoBehaviour
         {
             if (card.cardType == cardType)
             {
+                // Cache it for future use
+                RegisterCardData(card);
                 return card;
             }
         }
@@ -1060,12 +1096,138 @@ public class InventoryManager : MonoBehaviour
             TarotCardData card = UnityEditor.AssetDatabase.LoadAssetAtPath<TarotCardData>(path);
             if (card != null && card.cardType == cardType)
             {
+                // Cache it for future use
+                RegisterCardData(card);
                 return card;
             }
         }
         #endif
         
         return null;
+    }
+    
+    /// <summary>
+    /// Register a TarotCardData in the static registry for future lookups.
+    /// Call this whenever a card is encountered (e.g., when shop loads).
+    /// </summary>
+    public static void RegisterCardData(TarotCardData card)
+    {
+        if (card == null) return;
+        
+        if (!cardDataRegistry.ContainsKey(card.cardType) || cardDataRegistry[card.cardType] == null)
+        {
+            cardDataRegistry[card.cardType] = card;
+            Debug.Log($"[InventoryManager] Registered card data: {card.cardName} ({card.cardType})");
+        }
+        
+        // Check if any cards need sprite refresh
+        RefreshPendingCardSprites(card.cardType);
+    }
+    
+    /// <summary>
+    /// Mark a card as needing sprite refresh (will be fixed when original data becomes available)
+    /// </summary>
+    private void MarkCardForSpriteRefresh(TarotCardData card)
+    {
+        if (card != null && !cardsNeedingSpriteRefresh.Contains(card))
+        {
+            cardsNeedingSpriteRefresh.Add(card);
+            Debug.Log($"[InventoryManager] Card {card.cardName} marked for sprite refresh");
+        }
+    }
+    
+    /// <summary>
+    /// Refresh sprites for any cards that were loaded with placeholders
+    /// </summary>
+    private static void RefreshPendingCardSprites(TarotCardType cardType)
+    {
+        if (cardsNeedingSpriteRefresh.Count == 0) return;
+        
+        // Find the registered original card
+        if (!cardDataRegistry.ContainsKey(cardType) || cardDataRegistry[cardType] == null) return;
+        
+        TarotCardData originalCard = cardDataRegistry[cardType];
+        if (originalCard.cardImage == null) return;
+        
+        // Find and update cards of this type that need refresh
+        List<TarotCardData> toRemove = new List<TarotCardData>();
+        foreach (var card in cardsNeedingSpriteRefresh)
+        {
+            if (card != null && card.cardType == cardType)
+            {
+                card.cardImage = originalCard.cardImage;
+                card.description = originalCard.description;
+                card.price = originalCard.price;
+                toRemove.Add(card);
+                Debug.Log($"[InventoryManager] Refreshed sprite for {card.cardName}");
+            }
+        }
+        
+        foreach (var card in toRemove)
+        {
+            cardsNeedingSpriteRefresh.Remove(card);
+        }
+        
+        // If cards were refreshed, trigger UI update
+        if (toRemove.Count > 0 && Instance != null)
+        {
+            Instance.StartCoroutine(Instance.TriggerDelayedUIRefresh());
+        }
+    }
+    
+    /// <summary>
+    /// Trigger a delayed UI refresh to show updated sprites
+    /// </summary>
+    private IEnumerator TriggerDelayedUIRefresh()
+    {
+        yield return new WaitForSeconds(0.1f);
+        
+        // Find and refresh inventory UI
+        InventoryPanelUI inventoryUI = FindObjectOfType<InventoryPanelUI>();
+        if (inventoryUI != null)
+        {
+            var refreshMethod = inventoryUI.GetType().GetMethod("ForceRefreshInventoryDisplay", 
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (refreshMethod != null)
+            {
+                refreshMethod.Invoke(inventoryUI, null);
+            }
+        }
+        
+        // Find and refresh V3 panel if exists
+        InventoryPanelUIV3 panelV3 = FindObjectOfType<InventoryPanelUIV3>();
+        if (panelV3 != null)
+        {
+            panelV3.RefreshAllSlots();
+            panelV3.RefreshEquipmentSlots();
+        }
+        
+        // Find and refresh tarot window
+        TarotWindowUI tarotWindow = FindObjectOfType<TarotWindowUI>();
+        if (tarotWindow != null)
+        {
+            tarotWindow.Refresh();
+        }
+        
+        Debug.Log("[InventoryManager] Triggered delayed UI refresh after sprite update");
+    }
+    
+    /// <summary>
+    /// Force scan scene for TarotCards and register their data
+    /// </summary>
+    public void ScanAndRegisterSceneCards()
+    {
+        TarotCard[] sceneCards = FindObjectsOfType<TarotCard>();
+        int registered = 0;
+        foreach (var card in sceneCards)
+        {
+            if (card.cardData != null && card.cardData.cardImage != null)
+            {
+                RegisterCardData(card.cardData);
+                registered++;
+            }
+        }
+        Debug.Log($"[InventoryManager] Scanned scene and registered {registered} cards");
     }
     
     private MaterialData LoadMaterialFromResources(TarotMaterialType materialType)
@@ -1194,6 +1356,38 @@ public class InventoryManager : MonoBehaviour
     {
         yield return new WaitForSeconds(0.5f); // Wait a bit for UI to be ready
         
+        // Scan scene for cards to populate registry (shop might be loaded now)
+        ScanAndRegisterSceneCards();
+        
+        // Check if any pending cards can now be refreshed
+        if (cardsNeedingSpriteRefresh.Count > 0)
+        {
+            Debug.Log($"[InventoryManager] {cardsNeedingSpriteRefresh.Count} cards still need sprite refresh, attempting...");
+            
+            // Try to refresh any pending cards from the newly registered data
+            List<TarotCardData> toRemove = new List<TarotCardData>();
+            foreach (var card in cardsNeedingSpriteRefresh)
+            {
+                if (card != null && cardDataRegistry.ContainsKey(card.cardType))
+                {
+                    TarotCardData original = cardDataRegistry[card.cardType];
+                    if (original != null && original.cardImage != null)
+                    {
+                        card.cardImage = original.cardImage;
+                        card.description = original.description;
+                        card.price = original.price;
+                        toRemove.Add(card);
+                        Debug.Log($"[InventoryManager] Late refresh: Updated sprite for {card.cardName}");
+                    }
+                }
+            }
+            
+            foreach (var card in toRemove)
+            {
+                cardsNeedingSpriteRefresh.Remove(card);
+            }
+        }
+        
         // Find and refresh the inventory UI
         InventoryPanelUI inventoryUI = FindObjectOfType<InventoryPanelUI>();
         if (inventoryUI != null)
@@ -1214,6 +1408,21 @@ public class InventoryManager : MonoBehaviour
                 inventoryUI.ForceRefreshInventoryDisplay();
                 Debug.Log("✅ UI refreshed after card loading (direct call)");
             }
+        }
+        
+        // Also refresh V3 panel
+        InventoryPanelUIV3 panelV3 = FindObjectOfType<InventoryPanelUIV3>();
+        if (panelV3 != null)
+        {
+            panelV3.RefreshAllSlots();
+            panelV3.RefreshEquipmentSlots();
+        }
+        
+        // Refresh tarot window
+        TarotWindowUI tarotWindow = FindObjectOfType<TarotWindowUI>();
+        if (tarotWindow != null)
+        {
+            tarotWindow.Refresh();
         }
     }
     

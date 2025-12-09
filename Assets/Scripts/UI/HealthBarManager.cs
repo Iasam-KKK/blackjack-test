@@ -339,6 +339,8 @@ public class HealthBarManager : MonoBehaviour
     {
         Log($"[HealthBarManager] Enemy health changed event: {newHealth}");
         UpdateEnemyHealthBar();
+        // Also update enemy name in case this is a new encounter starting
+        UpdateEnemyName();
     }
     
     /// <summary>

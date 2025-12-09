@@ -10,17 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3dab666e5dc8c504aad31dbedeb22634, type: 3}
-  m_Name: 10 - The Spy
+  m_Name: 11 -CursedHourglass
   m_EditorClassIdentifier: 
-  cardName: The Spy
-  cardImage: {fileID: -4745331791431480123, guid: 237dc4ec586b9624d82b7debeba61e3e,
+  cardName: CursedHourglass
+  cardImage: {fileID: -32581631581861048, guid: 3f768a5c057438249a031bb1f6e23630,
     type: 3}
   price: 100
-  description: Allows to peek at the next enemy card (show and hide)
+  description: 'Lose half of your bet, but temporarily discard all cards in play
+    from both sides
+
+'
   assignedMaterial: {fileID: 11400000, guid: ce48707311da09e469848e1b5c9f8341, type: 2}
   currentUses: 0
   maxUses: 1
-  cardType: 17
+  cardType: 10
   isReusable: 0
   animationDuration: 0.5
   animationCurve:

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 5 - The_Jeweler
   m_EditorClassIdentifier: 
   cardName: The Jeweler
-  cardImage: {fileID: 1526939599403150066, guid: fb599d6e284d3fb4f977e9973e6bf4b9,
+  cardImage: {fileID: -8275883320919065726, guid: 482a03dc2668e4945b4ab9019b58f9e3,
     type: 3}
   price: 100
   description: Adds a +50 bonus per each diamond in the winning hand
