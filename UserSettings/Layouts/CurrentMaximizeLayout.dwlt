@@ -71,7 +71,7 @@ MonoBehaviour:
   m_ShowGizmos: 0
   m_TargetDisplay: 0
   m_ClearColor: {r: 0, g: 0, b: 0, a: 0}
-  m_TargetSize: {x: 3840, y: 2160}
+  m_TargetSize: {x: 1920, y: 1080}
   m_TextureFilterMode: 0
   m_TextureHideFlags: 61
   m_RenderIMGUI: 1
@@ -80,16 +80,16 @@ MonoBehaviour:
   m_VSyncEnabled: 0
   m_Gizmos: 0
   m_Stats: 0
-  m_SelectedSizes: 06000000000000000000000000000000000000000000000000000000000000000000000000000000
+  m_SelectedSizes: 03000000000000000000000000000000000000000000000000000000000000000000000000000000
   m_ZoomArea:
     m_HRangeLocked: 0
     m_VRangeLocked: 0
     hZoomLockedByDefault: 0
     vZoomLockedByDefault: 0
-    m_HBaseRangeMin: -1920
-    m_HBaseRangeMax: 1920
-    m_VBaseRangeMin: -1080
-    m_VBaseRangeMax: 1080
+    m_HBaseRangeMin: -960
+    m_HBaseRangeMax: 960
+    m_VBaseRangeMin: -540
+    m_VBaseRangeMax: 540
     m_HAllowExceedBaseRangeMin: 1
     m_HAllowExceedBaseRangeMax: 1
     m_VAllowExceedBaseRangeMin: 1
@@ -109,7 +109,7 @@ MonoBehaviour:
       y: 21
       width: 1209
       height: 583
-    m_Scale: {x: 0.26990741, y: 0.26990741}
+    m_Scale: {x: 0.53981483, y: 0.53981483}
     m_Translation: {x: 604.5, y: 291.5}
     m_MarginLeft: 0
     m_MarginRight: 0
@@ -117,12 +117,12 @@ MonoBehaviour:
     m_MarginBottom: 0
     m_LastShownAreaInsideMargins:
       serializedVersion: 2
-      x: -2239.657
-      y: -1080
-      width: 4479.314
-      height: 2160
+      x: -1119.8285
+      y: -540
+      width: 2239.657
+      height: 1080
     m_MinimalGUI: 1
-  m_defaultScale: 0.26990741
+  m_defaultScale: 0.53981483
   m_LastWindowPixelSize: {x: 1209, y: 604}
   m_ClearInEditMode: 1
   m_NoCameraWarning: 1
@@ -956,9 +956,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 709e0000
+      m_SelectedIDs: aaa60000
       m_LastClickedID: 0
-      m_ExpandedIDs: 721cffffba1dffff849affff8e9bffff58a5fffff0c8ffff74e0ffff3ef5ffff6ef5ffff74f5ffff76f5ffff78f5ffff30f6ffff00f7ffff0cfaffff8c9f00003aa2000044a200002cb80000aac100008ec20000dec400003cc500005edf000078df0000a2df0000d4df00004a030100f8030100
+      m_ExpandedIDs: a4cffcff98d0fcff5e49fdff3e52fdff5a53fdffba6afdfff473fdfff874fdff708bfdff828bfdffc88efdff6a8ffdffbc8ffdffc4dafdff54dcfdffbc04feffb00dfeffdc0efeff7843feffc44cfeffd84dfeff0065feff721cffffba1dffff849affff8e9bffff58a5fffff0c8ffff74e0ffff3ef5ffff6ef5ffff74f5ffff76f5ffff78f5ffff30f6ffff00f7ffff0cfaffff8c9f00003aa2000044a200002cb80000aac100008ec20000dec400003cc500005edf000078df0000a2df0000d4df00004a030100f80301008cda010014de0100f4de0100e6e1010004e5010004ed01008cf001006cf10100bcf101005ef401007cf70100aa20020038270200f827020022330200b0390200de6202006c690200c08d02004e940200f6490300604e0300d854030044590300d45903006e5c0300d860030050670300bc6b03004c6c0300e67f0300008003000a800300748003008082030052830300968c03001e900300fe9003004e910300f09303000e97030054a40300dca70300bca803000ca90300aeab0300ccae0300
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -975,7 +975,7 @@ MonoBehaviour:
         m_OriginalEventType: 11
         m_IsRenamingFilename: 0
         m_TrimLeadingAndTrailingWhitespace: 0
-        m_ClientGUIView: {fileID: 0}
+        m_ClientGUIView: {fileID: 7}
       m_SearchString: 
     m_ExpandedScenes: []
     m_CurrenRootInstanceID: 0
@@ -1057,7 +1057,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/Tarot Cards/tarot_Cards_Updated
+    - Assets/Scenes
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -1067,16 +1067,16 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 64
   m_LastFolders:
-  - Assets/Tarot Cards/tarot_Cards_Updated
+  - Assets/Scenes
   m_LastFoldersGridSize: -1
   m_LastProjectPath: D:\Black-Jack\blackjack-test
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
-    m_SelectedIDs: 2c0e0100
-    m_LastClickedID: 69164
-    m_ExpandedIDs: 0000000014a5000016a5000018a500001aa50000baa5000000ca9a3bffffff7f
+    m_SelectedIDs: aca50000
+    m_LastClickedID: 42412
+    m_ExpandedIDs: 0000000014a5000016a5000018a500001aa5000000ca9a3bffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1131,8 +1131,8 @@ MonoBehaviour:
       m_Icon: {fileID: 0}
       m_ResourceFile: 
   m_ListAreaState:
-    m_SelectedInstanceIDs: 709e0000
-    m_LastClickedInstanceID: 40560
+    m_SelectedInstanceIDs: aaa60000
+    m_LastClickedInstanceID: 42666
     m_HadKeyboardFocusLastEvent: 1
     m_ExpandedInstanceIDs: 3ca5000088a30000dcc00000cec00000
     m_RenameOverlay:

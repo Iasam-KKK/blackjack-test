@@ -10,16 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3dab666e5dc8c504aad31dbedeb22634, type: 3}
-  m_Name: The Mad Writer
+  m_Name: 23 - The Hitman
   m_EditorClassIdentifier: 
-  cardName: The Mad Writer
-  cardImage: {fileID: 21300000, guid: eba487c13fde2b64d9df277c6b363094, type: 3}
+  cardName: The Hitman
+  cardImage: {fileID: -4630192870548138576, guid: ea9dfd3d571161a40a5c1af48cbb8631,
+    type: 3}
   price: 100
-  description: Take a look at the next card and shuffle the whole deck if desired
+  description: Peek into the first three cards on your deck and remove one at discretion
+    from play
   assignedMaterial: {fileID: 11400000, guid: ce48707311da09e469848e1b5c9f8341, type: 2}
   currentUses: 0
   maxUses: 1
-  cardType: 22
+  cardType: 20
   isReusable: 0
   animationDuration: 0.5
   animationCurve:
