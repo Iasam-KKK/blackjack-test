@@ -254,6 +254,12 @@ public class Deck : MonoBehaviour
 
         ShuffleCards();
         
+        // Subscribe to ActionCardManager events
+        if (ActionCardManager.Instance != null)
+        {
+            ActionCardManager.Instance.OnEquippedCardsChanged += RefreshActionCardsDisplay;
+        }
+        
         // Find BossManager if not assigned
         if (bossManager == null)
             bossManager = FindObjectOfType<BossManager>();
@@ -386,6 +392,12 @@ public class Deck : MonoBehaviour
         if (GameProgressionManager.Instance != null)
         {
             GameProgressionManager.Instance.OnPlayerGameOver -= HandlePlayerGameOver;
+        }
+        
+        // Unsubscribe from ActionCardManager events
+        if (ActionCardManager.Instance != null)
+        {
+            ActionCardManager.Instance.OnEquippedCardsChanged -= RefreshActionCardsDisplay;
         }
     }
     
@@ -3135,12 +3147,13 @@ private void EndHand(WinCode code)
     
     /// <summary>
     /// Spawn action cards in the panel
+    /// Uses ActionCardManager's equipped cards if available, otherwise falls back to availableActionCards
     /// </summary>
     private void SpawnActionCards()
     {
-        if (actionCardsPanel == null || actionCardPrefab == null || availableActionCards == null)
+        if (actionCardsPanel == null || actionCardPrefab == null)
         {
-            Debug.LogWarning("Action cards system not configured");
+            Debug.LogWarning("Action cards panel or prefab not configured");
             return;
         }
         
@@ -3150,8 +3163,30 @@ private void EndHand(WinCode code)
             Destroy(child.gameObject);
         }
         
-        // Spawn each available action card
-        foreach (ActionCardData actionData in availableActionCards)
+        // Determine which action cards to spawn
+        System.Collections.Generic.List<ActionCardData> cardsToSpawn = null;
+        
+        // First priority: Use ActionCardManager's equipped cards
+        if (ActionCardManager.Instance != null && ActionCardManager.Instance.EquippedCount > 0)
+        {
+            cardsToSpawn = ActionCardManager.Instance.EquippedCards;
+            Debug.Log($"[SpawnActionCards] Using {cardsToSpawn.Count} equipped cards from ActionCardManager");
+        }
+        // Fallback: Use availableActionCards array (legacy support)
+        else if (availableActionCards != null && availableActionCards.Length > 0)
+        {
+            cardsToSpawn = new System.Collections.Generic.List<ActionCardData>(availableActionCards);
+            Debug.Log($"[SpawnActionCards] Using {cardsToSpawn.Count} cards from availableActionCards array (fallback)");
+        }
+        
+        if (cardsToSpawn == null || cardsToSpawn.Count == 0)
+        {
+            Debug.Log("[SpawnActionCards] No action cards to spawn");
+            return;
+        }
+        
+        // Spawn each action card
+        foreach (ActionCardData actionData in cardsToSpawn)
         {
             if (actionData == null) continue;
             
@@ -3164,7 +3199,16 @@ private void EndHand(WinCode code)
             }
         }
         
-        Debug.Log($"Spawned {availableActionCards.Length} action cards");
+        Debug.Log($"[SpawnActionCards] Spawned {cardsToSpawn.Count} action cards");
+    }
+    
+    /// <summary>
+    /// Refresh action cards display (called when equipped cards change)
+    /// </summary>
+    public void RefreshActionCardsDisplay()
+    {
+        SpawnActionCards();
+        ResetActionCards();
     }
     
     /// <summary>
@@ -3633,6 +3677,274 @@ private void EndHand(WinCode code)
         targetCard.DeselectCard();
         UpdateScoreDisplays();
         Debug.Log($"Copied value {sourceCard.value} to second card!");
+        return true;
+    }
+    
+    // ============ LOW-IMPACT ACTION CARD MODIFIERS ============
+    
+    /// <summary>
+    /// ACTION: Value Plus One - Add +1 to any card including empty cards
+    /// Similar to AddOneToCard but specifically for the low-impact action card system
+    /// </summary>
+    public bool ActionValuePlusOne()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        if (playerHand == null)
+        {
+            Debug.LogWarning("[ActionValuePlusOne] Player hand not found!");
+            return false;
+        }
+        
+        GameObject selectedCard = playerHand.GetSelectedCard();
+        if (selectedCard == null)
+        {
+            Debug.LogWarning("[ActionValuePlusOne] No card selected!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "Select a card first!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return false;
+        }
+        
+        CardModel cardModel = selectedCard.GetComponent<CardModel>();
+        if (cardModel == null)
+        {
+            Debug.LogError("[ActionValuePlusOne] Selected card has no CardModel component!");
+            return false;
+        }
+        
+        // Handle empty cards (value 0) - they should become value 1
+        // For regular cards, check if already at max
+        if (cardModel.value > 0 && cardModel.value >= 10)
+        {
+            Debug.LogWarning("[ActionValuePlusOne] Card is already at maximum value (10)!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "Card already at max (10)!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return false;
+        }
+        
+        // Execute action - increase value by 1
+        int oldValue = cardModel.value;
+        cardModel.value++;
+        
+        // Update card visual if needed (for empty cards becoming value 1)
+        if (oldValue == 0 && cardModel.value == 1)
+        {
+            // Empty card became an Ace - update sprite if possible
+            Image cardImage = selectedCard.GetComponent<Image>();
+            if (cardImage != null && faces != null && faces.Length > 0)
+            {
+                // Try to set a default Ace sprite (first card in deck is usually Ace of Spades)
+                // This is a fallback - ideally the card should already have a sprite
+                if (cardImage.sprite == null)
+                {
+                    // Find an Ace sprite (value 1, any suit)
+                    for (int i = 0; i < faces.Length && i < values.Length; i++)
+                    {
+                        if (values[i] == 1)
+                        {
+                            cardImage.sprite = faces[i];
+                            cardModel.cardFront = faces[i];
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Deselect the card
+        cardModel.DeselectCard();
+        
+        // Update score displays
+        UpdateScoreDisplays();
+        
+        Debug.Log($"[ActionValuePlusOne] Card value increased from {oldValue} to {cardModel.value}");
+        
+        if (finalMessage != null)
+        {
+            finalMessage.text = $"+1! Card now {cardModel.value}";
+            StartCoroutine(ClearMessageAfterDelay(1.5f));
+        }
+        
+        // Check for bust/blackjack after modifying - but don't call EndHand immediately
+        // Let the game flow handle it naturally
+        int playerPoints = GetPlayerPoints();
+        if (playerPoints > Constants.Blackjack)
+        {
+            // Don't end hand immediately - let the player see the result
+            // The game will handle bust on next action
+            Debug.Log($"[ActionValuePlusOne] Player busted with {playerPoints} points");
+        }
+        else if (playerPoints == Constants.Blackjack)
+        {
+            // Don't end hand immediately - let the player see the result
+            Debug.Log($"[ActionValuePlusOne] Player got blackjack with {playerPoints} points");
+        }
+        
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Minor Swap With Dealer - Swap player card with dealer's face-up card
+    /// Requires selecting player card first, then dealer's face-up card
+    /// </summary>
+    public bool ActionMinorSwapWithDealer()
+    {
+        CardHand playerHand = player.GetComponent<CardHand>();
+        CardHand dealerHand = dealer.GetComponent<CardHand>();
+        
+        if (playerHand == null || dealerHand == null) return false;
+        
+        // Get selected player card
+        GameObject selectedPlayerCard = playerHand.GetSelectedCard();
+        if (selectedPlayerCard == null)
+        {
+            Debug.LogWarning("Select a player card first to swap!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "Select your card first!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return false;
+        }
+        
+        // Find selected dealer card (must be face-up)
+        GameObject selectedDealerCard = null;
+        foreach (GameObject card in dealerHand.cards)
+        {
+            CardModel cardModel = card.GetComponent<CardModel>();
+            Image cardImage = card.GetComponent<Image>();
+            
+            // Check if card is face-up (showing front sprite) and selected
+            if (cardImage != null && cardImage.sprite == cardModel.cardFront && cardModel.isSelected)
+            {
+                selectedDealerCard = card;
+                break;
+            }
+        }
+        
+        if (selectedDealerCard == null)
+        {
+            Debug.LogWarning("Select a face-up dealer card to swap with!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "Select dealer's face-up card!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return false;
+        }
+        
+        // Perform the swap
+        CardModel playerCardModel = selectedPlayerCard.GetComponent<CardModel>();
+        CardModel dealerCardModel = selectedDealerCard.GetComponent<CardModel>();
+        
+        // Swap values
+        int tempValue = playerCardModel.value;
+        playerCardModel.value = dealerCardModel.value;
+        dealerCardModel.value = tempValue;
+        
+        // Swap sprites
+        Image playerImage = selectedPlayerCard.GetComponent<Image>();
+        Image dealerImage = selectedDealerCard.GetComponent<Image>();
+        
+        Sprite tempSprite = playerCardModel.cardFront;
+        playerCardModel.cardFront = dealerCardModel.cardFront;
+        dealerCardModel.cardFront = tempSprite;
+        
+        // Update visual display
+        if (playerImage != null) playerImage.sprite = playerCardModel.cardFront;
+        if (dealerImage != null) dealerImage.sprite = dealerCardModel.cardFront;
+        
+        // Swap original deck indices for proper tracking
+        int tempIndex = playerCardModel.originalDeckIndex;
+        playerCardModel.originalDeckIndex = dealerCardModel.originalDeckIndex;
+        dealerCardModel.originalDeckIndex = tempIndex;
+        
+        // Deselect both cards
+        playerCardModel.DeselectCard();
+        dealerCardModel.DeselectCard();
+        
+        UpdateScoreDisplays();
+        
+        Debug.Log($"[ActionMinorSwapWithDealer] Swapped player card (now {playerCardModel.value}) with dealer card (now {dealerCardModel.value})");
+        
+        if (finalMessage != null)
+        {
+            finalMessage.text = "Cards swapped!";
+            StartCoroutine(ClearMessageAfterDelay(1.5f));
+        }
+        
+        // Check for bust after swap
+        int playerPoints = GetPlayerPoints();
+        if (playerPoints > Constants.Blackjack)
+        {
+            EndHand(WinCode.DealerWins);
+        }
+        else if (playerPoints == Constants.Blackjack)
+        {
+            EndHand(WinCode.PlayerWins);
+        }
+        
+        return true;
+    }
+    
+    /// <summary>
+    /// ACTION: Minor Heal - Restore 10 health points
+    /// Limited to 3 uses per entire game session
+    /// </summary>
+    public bool ActionMinorHeal()
+    {
+        // Check if ActionCardManager exists and has uses remaining
+        if (ActionCardManager.Instance == null)
+        {
+            Debug.LogError("[ActionMinorHeal] ActionCardManager not found!");
+            return false;
+        }
+        
+        if (!ActionCardManager.Instance.CanUseMinorHeal())
+        {
+            Debug.LogWarning("[ActionMinorHeal] No Minor Heal uses remaining!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "No heals remaining!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return false;
+        }
+        
+        // Use the heal charge
+        if (!ActionCardManager.Instance.UseMinorHeal())
+        {
+            return false;
+        }
+        
+        // Apply healing via PlayerHealthManager
+        if (PlayerHealthManager.Instance != null)
+        {
+            PlayerHealthManager.Instance.Heal(10f);
+            Debug.Log($"[ActionMinorHeal] Healed 10 HP. Remaining uses: {ActionCardManager.Instance.MinorHealRemainingUses}");
+            
+            if (finalMessage != null)
+            {
+                finalMessage.text = $"+10 HP! ({ActionCardManager.Instance.MinorHealRemainingUses} heals left)";
+                StartCoroutine(ClearMessageAfterDelay(2f));
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[ActionMinorHeal] PlayerHealthManager not found!");
+            if (finalMessage != null)
+            {
+                finalMessage.text = "Heal failed!";
+                StartCoroutine(ClearMessageAfterDelay(1.5f));
+            }
+            return false;
+        }
+        
         return true;
     }
     

@@ -160,6 +160,16 @@ public class ActionCard : MonoBehaviour, IPointerClickHandler
             case ActionCardType.CopyCard:
                 return deck.ActionCopyCard();
             
+            // Low-impact action card modifiers
+            case ActionCardType.ValuePlusOne:
+                return deck.ActionValuePlusOne();
+            
+            case ActionCardType.MinorSwapWithDealer:
+                return deck.ActionMinorSwapWithDealer();
+            
+            case ActionCardType.MinorHeal:
+                return deck.ActionMinorHeal();
+            
             default:
                 Debug.LogWarning($"Action type {actionData.actionType} not implemented!");
                 return false;

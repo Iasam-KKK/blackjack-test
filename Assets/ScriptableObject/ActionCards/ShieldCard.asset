@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b2e6ea823ec0c7439088aa6640c03c1, type: 3}
+  m_Name: ShieldCard
+  m_EditorClassIdentifier: 
+  actionName: Shield
+  actionType: 9
+  actionIcon: {fileID: 2226455469344906927, guid: 3990841888d74ae40b06f9001c54bea4,
+    type: 3}
+  actionDescription: Protect a selected card from curses and boss effects for the
+    remainder of the hand.
+  actionsRequired: 1
+  canBeUsedMultipleTimes: 0
+  hasLimitedGameUses: 0
+  maxGameUses: 3
+  unlockLevel: 0
+  isStarterAction: 1
+  cardColor: {r: 0.4, g: 0.8, b: 0.4, a: 1}
+  cardBackground: {fileID: 0}

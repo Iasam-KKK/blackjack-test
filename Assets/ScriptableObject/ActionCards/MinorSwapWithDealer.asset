@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b2e6ea823ec0c7439088aa6640c03c1, type: 3}
+  m_Name: MinorSwapWithDealer
+  m_EditorClassIdentifier: 
+  actionName: Minor Swap
+  actionType: 12
+  actionIcon: {fileID: -241542693538003996, guid: be0c296827d911045ac7fe38f06857ba,
+    type: 3}
+  actionDescription: Swap one of your cards with a dealer's face-up card. Select
+    your card first, then the dealer's card.
+  actionsRequired: 1
+  canBeUsedMultipleTimes: 0
+  hasLimitedGameUses: 0
+  maxGameUses: 3
+  unlockLevel: 0
+  isStarterAction: 1
+  cardColor: {r: 0.8, g: 0.4, b: 0.8, a: 1}
+  cardBackground: {fileID: 0}

@@ -7,6 +7,7 @@ using TMPro;
 /// <summary>
 /// UI Controller for the Deck Inspector Panel
 /// Displays card counts, filters, and a grid of cards in the player's deck
+/// Also handles action card equipping functionality
 /// </summary>
 public class DeckInspectorPanel : MonoBehaviour
 {
@@ -55,6 +56,12 @@ public class DeckInspectorPanel : MonoBehaviour
     [Header("Action Card Description")]
     public TextMeshProUGUI actionCardDescriptionText;  // Text for action card description
     
+    [Header("Action Card Equip System")]
+    [Tooltip("Optional panel-level buttons. Main equip button is embedded in each DeckCardSlot prefab.")]
+    public Button equipButton;              // Optional: Panel-level button to equip (legacy support)
+    public Button unequipButton;            // Optional: Panel-level button to unequip (legacy support)
+    public TextMeshProUGUI equippedCountText; // Shows "X/4 Equipped"
+    
     [Header("Configuration")]
     public float activeAlpha = 1.0f;        // Alpha for active filter button
     public float inactiveAlpha = 0.5f;      // Alpha for inactive filter buttons
@@ -64,6 +71,10 @@ public class DeckInspectorPanel : MonoBehaviour
     private PlayerDeck playerDeck;
     private DeckFilterType currentFilter = DeckFilterType.Remaining;
     private List<DeckCardSlot> cardSlots = new List<DeckCardSlot>();
+    
+    // Action card selection
+    private DeckCardSlot selectedActionCardSlot;
+    private ActionCardData selectedActionCardData;
     
     private void Awake()
     {
@@ -88,18 +99,30 @@ public class DeckInspectorPanel : MonoBehaviour
             playerDeck.OnDeckChanged += RefreshUI;
         }
         
+        // Subscribe to action card manager events
+        if (ActionCardManager.Instance != null)
+        {
+            ActionCardManager.Instance.OnEquippedCardsChanged += OnEquippedCardsChanged;
+        }
+        
         // Set default filter
         SetFilter(DeckFilterType.Remaining);
         
-        // Disable action cards button for now (as specified)
+        // Enable action cards button now that the system is implemented
         if (actionCardsButton != null)
         {
-            actionCardsButton.interactable = false;
+            actionCardsButton.interactable = true;
             if (actionCardsCanvasGroup != null)
             {
-                actionCardsCanvasGroup.alpha = 0.3f;
+                actionCardsCanvasGroup.alpha = inactiveAlpha;
             }
         }
+        
+        // Hide equip buttons initially
+        HideEquipButtons();
+        
+        // Update equipped count display
+        UpdateEquippedCountDisplay();
     }
     
     private void OnDestroy()
@@ -107,6 +130,11 @@ public class DeckInspectorPanel : MonoBehaviour
         if (playerDeck != null)
         {
             playerDeck.OnDeckChanged -= RefreshUI;
+        }
+        
+        if (ActionCardManager.Instance != null)
+        {
+            ActionCardManager.Instance.OnEquippedCardsChanged -= OnEquippedCardsChanged;
         }
     }
     
@@ -133,6 +161,17 @@ public class DeckInspectorPanel : MonoBehaviour
         if (actionCardsButton != null)
         {
             actionCardsButton.onClick.AddListener(() => SetFilter(DeckFilterType.ActionCards));
+        }
+        
+        // Equip/Unequip button listeners
+        if (equipButton != null)
+        {
+            equipButton.onClick.AddListener(OnEquipButtonClicked);
+        }
+        
+        if (unequipButton != null)
+        {
+            unequipButton.onClick.AddListener(OnUnequipButtonClicked);
         }
     }
     
@@ -229,8 +268,18 @@ public class DeckInspectorPanel : MonoBehaviour
             fullDeckCanvasGroup.DOFade(targetAlpha, 0.2f);
         }
         
-        // Action Cards button stays at low alpha since it's disabled
-        // (handled in Start())
+        // Update Action Cards button
+        if (actionCardsCanvasGroup != null)
+        {
+            float targetAlpha = currentFilter == DeckFilterType.ActionCards ? activeAlpha : inactiveAlpha;
+            actionCardsCanvasGroup.DOFade(targetAlpha, 0.2f);
+        }
+        
+        // Clear action card selection when switching filters
+        if (currentFilter != DeckFilterType.ActionCards)
+        {
+            ClearActionCardSelection();
+        }
     }
     
     /// <summary>
@@ -412,15 +461,43 @@ public class DeckInspectorPanel : MonoBehaviour
         // Only gray out dealt cards in "Remaining" view, show true colors in "Full Deck" view
         bool showDealtAsGrayed = (currentFilter == DeckFilterType.Remaining);
         
+        // ALWAYS get action card data list - action cards appear on all tabs
+        List<ActionCardData> actionCardDataList = null;
+        if (ActionCardManager.Instance != null && ActionCardManager.Instance.allActionCards != null)
+        {
+            actionCardDataList = ActionCardManager.Instance.allActionCards;
+        }
+        
         // Ensure we have enough card slots
         EnsureCardSlots(cardsToDisplay.Count);
+        
+        // Track action card index for mapping to ActionCardData
+        int actionCardIndex = 0;
         
         // Update each slot
         for (int i = 0; i < cardSlots.Count; i++)
         {
             if (i < cardsToDisplay.Count)
             {
-                cardSlots[i].SetCard(cardsToDisplay[i], showDealtAsGrayed);
+                PlayerDeckCard card = cardsToDisplay[i];
+                
+                // Handle action cards specially to link with ActionCardData - ON ALL TABS
+                if (card.isActionCard)
+                {
+                    // Find matching ActionCardData
+                    ActionCardData matchingData = null;
+                    if (actionCardDataList != null && actionCardIndex < actionCardDataList.Count)
+                    {
+                        matchingData = actionCardDataList[actionCardIndex];
+                        actionCardIndex++;
+                    }
+                    cardSlots[i].SetActionCard(card, matchingData);
+                }
+                else
+                {
+                    cardSlots[i].SetCard(card, showDealtAsGrayed);
+                }
+                
                 cardSlots[i].gameObject.SetActive(true);
             }
             else
@@ -428,6 +505,12 @@ public class DeckInspectorPanel : MonoBehaviour
                 cardSlots[i].SetEmpty();
                 cardSlots[i].gameObject.SetActive(false);
             }
+        }
+        
+        // Update equipped count when showing action cards
+        if (currentFilter == DeckFilterType.ActionCards)
+        {
+            UpdateEquippedCountDisplay();
         }
     }
     
@@ -490,6 +573,207 @@ public class DeckInspectorPanel : MonoBehaviour
         if (actionCardDescriptionText != null)
         {
             actionCardDescriptionText.text = "select an action card\nto view description";
+        }
+    }
+    
+    // ============ ACTION CARD EQUIP SYSTEM ============
+    
+    /// <summary>
+    /// Called when an action card slot is selected for equipping
+    /// </summary>
+    public void OnActionCardSlotSelected(DeckCardSlot slot, ActionCardData actionCardData)
+    {
+        // Clear previous selection
+        if (selectedActionCardSlot != null && selectedActionCardSlot != slot)
+        {
+            selectedActionCardSlot.SetSelected(false);
+        }
+        
+        selectedActionCardSlot = slot;
+        selectedActionCardData = actionCardData;
+        
+        if (slot != null)
+        {
+            slot.SetSelected(true);
+        }
+        
+        // Update equip button state
+        UpdateEquipButtonState();
+        
+        // Show action card description
+        if (actionCardData != null)
+        {
+            ShowActionCardDescription($"<b>{actionCardData.actionName}</b>\n{actionCardData.actionDescription}");
+        }
+        
+        Debug.Log($"[DeckInspector] Action card selected: {actionCardData?.actionName ?? "None"}");
+    }
+    
+    /// <summary>
+    /// Clear action card selection
+    /// </summary>
+    private void ClearActionCardSelection()
+    {
+        if (selectedActionCardSlot != null)
+        {
+            selectedActionCardSlot.SetSelected(false);
+        }
+        
+        selectedActionCardSlot = null;
+        selectedActionCardData = null;
+        
+        HideEquipButtons();
+        ClearActionCardDescription();
+    }
+    
+    /// <summary>
+    /// Update equip/unequip button visibility based on selection
+    /// </summary>
+    private void UpdateEquipButtonState()
+    {
+        if (selectedActionCardData == null)
+        {
+            HideEquipButtons();
+            return;
+        }
+        
+        bool isEquipped = ActionCardManager.Instance != null && 
+                          ActionCardManager.Instance.IsCardEquipped(selectedActionCardData);
+        
+        // Show appropriate button
+        if (equipButton != null)
+        {
+            equipButton.gameObject.SetActive(!isEquipped && ActionCardManager.Instance.CanEquipMore);
+        }
+        
+        if (unequipButton != null)
+        {
+            unequipButton.gameObject.SetActive(isEquipped);
+        }
+    }
+    
+    /// <summary>
+    /// Hide both equip buttons
+    /// </summary>
+    private void HideEquipButtons()
+    {
+        if (equipButton != null)
+        {
+            equipButton.gameObject.SetActive(false);
+        }
+        
+        if (unequipButton != null)
+        {
+            unequipButton.gameObject.SetActive(false);
+        }
+    }
+    
+    /// <summary>
+    /// Handle equip button click
+    /// </summary>
+    private void OnEquipButtonClicked()
+    {
+        if (selectedActionCardData == null)
+        {
+            Debug.LogWarning("[DeckInspector] No action card selected to equip");
+            return;
+        }
+        
+        if (ActionCardManager.Instance == null)
+        {
+            Debug.LogError("[DeckInspector] ActionCardManager not found!");
+            return;
+        }
+        
+        bool success = ActionCardManager.Instance.EquipCard(selectedActionCardData);
+        
+        if (success)
+        {
+            Debug.Log($"[DeckInspector] Equipped: {selectedActionCardData.actionName}");
+            
+            // Visual feedback - pulse animation
+            if (equipButton != null)
+            {
+                equipButton.transform.DOPunchScale(Vector3.one * 0.2f, 0.3f, 10, 1f);
+            }
+            
+            // Update button state and display
+            UpdateEquipButtonState();
+            UpdateEquippedCountDisplay();
+            RefreshActionCardSlotVisuals();
+        }
+    }
+    
+    /// <summary>
+    /// Handle unequip button click
+    /// </summary>
+    private void OnUnequipButtonClicked()
+    {
+        if (selectedActionCardData == null)
+        {
+            Debug.LogWarning("[DeckInspector] No action card selected to unequip");
+            return;
+        }
+        
+        if (ActionCardManager.Instance == null)
+        {
+            Debug.LogError("[DeckInspector] ActionCardManager not found!");
+            return;
+        }
+        
+        bool success = ActionCardManager.Instance.UnequipCard(selectedActionCardData);
+        
+        if (success)
+        {
+            Debug.Log($"[DeckInspector] Unequipped: {selectedActionCardData.actionName}");
+            
+            // Visual feedback
+            if (unequipButton != null)
+            {
+                unequipButton.transform.DOPunchScale(Vector3.one * 0.2f, 0.3f, 10, 1f);
+            }
+            
+            // Update button state and display
+            UpdateEquipButtonState();
+            UpdateEquippedCountDisplay();
+            RefreshActionCardSlotVisuals();
+        }
+    }
+    
+    /// <summary>
+    /// Update the equipped count display text
+    /// </summary>
+    private void UpdateEquippedCountDisplay()
+    {
+        if (equippedCountText != null && ActionCardManager.Instance != null)
+        {
+            equippedCountText.text = $"{ActionCardManager.Instance.EquippedCount}/{ActionCardManager.MAX_EQUIPPED_CARDS} Equipped";
+        }
+    }
+    
+    /// <summary>
+    /// Called when equipped cards change (from ActionCardManager event)
+    /// </summary>
+    private void OnEquippedCardsChanged()
+    {
+        UpdateEquippedCountDisplay();
+        RefreshActionCardSlotVisuals();
+        UpdateEquipButtonState();
+    }
+    
+    /// <summary>
+    /// Refresh the visual state of action card slots (show which are equipped)
+    /// </summary>
+    private void RefreshActionCardSlotVisuals()
+    {
+        foreach (var slot in cardSlots)
+        {
+            if (slot != null && slot.GetCurrentActionCardData() != null)
+            {
+                bool isEquipped = ActionCardManager.Instance != null && 
+                                  ActionCardManager.Instance.IsCardEquipped(slot.GetCurrentActionCardData());
+                slot.SetEquippedState(isEquipped);
+            }
         }
     }
 }

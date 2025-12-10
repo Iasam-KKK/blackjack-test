@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b2e6ea823ec0c7439088aa6640c03c1, type: 3}
+  m_Name: MinorHeal
+  m_EditorClassIdentifier: 
+  actionName: Minor Heal
+  actionType: 13
+  actionIcon: {fileID: -852987005757975012, guid: b641624123c86a145b3a55733133c328,
+    type: 3}
+  actionDescription: Restore 10 health points. Limited to 3 uses per entire game
+    session.
+  actionsRequired: 1
+  canBeUsedMultipleTimes: 0
+  hasLimitedGameUses: 1
+  maxGameUses: 3
+  unlockLevel: 0
+  isStarterAction: 1
+  cardColor: {r: 1, g: 0.5, b: 0.5, a: 1}
+  cardBackground: {fileID: 0}

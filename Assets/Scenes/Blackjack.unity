@@ -11578,6 +11578,58 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 434767615}
   m_CullTransparentMesh: 1
+--- !u!1 &435990345
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 435990347}
+  - component: {fileID: 435990346}
+  m_Layer: 0
+  m_Name: ActionCardManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &435990346
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 435990345}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f75c689ddebbfee49a68833dbefbb5a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  equippedCards: []
+  allActionCards:
+  - {fileID: 11400000, guid: 666f8d623588be24ebb565fc0ac0d058, type: 2}
+  - {fileID: 11400000, guid: f712c955a2d75ef43856ce3b4555cc42, type: 2}
+  - {fileID: 11400000, guid: 522daf245a143b64c85a2a239fdad229, type: 2}
+  - {fileID: 11400000, guid: 28da2476564109a4c82fb678fc7fd929, type: 2}
+  actionCardWindow: {fileID: 626183647}
+  minorHealRemainingUses: 0
+--- !u!4 &435990347
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 435990345}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3210.94, y: 166.9336, z: -19.549828}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &449436746
 GameObject:
   m_ObjectHideFlags: 0
@@ -12328,6 +12380,83 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 480571849}
   m_CullTransparentMesh: 1
+--- !u!1 &483946911
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 483946912}
+  - component: {fileID: 483946914}
+  - component: {fileID: 483946913}
+  m_Layer: 5
+  m_Name: Container
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &483946912
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 483946911}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 626183644}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.05718764, y: 0.074}
+  m_AnchorMax: {x: 0.9538002, y: 0.8325547}
+  m_AnchoredPosition: {x: -3.001831, y: 0}
+  m_SizeDelta: {x: 5.3601074, y: 1.103302}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &483946913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 483946911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30649d3a9faa99c48a7b1166b86bf2a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 4
+  m_Spacing: -150
+  m_ChildForceExpandWidth: 1
+  m_ChildForceExpandHeight: 1
+  m_ChildControlWidth: 0
+  m_ChildControlHeight: 0
+  m_ChildScaleWidth: 0
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
+--- !u!114 &483946914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 483946911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3312d7739989d2b4e91e6319e9a96d76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Padding: {x: 0, y: 0, z: 0, w: 0}
+  m_Softness: {x: 0, y: 0}
 --- !u!1 &486020162
 GameObject:
   m_ObjectHideFlags: 0
@@ -16481,6 +16610,7 @@ GameObject:
   - component: {fileID: 626183644}
   - component: {fileID: 626183646}
   - component: {fileID: 626183645}
+  - component: {fileID: 626183647}
   m_Layer: 5
   m_Name: ActionCardsWindow
   m_TagString: Untagged
@@ -16502,6 +16632,7 @@ RectTransform:
   m_Children:
   - {fileID: 1958185899}
   - {fileID: 1196758610}
+  - {fileID: 483946912}
   m_Father: {fileID: 1423194943}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.7873156, y: 0.01582995}
@@ -16548,6 +16679,27 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 626183643}
   m_CullTransparentMesh: 1
+--- !u!114 &626183647
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 626183643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7715e28bf53309c4c926b87cdb23071c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  container: {fileID: 483946912}
+  slotPrefab: {fileID: 3839155623287719043, guid: 95d6e8fc2d6e42e419f455b093ac0c6d,
+    type: 3}
+  layoutGroup: {fileID: 483946913}
+  cardWidth: 120
+  cardHeight: 170
+  spacing: -150
+  slotsText: {fileID: 1196758611}
+  minorHealUsesText: {fileID: 0}
 --- !u!1 &630193570
 GameObject:
   m_ObjectHideFlags: 0
@@ -23257,9 +23409,12 @@ MonoBehaviour:
   threeIndividualText: {fileID: 1972935396}
   twoIndividualText: {fileID: 1499216522}
   cardGridContent: {fileID: 1033823106}
-  cardSlotPrefab: {fileID: 3239380116014201320, guid: 8896ec9b65beae74cb50949062851726,
+  cardSlotPrefab: {fileID: 5421066646846901466, guid: 457eba6ed7cd007429e7cdefeddcb451,
     type: 3}
   actionCardDescriptionText: {fileID: 1012535228}
+  equipButton: {fileID: 0}
+  unequipButton: {fileID: 0}
+  equippedCountText: {fileID: 0}
   activeAlpha: 1
   inactiveAlpha: 0.5
   animationDuration: 0.3
@@ -58853,3 +59008,4 @@ SceneRoots:
   - {fileID: 1966985387}
   - {fileID: 2038751731}
   - {fileID: 233368776}
+  - {fileID: 435990347}

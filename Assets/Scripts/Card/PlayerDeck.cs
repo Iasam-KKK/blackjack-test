@@ -75,16 +75,16 @@ public class PlayerDeckCard
 }
 
 /// <summary>
-/// Manages the player's 30-card deck for the deck inspector system
-/// Deck Structure: 22 Value Cards + 6 Action Cards + 2 Blank slots
+/// Manages the player's 28-card deck for the deck inspector system
+/// Deck Structure: 22 Value Cards + 4 Action Cards + 2 Blank slots
 /// Value Distribution: 2 Aces, 8 low cards (2-6), 8 mid cards (7-9), 4 tens/faces
 /// </summary>
 public class PlayerDeck : MonoBehaviour
 {
     [Header("Deck Configuration")]
-    public const int TOTAL_CARDS = 30;
+    public const int TOTAL_CARDS = 28;
     public const int VALUE_CARDS = 22;
-    public const int ACTION_CARDS = 6;
+    public const int ACTION_CARDS = 4;
     public const int BLANK_SLOTS = 2;
     
     [Header("Card Sprites")]
@@ -175,7 +175,7 @@ public class PlayerDeck : MonoBehaviour
         AddValueCard(ref cardId, 12, CardSuit.Spades);    // Queen
         AddValueCard(ref cardId, 13, CardSuit.Hearts);    // King
         
-        // === ACTION CARDS (6 total) ===
+        // === ACTION CARDS (4 total) ===
         for (int i = 0; i < ACTION_CARDS; i++)
         {
             allCards.Add(new PlayerDeckCard(
@@ -441,6 +441,39 @@ public class PlayerDeck : MonoBehaviour
     {
         var source = remainingOnly ? drawPile : allCards;
         return source.Where(c => c.isActionCard).ToList();
+    }
+    
+    /// <summary>
+    /// Get ActionCardData for a specific action card index in the deck
+    /// Returns the action card data from ActionCardManager if available
+    /// </summary>
+    public ActionCardData GetActionCardDataForSlot(int actionCardIndex)
+    {
+        if (ActionCardManager.Instance == null || ActionCardManager.Instance.allActionCards == null)
+        {
+            return null;
+        }
+        
+        var allActions = ActionCardManager.Instance.allActionCards;
+        if (actionCardIndex >= 0 && actionCardIndex < allActions.Count)
+        {
+            return allActions[actionCardIndex];
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// Get all available ActionCardData from ActionCardManager
+    /// </summary>
+    public List<ActionCardData> GetAllActionCardData()
+    {
+        if (ActionCardManager.Instance == null || ActionCardManager.Instance.allActionCards == null)
+        {
+            return new List<ActionCardData>();
+        }
+        
+        return ActionCardManager.Instance.allActionCards;
     }
     
     /// <summary>

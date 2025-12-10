@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b2e6ea823ec0c7439088aa6640c03c1, type: 3}
+  m_Name: ValuePlusOne
+  m_EditorClassIdentifier: 
+  actionName: +1 Value
+  actionType: 11
+  actionIcon: {fileID: 6570828195454370993, guid: 6f8deb5164127584aa615814d33d84aa,
+    type: 3}
+  actionDescription: Add +1 to any selected card in your hand. Cards cannot exceed
+    value 10.
+  actionsRequired: 1
+  canBeUsedMultipleTimes: 0
+  hasLimitedGameUses: 0
+  maxGameUses: 3
+  unlockLevel: 0
+  isStarterAction: 1
+  cardColor: {r: 0.2, g: 0.6, b: 1, a: 1}
+  cardBackground: {fileID: 0}
