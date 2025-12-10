@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bossName: The Diplomat
   bossType: 8
-  bossPortrait: {fileID: 21300000, guid: f8321adbd64675b4cace16e7ece1fafe, type: 3}
+  bossPortrait: {fileID: 3964513036798904003, guid: c6c3a0a36e433c443a1f446e548e9e20,
+    type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: 4e59ca7b110f6a84aa6bbe00499a656a, type: 3}
   bossDescription: When playing a K, it adds as many points as needed to win, unless
     effects nullify or alter it
@@ -35,6 +36,7 @@ MonoBehaviour:
     mechanicValue: 0
     mechanicMultiplier: 1
     mechanicTags: []
+  minions: []
   rewards: []
   bossThemeColor: {r: 0.8, g: 0.6, b: 0.2, a: 1}
   bossMusic: {fileID: 0}
@@ -52,3 +54,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 1
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000

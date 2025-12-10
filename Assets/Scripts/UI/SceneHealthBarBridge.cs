@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
 
 /// <summary>
 /// Bridge script to register scene-specific health bar UI with the global HealthBarManager
@@ -43,6 +44,28 @@ public class SceneHealthBarBridge : MonoBehaviour
         if (autoRegister)
         {
             RegisterHealthBars();
+            
+            // Force a delayed refresh to ensure enemy name is updated after all scene initialization
+            // This handles race conditions between scene loading and event firing
+            StartCoroutine(DelayedRefresh());
+        }
+    }
+    
+    /// <summary>
+    /// Delayed refresh to ensure UI is properly updated after all initialization
+    /// </summary>
+    private IEnumerator DelayedRefresh()
+    {
+        // Wait one frame for all Start() methods to complete
+        yield return null;
+        
+        // Wait another frame to be safe
+        yield return null;
+        
+        if (HealthBarManager.Instance != null)
+        {
+            Debug.Log("[SceneHealthBarBridge] Performing delayed refresh of health bars");
+            HealthBarManager.Instance.ForceRefreshEnemyDisplay();
         }
     }
     

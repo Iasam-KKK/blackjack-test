@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bossName: The Forgetful Seer
   bossType: 3
-  bossPortrait: {fileID: 21300000, guid: 27bbde1d496e30247afdf23dad84f979, type: 3}
+  bossPortrait: {fileID: 5110418099122641380, guid: d231fe3c5475c7b4190e322597144690,
+    type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: 2aa59516d9776544a8180a588d29cffe, type: 3}
   bossDescription: Can see the player's next 2 cards in hand, randomly acts upon
     it
@@ -66,3 +67,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 1
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000

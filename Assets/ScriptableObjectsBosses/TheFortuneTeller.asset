@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bossName: The Fortune Teller
   bossType: 1
-  bossPortrait: {fileID: 21300000, guid: db183fd8d0ef2354a86639e2adbad70f, type: 3}
+  bossPortrait: {fileID: 6842753589507867227, guid: 296e6e6c59e7aa841adc770827dee013,
+    type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: 474dfa7e11aab914fb56797a9fbe7f51, type: 3}
   bossDescription: Tarot cards introduction. Regular experience, with the use of
     basic Tarot cards
@@ -54,3 +55,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 1
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000

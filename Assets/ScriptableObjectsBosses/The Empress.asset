@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: The Empress
   m_EditorClassIdentifier: 
   bossName: The Empress
-  bossType: 27
+  bossType: 20
   bossPortrait: {fileID: 21300000, guid: 6a4a168d91cc0a343a0bb2d588b879d8, type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: 15de6301c72a0654aa56ae6d5e0b3c39, type: 3}
   bossDescription: Its own and player's Ks and Js add to its convenience, only Ks
@@ -25,7 +25,8 @@ MonoBehaviour:
   mechanics:
   - mechanicType: 22
     mechanicName: Empress Intercept
-    mechanicDescription: Intercepts all Kings and Jacks dealt to the player and redirects them to the dealer. Queens are immune.
+    mechanicDescription: Intercepts all Kings and Jacks dealt to the player and redirects
+      them to the dealer. Queens are immune.
     activationChance: 1
     isPassive: 1
     triggersOnPlayerAction: 0
@@ -34,6 +35,7 @@ MonoBehaviour:
     mechanicValue: 0
     mechanicMultiplier: 1
     mechanicTags: []
+  minions: []
   rewards: []
   bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
   bossMusic: {fileID: 0}
@@ -51,3 +53,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 1
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000

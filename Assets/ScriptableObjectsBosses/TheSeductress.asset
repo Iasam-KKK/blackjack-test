@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bossName: The Seductress
   bossType: 10
-  bossPortrait: {fileID: 21300000, guid: 7ccdf307412f2c144bd1927b45a4a920, type: 3}
+  bossPortrait: {fileID: -8417971719959412176, guid: bb21cd3d6b4fbef42ac099d3a3425f30,
+    type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: e889123b687c3c14f90132ae1a6282d6, type: 3}
   bossDescription: Ks and J's played go to the Seductress hand in first place, they
     add 10 or 1 at convenience
@@ -35,6 +36,7 @@ MonoBehaviour:
     mechanicValue: 0
     mechanicMultiplier: 1
     mechanicTags: []
+  minions: []
   rewards: []
   bossThemeColor: {r: 1, g: 0.4, b: 0.7, a: 1}
   bossMusic: {fileID: 0}
@@ -52,3 +54,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 1
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000

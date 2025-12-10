@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: TheNaughtyChild
   m_EditorClassIdentifier: 
   bossName: The Naughty Child
-  bossType: 25
-  bossPortrait: {fileID: 21300000, guid: 50dd2f6c57a8b4d4aa0a13e4157e45a1, type: 3}
+  bossType: 19
+  bossPortrait: {fileID: 8987841669545470719, guid: 5cf3553d5483abe499c983355403cada,
+    type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: a65d6c088c1bcec4e94e5375be9f98f6, type: 3}
   bossDescription: A mischievous child who hides all your tarot cards and steals
     cards from your hand temporarily
@@ -46,6 +47,7 @@ MonoBehaviour:
     mechanicValue: 2
     mechanicMultiplier: 1
     mechanicTags: []
+  minions: []
   rewards: []
   bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
   bossMusic: {fileID: 0}
@@ -63,3 +65,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 0
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000

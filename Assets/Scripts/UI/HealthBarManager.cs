@@ -54,13 +54,72 @@ public class HealthBarManager : MonoBehaviour
         }
         else
         {
-            Log($"[HealthBarManager] Duplicate instance detected, destroying {gameObject.name}");
+            Log($"[HealthBarManager] Duplicate instance detected, transferring UI references before destroying {gameObject.name}");
+            
+            // CRITICAL: Transfer UI references from this (new scene's) HealthBarManager to the singleton
+            // This ensures the singleton always has fresh, valid UI references for the current scene
+            TransferReferencesToSingleton();
+            
             Destroy(gameObject);
             return;
         }
         
         // Subscribe to scene changes
         SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+    
+    /// <summary>
+    /// Transfer UI references from this instance to the singleton instance
+    /// Called when a duplicate is detected, before this instance is destroyed
+    /// </summary>
+    private void TransferReferencesToSingleton()
+    {
+        if (Instance == null) return;
+        
+        // Transfer player health references if this instance has them
+        if (playerHealthBarFill != null)
+        {
+            Instance.playerHealthBarFill = playerHealthBarFill;
+            Log("[HealthBarManager] Transferred playerHealthBarFill to singleton");
+        }
+        if (playerHealthText != null)
+        {
+            Instance.playerHealthText = playerHealthText;
+            Log("[HealthBarManager] Transferred playerHealthText to singleton");
+        }
+        if (playerHealthTextLegacy != null)
+        {
+            Instance.playerHealthTextLegacy = playerHealthTextLegacy;
+        }
+        
+        // Transfer enemy health references if this instance has them
+        if (enemyHealthBarFill != null)
+        {
+            Instance.enemyHealthBarFill = enemyHealthBarFill;
+            Log("[HealthBarManager] Transferred enemyHealthBarFill to singleton");
+        }
+        if (enemyNameText != null)
+        {
+            Instance.enemyNameText = enemyNameText;
+            Log("[HealthBarManager] Transferred enemyNameText to singleton");
+        }
+        if (enemyNameTextLegacy != null)
+        {
+            Instance.enemyNameTextLegacy = enemyNameTextLegacy;
+        }
+        if (enemyHealthText != null)
+        {
+            Instance.enemyHealthText = enemyHealthText;
+        }
+        if (enemyHealthTextLegacy != null)
+        {
+            Instance.enemyHealthTextLegacy = enemyHealthTextLegacy;
+        }
+        
+        Log("[HealthBarManager] UI references transferred, forcing refresh on singleton");
+        
+        // Force the singleton to update with the new references
+        Instance.UpdateAllHealthBars();
     }
     
     private void Start()
@@ -90,9 +149,39 @@ public class HealthBarManager : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         Log($"[HealthBarManager] Scene loaded: {scene.name}, updating health bars");
+        
+        // Re-subscribe to events in case GameProgressionManager was not available during Start()
+        // This handles the case where HealthBarManager loaded before GameProgressionManager
+        EnsureEventSubscription();
+        
         // Note: UI references should be reassigned in Inspector for each scene
         // or use a scene-specific UI manager that registers with this global manager
         UpdateAllHealthBars();
+    }
+    
+    /// <summary>
+    /// Ensure we are subscribed to GameProgressionManager events
+    /// Safe to call multiple times - will unsubscribe first to prevent double subscription
+    /// </summary>
+    private void EnsureEventSubscription()
+    {
+        if (GameProgressionManager.Instance != null)
+        {
+            // Unsubscribe first to prevent double subscription
+            GameProgressionManager.Instance.OnPlayerHealthChanged -= OnPlayerHealthChanged;
+            GameProgressionManager.Instance.OnEncounterHealthChanged -= OnEnemyHealthChanged;
+            GameProgressionManager.Instance.OnEncounterStarted -= OnEncounterStarted;
+            
+            // Subscribe
+            GameProgressionManager.Instance.OnPlayerHealthChanged += OnPlayerHealthChanged;
+            GameProgressionManager.Instance.OnEncounterHealthChanged += OnEnemyHealthChanged;
+            GameProgressionManager.Instance.OnEncounterStarted += OnEncounterStarted;
+            Log("[HealthBarManager] Event subscription ensured");
+        }
+        else
+        {
+            LogWarning("[HealthBarManager] GameProgressionManager.Instance still null on scene load");
+        }
     }
     
     /// <summary>
@@ -104,6 +193,7 @@ public class HealthBarManager : MonoBehaviour
         {
             GameProgressionManager.Instance.OnPlayerHealthChanged += OnPlayerHealthChanged;
             GameProgressionManager.Instance.OnEncounterHealthChanged += OnEnemyHealthChanged;
+            GameProgressionManager.Instance.OnEncounterStarted += OnEncounterStarted;
             Log("[HealthBarManager] Subscribed to GameProgressionManager events");
         }
         else
@@ -121,6 +211,7 @@ public class HealthBarManager : MonoBehaviour
         {
             GameProgressionManager.Instance.OnPlayerHealthChanged -= OnPlayerHealthChanged;
             GameProgressionManager.Instance.OnEncounterHealthChanged -= OnEnemyHealthChanged;
+            GameProgressionManager.Instance.OnEncounterStarted -= OnEncounterStarted;
         }
     }
     
@@ -182,6 +273,37 @@ public class HealthBarManager : MonoBehaviour
     public void UpdateAllHealthBars()
     {
         UpdatePlayerHealthBar();
+        UpdateEnemyHealthBar();
+        UpdateEnemyName();
+    }
+    
+    /// <summary>
+    /// Force refresh the enemy display (name and health bar)
+    /// Call this after scene transitions to ensure UI is up-to-date
+    /// </summary>
+    public void ForceRefreshEnemyDisplay()
+    {
+        Log("[HealthBarManager] ForceRefreshEnemyDisplay called");
+        
+        // Log current state for debugging
+        if (GameProgressionManager.Instance != null)
+        {
+            Log($"[HealthBarManager] Current state - isEncounterActive: {GameProgressionManager.Instance.isEncounterActive}");
+            Log($"[HealthBarManager] Current state - isMinion: {GameProgressionManager.Instance.isMinion}");
+            if (GameProgressionManager.Instance.currentMinion != null)
+            {
+                Log($"[HealthBarManager] Current minion: {GameProgressionManager.Instance.currentMinion.minionName}");
+            }
+            if (GameProgressionManager.Instance.currentBoss != null)
+            {
+                Log($"[HealthBarManager] Current boss: {GameProgressionManager.Instance.currentBoss.bossName}");
+            }
+        }
+        
+        // Log UI reference state
+        Log($"[HealthBarManager] UI References - enemyNameText: {(enemyNameText != null ? "SET" : "NULL")}");
+        Log($"[HealthBarManager] UI References - enemyHealthBarFill: {(enemyHealthBarFill != null ? "SET" : "NULL")}");
+        
         UpdateEnemyHealthBar();
         UpdateEnemyName();
     }
@@ -340,6 +462,18 @@ public class HealthBarManager : MonoBehaviour
         Log($"[HealthBarManager] Enemy health changed event: {newHealth}");
         UpdateEnemyHealthBar();
         // Also update enemy name in case this is a new encounter starting
+        UpdateEnemyName();
+    }
+    
+    /// <summary>
+    /// Event handler for encounter started
+    /// </summary>
+    private void OnEncounterStarted(string enemyName)
+    {
+        Log($"[HealthBarManager] Encounter started event received: {enemyName}");
+        // Force update the enemy name immediately
+        // Note: UI references might not be valid yet if scene is still loading
+        // The SceneHealthBarBridge will handle delayed refresh
         UpdateEnemyName();
     }
     

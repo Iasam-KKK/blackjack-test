@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bossName: The Chiromancer
   bossType: 5
-  bossPortrait: {fileID: 21300000, guid: 14f26fc1a089b154985b7c3e045e6bca, type: 3}
+  bossPortrait: {fileID: 3483393305516645270, guid: 34941755668ed0c48bb3dd76a3c424e7,
+    type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: 66100a7a24dd8794a8c384d24253254c, type: 3}
   bossDescription: When The Chiromancer wins, it takes 1.5x your bet. If it wins
     with 21, it takes 2x your bet instead.
@@ -65,3 +66,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 1
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000

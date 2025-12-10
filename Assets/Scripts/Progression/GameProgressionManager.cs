@@ -62,6 +62,7 @@ public class GameProgressionManager : MonoBehaviour
     public Action<MinionData> OnMinionDefeated;
     public Action<BossData> OnBossDefeated;
     public Action<int> OnEncounterHealthChanged;
+    public Action<string> OnEncounterStarted; // Fires with enemy name when encounter starts
     
     // Serializable save data
     private GameProgressionData progressionData;
@@ -331,6 +332,7 @@ public class GameProgressionManager : MonoBehaviour
         Debug.Log($"[GameProgressionManager] Encounter state set - isEncounterActive: {isEncounterActive}, isMinion: {isMinion}");
         
         OnEncounterHealthChanged?.Invoke(currentEncounterHealth);
+        OnEncounterStarted?.Invoke(minion.minionName);
         
         // Force refresh Inspector values
         LogCurrentState();
@@ -431,6 +433,7 @@ public class GameProgressionManager : MonoBehaviour
         Debug.Log($"  Pending Node Point: {pendingNodePoint}");
         
         OnEncounterHealthChanged?.Invoke(currentEncounterHealth);
+        OnEncounterStarted?.Invoke(boss.bossName);
     }
     
     public void OnPlayerWinRound()

@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bossName: The Traitor
   bossType: 7
-  bossPortrait: {fileID: 21300000, guid: e6bb2c94962c58b4d99ff2b32bee2655, type: 3}
+  bossPortrait: {fileID: -2766487906211855342, guid: 88d73f06024bcd24183813c918e2f161,
+    type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: 9c1aa8dee13155f4589a050dc1ecca5d, type: 3}
   bossDescription: Steals laid out cards, uses them, if it wins, they are permanently
     destroyed
@@ -46,6 +47,7 @@ MonoBehaviour:
     mechanicValue: 0
     mechanicMultiplier: 1
     mechanicTags: []
+  minions: []
   rewards: []
   bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
   bossMusic: {fileID: 0}
@@ -63,3 +65,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 1
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000

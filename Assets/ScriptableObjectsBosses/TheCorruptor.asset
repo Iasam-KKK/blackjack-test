@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bossName: The Corruptor
   bossType: 15
-  bossPortrait: {fileID: 21300000, guid: 839ba56b8bb41354fb250c333fb45378, type: 3}
+  bossPortrait: {fileID: 4975328484459640125, guid: 20a4adde6cfcd4143afd752c3a1ea921,
+    type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: 043a320716669a046b08a74b8ba5e2a2, type: 3}
   bossDescription: When a card is laid down, it can randomly inflate or deflate its
     value
@@ -34,6 +35,7 @@ MonoBehaviour:
     mechanicValue: 3
     mechanicMultiplier: 1
     mechanicTags: []
+  minions: []
   rewards: []
   bossThemeColor: {r: 0.4, g: 0.2, b: 0.8, a: 1}
   bossMusic: {fileID: 0}
@@ -51,3 +53,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 1
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000

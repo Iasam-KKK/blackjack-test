@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bossName: The Captain
   bossType: 6
-  bossPortrait: {fileID: 21300000, guid: 317a5020f7fc4374d91f2dddcaf4d26a, type: 3}
+  bossPortrait: {fileID: 5905260200826038030, guid: aa7b61c3a878eae4786da1c8ffd72bd0,
+    type: 3}
   bossIntroPanelBg: {fileID: 21300000, guid: 2c7baa2779f4d71428365882d115a3f9, type: 3}
   bossDescription: Its deck is comprised of J's and the whole set of spades, can
     nullify enemy Js
@@ -35,6 +36,7 @@ MonoBehaviour:
     mechanicValue: 0
     mechanicMultiplier: 1
     mechanicTags: []
+  minions: []
   rewards: []
   bossThemeColor: {r: 1, g: 1, b: 1, a: 1}
   bossMusic: {fileID: 0}
@@ -52,3 +54,6 @@ MonoBehaviour:
   hasWinStreakEffect: 0
   isFinalBoss: 0
   allowTarotCards: 1
+  modifiesBetRange: 0
+  customMinBet: 10
+  customMaxBet: 1000
