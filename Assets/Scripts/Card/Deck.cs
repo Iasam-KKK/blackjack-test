@@ -156,6 +156,7 @@ public class Deck : MonoBehaviour
     
     // Game History
     public GameHistoryManager gameHistoryManager;
+    public GameHistoryManagerV2 gameHistoryManagerV2;
 
     // Card Preview System for new tarot cards
     public CardPreviewManager cardPreviewManager;
@@ -1454,6 +1455,8 @@ private void EndHand(WinCode code)
     int playerScore = GetPlayerPoints();
     int dealerScore = GetDealerPoints();
     string outcomeText = "";
+    float winLossAmount = 0f; // Track win/loss amount for history V2
+    float totalWinnings = 0f; // Track total winnings for Win case
 
     switch (code)
     {
@@ -1508,6 +1511,7 @@ private void EndHand(WinCode code)
             _streakMultiplier = 0;
 
             Debug.Log($"Loss: Bet was {CurrentBetAmount}, Additional Damage={additionalDamage}");
+            winLossAmount = -CurrentBetAmount; // Negative for losses
             
             // Notify GameProgressionManager about player loss (SINGLE SOURCE OF TRUTH)
             if (GameProgressionManager.Instance != null)
@@ -1532,8 +1536,9 @@ private void EndHand(WinCode code)
 
             float baseProfit = CurrentBetAmount;
             float streakBonus = baseProfit * (multiplier - 1.0f);
-            float totalWinnings = CurrentBetAmount + baseProfit + streakBonus + suitBonuses;
+            totalWinnings = CurrentBetAmount + baseProfit + streakBonus + suitBonuses;
             float netHeal = baseProfit + streakBonus + suitBonuses;
+            winLossAmount = totalWinnings; // Positive for wins
 
             finalMessage.text = "You win!";
             if (_currentStreak > 1)
@@ -1584,6 +1589,7 @@ private void EndHand(WinCode code)
             }
 
             Debug.Log($"Draw: Refunded bet amount {CurrentBetAmount} back to player");
+            winLossAmount = 0f; // Draw = 0 (bet was refunded)
 
             _currentStreak = 0;
             _streakMultiplier = 0;
@@ -1594,9 +1600,27 @@ private void EndHand(WinCode code)
             break;
     }
 
-    // BETTING SYSTEM 2.0: Update game history with health values
-    if (gameHistoryManager != null)
+    // GAME HISTORY 2.0: Update game history with boss data and win/loss amounts
+    // Try to get singleton instance if reference is not set
+    GameHistoryManagerV2 historyManager = gameHistoryManagerV2 != null ? gameHistoryManagerV2 : GameHistoryManagerV2.Instance;
+    
+    if (historyManager != null)
     {
+        BossData currentBoss = bossManager != null && bossManager.currentBoss != null ? bossManager.currentBoss : null;
+        
+        GameHistoryEntryV2 historyEntryV2 = new GameHistoryEntryV2(
+            currentBoss,
+            winLossAmount,
+            outcomeText,
+            playerScore,
+            dealerScore
+        );
+        Debug.Log($"[Deck] Recording history entry V2: Boss={historyEntryV2.GetBossName()}, Outcome: {outcomeText}, Win/Loss: {winLossAmount:F0} SOL, PlayerScore: {playerScore}, DealerScore: {dealerScore}");
+        historyManager.AddHistoryEntry(historyEntryV2);
+    }
+    else if (gameHistoryManager != null)
+    {
+        // Fallback to old system if V2 is not available
         string currentBossName = bossManager != null && bossManager.currentBoss != null ? bossManager.currentBoss.bossName : "Unknown Boss";
         float newHealth = GameProgressionManager.Instance != null ? GameProgressionManager.Instance.playerHealthPercentage : 0f;
         
@@ -1611,12 +1635,12 @@ private void EndHand(WinCode code)
             (uint)(newHealth * 10),
             outcomeText
         );
-        Debug.Log($"Recording history entry: Boss={currentBossName}, Outcome: {outcomeText}, Bet: {CurrentBetAmount:F0}");
+        Debug.Log($"Recording history entry (old system): Boss={currentBossName}, Outcome: {outcomeText}, Bet: {CurrentBetAmount:F0}");
         gameHistoryManager.AddHistoryEntry(historyEntry);
     }
     else
     {
-        Debug.LogWarning("GameHistoryManager is null! Cannot record history entry.");
+        Debug.LogWarning("GameHistoryManagerV2 and GameHistoryManager are both null! Cannot record history entry.");
     }
 
     UpdateStreakUI();
