@@ -1,13 +1,12 @@
 using System;
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 
 public class TooltipHoverManager : MonoBehaviour
 {
     [Header("Tooltip UI References")]
-    public Text tipText; // Reference to your existing tooltip text component
+    public TextMeshProUGUI tipText; // Reference to your existing tooltip text component
     public RectTransform tipWindow; // Reference to your existing tooltip panel
     
     [Header("Settings")]

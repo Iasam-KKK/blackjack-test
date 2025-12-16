@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 // This is a helper script to create a tooltip UI if one doesn't exist
 // You can run this once in the editor to create the tooltip UI
@@ -39,13 +40,14 @@ public class TooltipSetup : MonoBehaviour
         titleRectTransform.offsetMin = new Vector2(10, 5);
         titleRectTransform.offsetMax = new Vector2(-10, -5);
         
-        Text titleText = titleObj.AddComponent<Text>();
-        titleText.alignment = TextAnchor.UpperCenter;
-        titleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        titleText.alignment = TextAlignmentOptions.Center;
+        // Note: TMP_FontAsset should be assigned in the Inspector or loaded from Resources
+        // titleText.font = Resources.Load<TMP_FontAsset>("Fonts & Materials/YourFontAsset");
         titleText.fontSize = 18;
-        titleText.fontStyle = FontStyle.Bold;
+        titleText.fontStyle = FontStyles.Bold;
         titleText.color = Color.white;
-        titleText.supportRichText = true;
+        titleText.richText = true;
         
         // Create tooltip description
         GameObject descObj = new GameObject("DescriptionText");
@@ -57,12 +59,13 @@ public class TooltipSetup : MonoBehaviour
         descRectTransform.offsetMin = new Vector2(10, 10);
         descRectTransform.offsetMax = new Vector2(-10, -5);
         
-        Text descriptionText = descObj.AddComponent<Text>();
-        descriptionText.alignment = TextAnchor.UpperLeft;
-        descriptionText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        TextMeshProUGUI descriptionText = descObj.AddComponent<TextMeshProUGUI>();
+        descriptionText.alignment = TextAlignmentOptions.TopLeft;
+        // Note: TMP_FontAsset should be assigned in the Inspector or loaded from Resources
+        // descriptionText.font = Resources.Load<TMP_FontAsset>("Fonts & Materials/YourFontAsset");
         descriptionText.fontSize = 16;
         descriptionText.color = Color.white;
-        descriptionText.supportRichText = true;
+        descriptionText.richText = true;
         
         // Add TooltipManager to canvas
         TooltipManager tooltipManager = canvas.gameObject.AddComponent<TooltipManager>();

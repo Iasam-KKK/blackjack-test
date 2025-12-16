@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using DG.Tweening;
+using TMPro;
 
 public class TooltipManager : MonoBehaviour
 {
@@ -11,8 +12,8 @@ public class TooltipManager : MonoBehaviour
     
     [Header("Tooltip Components")]
     public GameObject tooltipPanel;
-    public Text titleText;
-    public Text descriptionText;
+    public TextMeshProUGUI titleText;
+    public TextMeshProUGUI descriptionText;
     
     [Header("Settings")]
     public float offset = 20f;
