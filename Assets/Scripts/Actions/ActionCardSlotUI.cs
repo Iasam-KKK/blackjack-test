@@ -187,10 +187,18 @@ public class ActionCardSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnt
             UpdateUseButtonState();
         }
         
-        // Used overlay
+        // Used overlay - only show for per-hand limited cards, not game-wide limited cards
         if (usedOverlay != null)
         {
-            usedOverlay.SetActive(hasBeenUsedThisHand);
+            // Don't show "used" overlay for game-wide limited cards (they track usage differently)
+            if (cardData.hasLimitedGameUses)
+            {
+                usedOverlay.SetActive(false);
+            }
+            else
+            {
+                usedOverlay.SetActive(hasBeenUsedThisHand);
+            }
         }
     }
     
@@ -221,7 +229,34 @@ public class ActionCardSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnt
         // Update button text
         if (useButtonText != null)
         {
-            if (hasBeenUsedThisHand && !cardData.canBeUsedMultipleTimes)
+            // For game-wide limited cards, check the actual limit instead of hasBeenUsedThisHand
+            if (cardData.hasLimitedGameUses)
+            {
+                if (cardData.actionType == ActionCardType.MinorHeal)
+                {
+                    if (ActionCardManager.Instance == null || !ActionCardManager.Instance.CanUseMinorHeal())
+                    {
+                        useButtonText.text = "No Uses Left";
+                    }
+                    else if (!canUse)
+                    {
+                        useButtonText.text = "Can't Use";
+                    }
+                    else
+                    {
+                        useButtonText.text = "Use";
+                    }
+                }
+                else if (!canUse)
+                {
+                    useButtonText.text = "Can't Use";
+                }
+                else
+                {
+                    useButtonText.text = "Use";
+                }
+            }
+            else if (hasBeenUsedThisHand && !cardData.canBeUsedMultipleTimes)
             {
                 useButtonText.text = "Used";
             }
@@ -250,16 +285,24 @@ public class ActionCardSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnt
     {
         if (cardData == null) return false;
         
-        // Check if already used this hand
-        if (hasBeenUsedThisHand && !cardData.canBeUsedMultipleTimes)
+        // For cards with limited game uses (like Minor Heal), only check game-wide limit
+        // Don't check per-hand usage for these cards
+        if (cardData.hasLimitedGameUses)
         {
-            return false;
+            // Check Minor Heal special case
+            if (cardData.actionType == ActionCardType.MinorHeal)
+            {
+                if (ActionCardManager.Instance == null || !ActionCardManager.Instance.CanUseMinorHeal())
+                {
+                    return false;
+                }
+            }
+            // Future: Add other limited-use cards here if needed
         }
-        
-        // Check Minor Heal special case
-        if (cardData.actionType == ActionCardType.MinorHeal)
+        else
         {
-            if (ActionCardManager.Instance == null || !ActionCardManager.Instance.CanUseMinorHeal())
+            // For regular cards, check if already used this hand
+            if (hasBeenUsedThisHand && !cardData.canBeUsedMultipleTimes)
             {
                 return false;
             }
@@ -307,8 +350,9 @@ public class ActionCardSlotUI : MonoBehaviour, IPointerClickHandler, IPointerEnt
                 deck.ConsumeAction();
             }
             
-            // Mark as used this hand (if not reusable)
-            if (!cardData.canBeUsedMultipleTimes)
+            // Mark as used this hand (if not reusable AND not a game-wide limited use card)
+            // Cards with hasLimitedGameUses track usage globally, not per-hand
+            if (!cardData.canBeUsedMultipleTimes && !cardData.hasLimitedGameUses)
             {
                 hasBeenUsedThisHand = true;
             }

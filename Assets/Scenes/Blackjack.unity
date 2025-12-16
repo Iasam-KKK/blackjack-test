@@ -2189,7 +2189,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.31178164, y: 0.071}
   m_AnchorMax: {x: 0.67600006, y: 0.15900001}
-  m_AnchoredPosition: {x: 102, y: -14.538147}
+  m_AnchoredPosition: {x: 102, y: -14.538269}
   m_SizeDelta: {x: 0.68, y: -13.0757}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &75706464
@@ -4683,7 +4683,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &144098905
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4703,7 +4703,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.04560473, y: 0.04422282}
   m_AnchorMax: {x: 0.95400006, y: 0.89300007}
-  m_AnchoredPosition: {x: -6.6171265, y: 3.1940002}
+  m_AnchoredPosition: {x: -6.6171265, y: 3.1939697}
   m_SizeDelta: {x: 10.4, y: 10.905001}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &144098906
@@ -15809,7 +15809,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.21151467, y: 0.28100002}
   m_AnchorMax: {x: 0.31800002, y: 0.31300002}
-  m_AnchoredPosition: {x: 1, y: -5.6565857}
+  m_AnchoredPosition: {x: 1, y: -5.6565704}
   m_SizeDelta: {x: 2.5223007, y: 10.349}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &587814156
@@ -19347,7 +19347,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.018399334, y: 0.03749144}
   m_AnchorMax: {x: 0.9704011, y: 0.97084767}
-  m_AnchoredPosition: {x: 0.8477783, y: -0.8835144}
+  m_AnchoredPosition: {x: 0.8477783, y: -0.8835068}
   m_SizeDelta: {x: 1.0880127, y: 1.5153046}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &716332343
@@ -23903,7 +23903,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 891b57bcd7f2c8a479c7688df4b2974a, type: 2}
   - {fileID: 11400000, guid: 2efe2e45bbefb9c458739a6ddd280426, type: 2}
   - {fileID: 11400000, guid: d003767f53ec2d648bfdf775fe084e8c, type: 2}
-  - {fileID: 11400000, guid: 4e94c26676d0f7945b70567fac991f6d, type: 2}
   - {fileID: 11400000, guid: e488145a8594a6c4bb31618fe4637f0e, type: 2}
   - {fileID: 11400000, guid: 09e25554cce79fa4fb1412db5c5a7a99, type: 2}
   - {fileID: 11400000, guid: 8a7a37f2ca8b4db4db1e920c191eb42e, type: 2}
@@ -23915,7 +23914,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a7f1a26317aba334d9d8369b955c3bc6, type: 2}
   - {fileID: 11400000, guid: 33e40666cba225e4dae3ca9d1262b49b, type: 2}
   - {fileID: 11400000, guid: 2e8dba622f49d834383716b7740309d9, type: 2}
-  - {fileID: 11400000, guid: a527fba878519764fb856598e59ca73d, type: 2}
   availableActionCards: []
   deck: {fileID: 113795718}
   closeButton: {fileID: 275248797}
@@ -53238,7 +53236,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -1689.5792, y: 0}
+  m_SizeDelta: {x: -1689.5792, y: 17.4}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1971615243
 MonoBehaviour:

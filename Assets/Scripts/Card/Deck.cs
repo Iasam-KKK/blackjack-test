@@ -1,4 +1,4 @@
-﻿#undef ARRAY_SHUFFLE
+#undef ARRAY_SHUFFLE
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -1534,13 +1534,29 @@ private void EndHand(WinCode code)
             float multiplier = CalculateWinMultiplier();
             float suitBonuses = CalculateSuitBonusesAsPercentage(player);
 
-            float baseProfit = CurrentBetAmount;
-            float streakBonus = baseProfit * (multiplier - 1.0f);
+            // Check if player has natural blackjack (21 with exactly 2 cards) for 3:2 payout
+            CardHand playerHand = player.GetComponent<CardHand>();
+            bool isNaturalBlackjack = (playerScore == Constants.Blackjack && 
+                                     playerHand != null && 
+                                     playerHand.cards.Count == Constants.InitialCardsDealt &&
+                                     _hitsThisHand == 0);
+            
+            // Calculate base profit: 1x bet for regular win, 1.5x bet for blackjack (3:2 payout)
+            float profitMultiplier = isNaturalBlackjack ? 1.5f : 1.0f;
+            float baseProfit = CurrentBetAmount * profitMultiplier;
+            float streakBonus = CurrentBetAmount * (multiplier - 1.0f);
+            
+            // Total winnings = bet refund + profit + bonuses
+            // Since bet was already deducted, we need to refund it + give profit + bonuses
             totalWinnings = CurrentBetAmount + baseProfit + streakBonus + suitBonuses;
-            float netHeal = baseProfit + streakBonus + suitBonuses;
+            float netHeal = baseProfit + streakBonus + suitBonuses; // Net gain (excluding bet refund)
             winLossAmount = totalWinnings; // Positive for wins
 
-            finalMessage.text = "You win!";
+            finalMessage.text = isNaturalBlackjack ? "Blackjack! You win!" : "You win!";
+            if (isNaturalBlackjack)
+            {
+                finalMessage.text += "\n3:2 Payout!";
+            }
             if (_currentStreak > 1)
             {
                 finalMessage.text += "\nStreak: " + _currentStreak + " (" + multiplier.ToString("0.0") + "x bonus)";
@@ -1550,7 +1566,7 @@ private void EndHand(WinCode code)
                 finalMessage.text += $"\nSuit Bonus: +{suitBonuses:F0}";
             }
             finalMessage.gameObject.SetActive(true); // ✅ Show result
-            outcomeText = "Win";
+            outcomeText = isNaturalBlackjack ? "Blackjack" : "Win";
 
             // Heal player with winnings
             if (GameProgressionManager.Instance != null)
@@ -1558,10 +1574,11 @@ private void EndHand(WinCode code)
                 GameProgressionManager.Instance.HealPlayer(totalWinnings);
             }
 
-            Debug.Log($"Win calculation: Bet={CurrentBetAmount}, Base Profit={baseProfit}, " +
+            Debug.Log($"Win calculation: Bet={CurrentBetAmount}, IsBlackjack={isNaturalBlackjack}, " +
+                     $"Profit Multiplier={profitMultiplier:F2}x, Base Profit={baseProfit}, " +
                      $"Streak Bonus={streakBonus}, Suit Bonuses={suitBonuses}, " +
                      $"Total Heal={totalWinnings}, Net Heal={netHeal}, " +
-                     $"Multiplier={multiplier:F2}x");
+                     $"Streak Multiplier={multiplier:F2}x");
             
             // Notify GameProgressionManager about player win (SINGLE SOURCE OF TRUTH)
             if (GameProgressionManager.Instance != null)
@@ -3809,6 +3826,13 @@ private void EndHand(WinCode code)
             Debug.Log($"[ActionValuePlusOne] Player got blackjack with {playerPoints} points");
         }
         
+        // Re-enable player controls if game is still in progress and it's player's turn
+        // This ensures hit/stand buttons remain functional after using the action card
+        if (_gameInProgress && _currentTurn == GameTurn.Player && _isBetPlaced)
+        {
+            EnablePlayerControls();
+        }
+        
         return true;
     }
     
@@ -3946,21 +3970,21 @@ private void EndHand(WinCode code)
             return false;
         }
         
-        // Apply healing via PlayerHealthManager
-        if (PlayerHealthManager.Instance != null)
+        // Apply healing via GameProgressionManager (soul/health system)
+        if (GameProgressionManager.Instance != null)
         {
-            PlayerHealthManager.Instance.Heal(10f);
-            Debug.Log($"[ActionMinorHeal] Healed 10 HP. Remaining uses: {ActionCardManager.Instance.MinorHealRemainingUses}");
+            GameProgressionManager.Instance.HealPlayer(10f);
+            Debug.Log($"[ActionMinorHeal] Healed 10 soul (HP). Remaining uses: {ActionCardManager.Instance.MinorHealRemainingUses}");
             
             if (finalMessage != null)
             {
-                finalMessage.text = $"+10 HP! ({ActionCardManager.Instance.MinorHealRemainingUses} heals left)";
+                finalMessage.text = $"+10 Soul! ({ActionCardManager.Instance.MinorHealRemainingUses} heals left)";
                 StartCoroutine(ClearMessageAfterDelay(2f));
             }
         }
         else
         {
-            Debug.LogWarning("[ActionMinorHeal] PlayerHealthManager not found!");
+            Debug.LogWarning("[ActionMinorHeal] GameProgressionManager not found!");
             if (finalMessage != null)
             {
                 finalMessage.text = "Heal failed!";
@@ -4774,6 +4798,12 @@ private void EndHand(WinCode code)
         
         // Reset action cards for new hand
         ResetActionCards();
+        
+        // Reset ActionCardManager for new hand (resets per-hand usage for ActionCardSlotUI)
+        if (ActionCardManager.Instance != null)
+        {
+            ActionCardManager.Instance.ResetForNewHand();
+        }
         
         // Clear any existing cards
         if (player != null && player.GetComponent<CardHand>() != null)

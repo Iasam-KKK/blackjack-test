@@ -38,9 +38,9 @@ public class GameProgressionManager : MonoBehaviour
     // Minion-Boss associations are now handled directly in MinionData.associatedBossType
     
     [Header("Player State")]
-    [Range(0f, 100f)]
+    [Range(0f, 1000f)]
     public float playerHealthPercentage = 100f;
-    public float maxHealthPercentage = 100f;
+    public float maxHealthPercentage = 1000f; // Increased to allow balance to go above 100
     public float damagePerLoss = 10f;
     
     [Header("Current Encounter State")]
@@ -176,14 +176,16 @@ public class GameProgressionManager : MonoBehaviour
         }
         
         // Update health bar if it exists
+        // Cap visual fill at 1.0 (100%) but allow actual health to exceed 100
         var healthBar = GameObject.Find("PlayerHealthBar");
         if (healthBar != null)
         {
             var image = healthBar.GetComponent<Image>();
             if (image != null)
             {
-                image.fillAmount = playerHealthPercentage / 100f;
-                Debug.Log($"[GameProgressionManager] Updated player health bar: {playerHealthPercentage:F0}%");
+                // Visual fill capped at 100%, but actual health can go higher
+                image.fillAmount = Mathf.Min(1.0f, playerHealthPercentage / 100f);
+                Debug.Log($"[GameProgressionManager] Updated player health bar: {playerHealthPercentage:F0}% (visual: {Mathf.Min(100f, playerHealthPercentage):F0}%)");
             }
         }
     }
@@ -249,9 +251,13 @@ public class GameProgressionManager : MonoBehaviour
     public void HealPlayer(float amount)
     {
         float previousHealth = playerHealthPercentage;
-        playerHealthPercentage = Mathf.Min(maxHealthPercentage, playerHealthPercentage + amount);
+        // Allow health to exceed maxHealthPercentage (no cap) - balance can go above 100
+        playerHealthPercentage = playerHealthPercentage + amount;
         
-        Debug.Log($"[GameProgressionManager] Player healed {amount}. Health: {previousHealth}% -> {playerHealthPercentage}%");
+        Debug.Log($"[GameProgressionManager] Player healed {amount}. Health: {previousHealth:F1}% -> {playerHealthPercentage:F1}%");
+        
+        // Update UI immediately
+        UpdatePlayerHealthUI();
         
         SaveProgression();
         OnPlayerHealthChanged?.Invoke(playerHealthPercentage);
