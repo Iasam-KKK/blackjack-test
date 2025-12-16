@@ -1544,7 +1544,9 @@ private void EndHand(WinCode code)
             // Calculate base profit: 1x bet for regular win, 1.5x bet for blackjack (3:2 payout)
             float profitMultiplier = isNaturalBlackjack ? 1.5f : 1.0f;
             float baseProfit = CurrentBetAmount * profitMultiplier;
-            float streakBonus = CurrentBetAmount * (multiplier - 1.0f);
+            // Streak bonus must be calculated on baseProfit to ensure blackjack gets 1.5x streak bonus
+            // This makes streak bonuses proportionally higher for blackjack (1.5x) vs regular wins (1.0x)
+            float streakBonus = baseProfit * (multiplier - 1.0f);
             
             // Total winnings = bet refund + profit + bonuses
             // Since bet was already deducted, we need to refund it + give profit + bonuses
