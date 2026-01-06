@@ -30,11 +30,14 @@ public class CardHand : MonoBehaviour
     }
     public void ClearHand()
     {
-        foreach (Transform card in transform)
+        // Destroy only the actual card GameObjects from the cards list
+        // DO NOT iterate through transform children - that destroys the SlotsContainer!
+        foreach (GameObject card in cards)
         {
-            Destroy(card.gameObject);
+            if (card != null) Destroy(card);
         }
-        cards.Clear(); // Optional if you track cards in a list
+        cards.Clear();
+        points = 0;
     }
 
 

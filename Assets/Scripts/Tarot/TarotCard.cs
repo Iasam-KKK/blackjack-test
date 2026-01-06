@@ -513,7 +513,13 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
             }
         }
         
-        // Trigger the appropriate effect based on card type
+        // Try to use TarotEffectManager for registered effects
+        if (TryUseTarotEffectManager())
+        {
+            return; // Effect was handled by TarotEffectManager
+        }
+        
+        // Fallback: Trigger the appropriate effect based on card type using legacy code
         if (deck != null)
         {
             bool effectApplied = false;
@@ -817,6 +823,9 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                                     {
                                         Debug.Log("========== The Scavenger ALL ANIMATIONS COMPLETE ==========");
                                         
+                                        // Adjust hit counter - player can hit again after cards removed
+                                        deck.AdjustHitsAfterCardRemoval(totalAnimations);
+                                        
                                         // Rearrange remaining cards and update points
                                         playerHand.ArrangeCardsInWindow();
                                         playerHand.UpdatePoints();
@@ -826,7 +835,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                                         deck.UpdateDiscardButtonState();
                                         deck.UpdateTransformButtonState();
                                         
-                                        // ✅ FIX: Re-evaluate game state and re-enable controls FOR RESCUE
+                                        // Re-evaluate game state and re-enable controls FOR RESCUE
                                         int playerPoints = deck.GetPlayerPoints();
                                         int dealerPoints = deck.GetDealerPoints();
                                         
@@ -1089,6 +1098,98 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         }
     }
     
+    /// <summary>
+    /// Try to execute the tarot effect using TarotEffectManager.
+    /// Returns true if effect was handled, false if fallback to legacy code is needed.
+    /// </summary>
+    private bool TryUseTarotEffectManager()
+    {
+        // Check if TarotEffectManager exists and has this effect registered
+        if (TarotEffectManager.Instance == null || !TarotEffectManager.Instance.HasEffect(cardData.cardType))
+        {
+            return false; // Fall back to legacy code
+        }
+        
+        // Check if the effect can be executed
+        if (!TarotEffectManager.Instance.CanExecuteEffect(cardData.cardType, cardData))
+        {
+            string reason = TarotEffectManager.Instance.GetCannotExecuteReason(cardData.cardType, cardData);
+            Debug.Log($"[TarotCard] Cannot execute {cardData.cardType}: {reason}");
+            return false;
+        }
+        
+        // Execute the effect
+        bool success = TarotEffectManager.Instance.ExecuteEffect(cardData.cardType, cardData);
+        
+        if (success)
+        {
+            // Handle effect success (durability, visual feedback, etc.)
+            HandleEffectSuccess();
+            Debug.Log($"[TarotCard] {cardData.cardType} effect executed via TarotEffectManager");
+        }
+        
+        return success;
+    }
+    
+    /// <summary>
+    /// Handle successful effect execution (update durability, visual feedback, etc.)
+    /// </summary>
+    private void HandleEffectSuccess()
+    {
+        // Mark as used this round if not reusable and not a passive card
+        if (!cardData.isReusable && !cardData.IsPassiveCard())
+        {
+            hasBeenUsedThisRound = true;
+        }
+        
+        // Play activation effect for passive cards
+        if (cardData.IsPassiveCard())
+        {
+            PlaySimpleActivationEffect();
+        }
+        
+        // Update durability in the central inventory system
+        if (InventoryManagerV3.Instance != null)
+        {
+            InventoryManagerV3.Instance.UseEquippedCard(cardData);
+        }
+        else
+        {
+            // Fallback if no inventory manager
+            cardData.UseCard();
+        }
+        
+        UpdateCardDisplay();
+        
+        // Check if card is completely used up (no durability left)
+        if (!cardData.CanBeUsed())
+        {
+            Debug.Log("Card " + cardData.cardName + " has been completely used up! Material: " + 
+                     cardData.GetMaterialDisplayName());
+            
+            // Remove from PlayerStats (for compatibility)
+            if (PlayerStats.instance != null && PlayerStats.instance.ownedCards != null && cardData != null)
+            {
+                PlayerStats.instance.ownedCards.Remove(cardData);
+                Debug.Log("Removed " + cardData.cardName + " from player's owned cards - durability exhausted");
+            }
+            
+            // Remove from Inventory System
+            if (InventoryManagerV3.Instance != null && cardData != null)
+            {
+                InventoryManagerV3.Instance.RemoveUsedUpCard(cardData);
+            }
+            
+            // Animate the card destruction
+            StartCoroutine(AnimateCardDestruction());
+        }
+        else
+        {
+            Debug.Log("Card " + cardData.cardName + " used. Remaining uses: " + 
+                     cardData.GetRemainingUses() + " (" + cardData.GetMaterialDisplayName() + ")");
+        }
+    }
+    
     // Helper method to remove cards of a specific suit from both player and dealer hands
     private void RemoveCardsBySuitFromBothHands(CardSuit suit, string cardName, string suitName)
     {
@@ -1147,9 +1248,20 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         {
             Debug.Log($"Removing {cardsToRemove.Count} {suitName} cards from both hands.");
             
+            // Count how many are from player's hand (for hit adjustment)
+            int playerCardsRemoved = 0;
+            foreach (GameObject card in cardsToRemove)
+            {
+                if (playerHand.cards.Contains(card))
+                {
+                    playerCardsRemoved++;
+                }
+            }
+            
             // Keep track of completed animations
             int animationsCompleted = 0;
             int totalAnimations = cardsToRemove.Count;
+            int playerCardsCount = playerCardsRemoved; // Capture for closure
             
             for (int i = 0; i < cardsToRemove.Count; i++)
             {
@@ -1214,6 +1326,12 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                     {
                         Debug.Log($"========== {cardName} ALL ANIMATIONS COMPLETE ==========");
                         
+                        // Adjust hit counter - player can hit again after player cards removed
+                        if (playerCardsCount > 0)
+                        {
+                            deck.AdjustHitsAfterCardRemoval(playerCardsCount);
+                        }
+                        
                         playerHand.ArrangeCardsInWindow();
                         playerHand.UpdatePoints();
                         dealerHand.ArrangeCardsInWindow();
@@ -1224,7 +1342,7 @@ public class TarotCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
                         deck.UpdateDiscardButtonState();
                         deck.UpdateTransformButtonState();
                         
-                        // ✅ FIX: Re-evaluate game state and re-enable controls FOR RESCUE
+                        // Re-evaluate game state and re-enable controls FOR RESCUE
                         int playerPoints = deck.GetPlayerPoints();
                         int dealerPoints = deck.GetDealerPoints();
                         

@@ -265,6 +265,13 @@ public class Deck : MonoBehaviour
         if (bossManager == null)
             bossManager = FindObjectOfType<BossManager>();
         
+        // Initialize TarotEffectManager and register this deck
+        if (TarotEffectManager.Instance != null)
+        {
+            TarotEffectManager.Instance.SetDeck(this);
+            Debug.Log("[Deck] Registered with TarotEffectManager");
+        }
+        
         // Initialize boss system if available
         if (bossManager != null)
         {
@@ -2905,6 +2912,32 @@ private void EndHand(WinCode code)
     }
     
     /// <summary>
+    /// Adjust the hit counter when cards are removed by tarot effects.
+    /// This allows the player to hit again after cards are removed.
+    /// </summary>
+    /// <param name="cardsRemoved">Number of cards that were removed from the player's hand</param>
+    public void AdjustHitsAfterCardRemoval(int cardsRemoved)
+    {
+        if (cardsRemoved <= 0) return;
+        
+        int previousHits = _hitsThisHand;
+        _hitsThisHand = Mathf.Max(0, _hitsThisHand - cardsRemoved);
+        Debug.Log($"[Deck] Adjusted hits after card removal: {previousHits} -> {_hitsThisHand} ({cardsRemoved} cards removed)");
+        UpdateRoundFlowUI();
+    }
+    
+    /// <summary>
+    /// Reset hit counter to zero (used when hand is completely cleared)
+    /// </summary>
+    public void ResetHitsThisHand()
+    {
+        int previousHits = _hitsThisHand;
+        _hitsThisHand = 0;
+        Debug.Log($"[Deck] Reset hits: {previousHits} -> 0");
+        UpdateRoundFlowUI();
+    }
+    
+    /// <summary>
     /// Get remaining actions this hand
     /// </summary>
     public int GetRemainingActions() => _actionsRemainingThisHand;
@@ -5106,36 +5139,49 @@ private void EndHand(WinCode code)
     {
         Debug.Log("[CursedHourglass] Activated: Removing all cards and re-dealing...");
 
-        // 1. Clear card logic references first
-        if (player != null) player.GetComponent<CardHand>()?.ClearHand();
-        if (dealer != null) dealer.GetComponent<CardHand>()?.ClearHand();
+        // Get CardHand references
+        CardHand playerHand = player?.GetComponent<CardHand>();
+        CardHand dealerHand = dealer?.GetComponent<CardHand>();
 
-        // 2. Destroy visual GameObjects AFTER logic is cleared
-        foreach (Transform card in player.transform)
+        // 1. Destroy only the actual card GameObjects from the cards list
+        // DO NOT iterate through transform children - that destroys the SlotsContainer!
+        if (playerHand != null)
         {
-            if (card != null) Destroy(card.gameObject);
+            foreach (GameObject card in playerHand.cards)
+            {
+                if (card != null) Destroy(card);
+            }
+            playerHand.cards.Clear();
         }
 
-        foreach (Transform card in dealer.transform)
+        if (dealerHand != null)
         {
-            if (card != null) Destroy(card.gameObject);
+            foreach (GameObject card in dealerHand.cards)
+            {
+                if (card != null) Destroy(card);
+            }
+            dealerHand.cards.Clear();
         }
 
-        // 3. Wait a short moment to allow destroy animations (optional)
+        // 2. Reset hit counter since we're starting fresh
+        ResetHitsThisHand();
+
+        // 3. Wait a short moment to allow destroy to process
         yield return new WaitForSeconds(0.4f);
 
-        // 4. Re-deal cards like initial game start
-      //  yield return StartCoroutine(DealInitialCardsAnimated());
-      // Manually deal exactly 2 new cards
-      for (int i = 0; i < 2; i++)
-      {
-          yield return StartCoroutine(PushPlayerAnimated());
-          yield return new WaitForSeconds(Constants.CardDealDelay);
+        // 4. Re-deal exactly 2 new cards to each hand
+        for (int i = 0; i < 2; i++)
+        {
+            yield return StartCoroutine(PushPlayerAnimated());
+            yield return new WaitForSeconds(Constants.CardDealDelay);
 
-          yield return StartCoroutine(PushDealerAnimated());
-          yield return new WaitForSeconds(Constants.CardDealDelay);
-      }
+            yield return StartCoroutine(PushDealerAnimated());
+            yield return new WaitForSeconds(Constants.CardDealDelay);
+        }
 
+        // 5. Update UI
+        UpdateScoreDisplays();
+        Debug.Log("[CursedHourglass] Effect completed - hands re-dealt");
     }
     public IEnumerator ReplaceCardWithMakeupArtist(CardModel cardToReplace)
     {
@@ -5159,22 +5205,26 @@ private void EndHand(WinCode code)
     {
         Debug.Log("[WhisperOfThePast] Start effect");
 
-        // Clear player hand logic
-        CardHand playerHand = player.GetComponent<CardHand>();
+        // Get player hand reference
+        CardHand playerHand = player?.GetComponent<CardHand>();
+        
+        // Destroy only the actual card GameObjects from the cards list
+        // DO NOT iterate through transform children - that destroys the SlotsContainer!
         if (playerHand != null)
         {
-            playerHand.ClearHand();
+            foreach (GameObject card in playerHand.cards)
+            {
+                if (card != null) Destroy(card);
+            }
+            playerHand.cards.Clear();
         }
 
-        // Destroy all visual cards under player
-        foreach (Transform card in player.transform)
-        {
-            Destroy(card.gameObject);
-        }
+        // Reset hit counter since player's hand is completely cleared
+        ResetHitsThisHand();
 
         yield return new WaitForSeconds(0.4f); // small delay for visual clarity
 
-        // ✅ Do NOT deal new cards here — player will hit manually later
+        // Do NOT deal new cards here — player will hit manually later
 
         // Update the UI after discarding cards
         UpdateScoreDisplays();
@@ -5185,20 +5235,23 @@ private void EndHand(WinCode code)
         // Re-enable hit/stick buttons if needed
         hitButton.interactable = true;
         stickButton.interactable = true;
+        
+        Debug.Log("[WhisperOfThePast] Effect completed - player can hit for new cards");
     }
     public IEnumerator ActivateSaboteurEffect()
     {
         Debug.Log("[Saboteur] Effect triggered.");
 
-        // 1. Remove all dealer cards
-        if (dealer != null)
+        // 1. Remove all dealer cards - use cards list, NOT transform children
+        // DO NOT iterate through transform children - that destroys the SlotsContainer!
+        CardHand dealerHand = dealer?.GetComponent<CardHand>();
+        if (dealerHand != null)
         {
-            CardHand dh = dealer.GetComponent<CardHand>();
-            dh?.ClearHand(); // Clear logic
-            foreach (Transform c in dealer.transform)
+            foreach (GameObject card in dealerHand.cards)
             {
-                if (c != null) Destroy(c.gameObject); // Clear visuals
+                if (card != null) Destroy(card);
             }
+            dealerHand.cards.Clear();
         }
 
         yield return new WaitForSeconds(0.3f); // Small delay
